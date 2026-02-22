@@ -28,6 +28,28 @@ Route::middleware('auth')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::get('/jual', [ProductController::class, 'create'])->name('product.create');
         Route::post('/jual', [ProductController::class, 'store'])->name('product.store');
+        Route::get('/seller/register', function () {
+            return Inertia::render('Seller/Register');
+        })->name('seller.register');
+
+        Route::get('/seller/dashboard', function () {
+            return Inertia::render('Seller/Dashboard');
+        })->name('seller.dashboard');
+        Route::get('/seller/products', function () {
+            return Inertia::render('Seller/Products');
+        })->name('products.index');
+
+        Route::get('/seller/orders', function () {
+            return Inertia::render('Seller/Orders');
+        })->name('orders.index');
+
+        Route::get('/seller/finance', function () {
+            return Inertia::render('Seller/Finance');
+        })->name('finance.index');
+
+        Route::get('/seller/settings', function () {
+            return Inertia::render('Seller/Settings');
+        })->name('settings');
     });
 });
 

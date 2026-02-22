@@ -87,24 +87,30 @@ class ProductController extends Controller
     }
 
     // HALAMAN EXPLORE (INDEX)
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::with('user')->latest()->get()->map(function ($product) {
-            return [
-                'id' => $product->id,
-                'name' => $product->nama_barang, // Mapping DB Indo ke Props Frontend
-                'price' => $product->harga,
-                'category' => $product->kategori,
-                'location_uni' => $product->lokasi_kampus,
-                'img' => $product->image,
-                'seller_name' => $product->user->name,
-                'seller_avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($product->user->name),
-                'posted_at' => $product->created_at->diffForHumans(),
-            ];
-        });
+        // 1. Mulai query dasar (hanya ambil produk aktif)
+        $query = Product::with(['images', 'category'])->where('status', 'active');
 
+        // 2. LOGIKA SEARCH: Jika ada parameter 'search' dari Navbar
+        if ($request->has('search') && $request->search != '') {
+            $searchTerm = $request->search;
+
+            // Filter berdasarkan nama barang ATAU deskripsi
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('nama_barang', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('deskripsi', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
+        // 3. Ambil data dengan Pagination (misal 12 per halaman)
+        $products = $query->latest()->paginate(12)->withQueryString();
+
+        // 4. Kirim ke halaman React
         return Inertia::render('Product/Index', [
-            'initialProducts' => $products
+            'products' => $products,
+            // Kirim balik parameter pencarian biar bisa ditaruh di input search halamannya
+            'filters' => $request->only(['search'])
         ]);
     }
 }

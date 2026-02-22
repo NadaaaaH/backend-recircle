@@ -1,6 +1,7 @@
 import React from "react";
 import { Head, Link } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
+import * as Icons from "lucide-react"; // Import semua icon agar bisa dinamis
 import {
     ArrowRight,
     Search,
@@ -11,71 +12,24 @@ import {
     TrendingUp,
 } from "lucide-react";
 
-export default function Home({ products = [] }) {
-    // Data Dummy (Updated: No Emojis, General Context)
-    const categories = [
-        { name: "Meja & Kursi", count: "120+" },
-        { name: "Elektronik", count: "85+" },
-        { name: "Buku & Modul", count: "340+" },
-        { name: "Fashion", count: "210+" },
-        { name: "Dekorasi", count: "45+" },
-    ];
-
-    const trendingProducts = [
-        {
-            id: 1,
-            name: "Sony WH-1000XM4",
-            price: 2100000,
-            loc: "Jakarta",
-            img: "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?q=80&w=800&auto=format&fit=crop",
-            tag: "Rare Item",
-            seller: "Dian",
-        },
-        {
-            id: 2,
-            name: "IKEA Lerberg Shelf",
-            price: 150000,
-            loc: "Bandung",
-            img: "https://images.unsplash.com/photo-1594620302200-9a762244a156?q=80&w=800&auto=format&fit=crop",
-            tag: "Best Deal",
-            seller: "Budi",
-        },
-        {
-            id: 3,
-            name: "Fujifilm Instax Mini",
-            price: 650000,
-            loc: "Yogyakarta",
-            img: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?q=80&w=800&auto=format&fit=crop",
-            tag: null,
-            seller: "Sari",
-        },
-        {
-            id: 4,
-            name: 'Monitor 24" IPS',
-            price: 950000,
-            loc: "Surabaya",
-            img: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?q=80&w=800&auto=format&fit=crop",
-            tag: "Nego Tipis",
-            seller: "Rian",
-        },
-    ];
+// TANGKAP PROPS DARI CONTROLLER DI SINI
+export default function Home({ categories = [], trendingProducts = [] }) {
+    // (Data Dummy dihapus karena sekarang menggunakan data dari database)
 
     return (
         <MainLayout>
             <Head title="ReCircle - Marketplace Mahasiswa Indonesia" />
 
             {/* --- HERO SECTION: Clean Editorial Style --- */}
+            {/* ... (KODE HERO SECTION KAMU TETAP SAMA PERSIS, TIDAK ADA YANG DIUBAH) ... */}
             <section className="relative pt-8 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
-                    {/* Left: Typography & Action */}
                     <div className="lg:col-span-7 relative z-10">
-                        {/* Minimalist Badge */}
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white text-gray-600 text-xs font-semibold tracking-wide uppercase mb-8 shadow-sm">
                             <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
                             Marketplace Mahasiswa Terpercaya
                         </div>
 
-                        {/* Heading: Mixed Typography (Sans + Serif) */}
                         <h1 className="text-[3.5rem] leading-[1] md:text-8xl font-black text-primary tracking-tighter mb-6">
                             {" "}
                             Dompet{" "}
@@ -108,7 +62,6 @@ export default function Home({ products = [] }) {
                             </button>
                         </div>
 
-                        {/* Trust Indicators (No Emojis) */}
                         <div className="mt-12 flex items-center gap-8 text-gray-400 text-sm font-medium">
                             <div className="flex items-center gap-2">
                                 <ShieldCheck className="w-4 h-4 text-primary" />{" "}
@@ -125,13 +78,10 @@ export default function Home({ products = [] }) {
                         </div>
                     </div>
 
-                    {/* Right: Visual Composition (Masonry/Collage) */}
                     <div className="lg:col-span-5 relative hidden lg:block">
-                        {/* Decorative Background Circle */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-secondary rounded-full blur-3xl -z-10"></div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            {/* Image 1: Tall */}
                             <div className="space-y-4 translate-y-8">
                                 <div className="aspect-[3/4] rounded-[2rem] overflow-hidden shadow-2xl shadow-gray-200 border border-white">
                                     <img
@@ -153,7 +103,6 @@ export default function Home({ products = [] }) {
                                 </div>
                             </div>
 
-                            {/* Image 2: Stacked */}
                             <div className="space-y-4">
                                 <div className="p-4 bg-primary text-white rounded-2xl shadow-lg flex items-center justify-between">
                                     <div>
@@ -179,7 +128,7 @@ export default function Home({ products = [] }) {
                 </div>
             </section>
 
-            {/* --- INFINITE TICKER (Clean Text Only) --- */}
+            {/* --- INFINITE TICKER --- */}
             <div className="bg-primary text-white py-4 overflow-hidden border-y border-primary-light/20">
                 <div className="flex gap-12 items-center animate-marquee whitespace-nowrap text-sm font-bold tracking-[0.2em] uppercase opacity-90">
                     <span>Transaksi Aman</span>
@@ -198,7 +147,7 @@ export default function Home({ products = [] }) {
                 </div>
             </div>
 
-            {/* --- CATEGORIES (Clean Icons) --- */}
+            {/* --- CATEGORIES --- */}
             <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
                 <div className="flex justify-between items-end mb-10">
                     <h2 className="text-3xl font-bold tracking-tight text-gray-900">
@@ -210,31 +159,36 @@ export default function Home({ products = [] }) {
                 </div>
 
                 <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide snap-x">
-                    {categories.map((cat, idx) => (
-                        <Link
-                            key={idx}
-                            href="#"
-                            className="snap-start flex-shrink-0 group"
-                        >
-                            <div className="flex flex-col justify-between p-6 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-xl hover:shadow-gray-200/50 hover:border-primary/20 transition-all min-w-[160px] h-[160px]">
-                                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                                    <Search className="w-5 h-5" />
+                    {categories.map((cat, idx) => {
+                        // Render icon dinamis sesuai string dari database (fallback ke icon Search)
+                        const IconComponent = Icons[cat.icon] || Icons.Search;
+
+                        return (
+                            <Link
+                                key={idx}
+                                href={`/kategori/${cat.name.toLowerCase()}`}
+                                className="snap-start flex-shrink-0 group"
+                            >
+                                <div className="flex flex-col justify-between p-6 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-xl hover:shadow-gray-200/50 hover:border-primary/20 transition-all min-w-[160px] h-[160px]">
+                                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                                        <IconComponent className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-gray-900 text-lg mb-1">
+                                            {cat.name}
+                                        </h3>
+                                        <p className="text-xs text-gray-400 font-medium">
+                                            {cat.count} items
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-gray-900 text-lg mb-1">
-                                        {cat.name}
-                                    </h3>
-                                    <p className="text-xs text-gray-400 font-medium">
-                                        {cat.count} items
-                                    </p>
-                                </div>
-                            </div>
-                        </Link>
-                    ))}
+                            </Link>
+                        );
+                    })}
                 </div>
             </section>
 
-            {/* --- FEATURED GRID (Same Structure, Just Cleaned Up) --- */}
+            {/* --- FEATURED GRID --- */}
             <section className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto mb-24">
                 <div className="flex justify-between items-center gap-4 mb-12">
                     <div className="flex space-x-2">
@@ -259,11 +213,8 @@ export default function Home({ products = [] }) {
                         <Link
                             href={route("product.show", product.id)}
                             key={product.id}
-                            className="group cursor-pointer block" // Class pembungkus utama
+                            className="group cursor-pointer block"
                         >
-                            {/* --- KONTEN HARUS DI DALAM SINI (ANTARA <Link> DAN </Link>) --- */}
-
-                            {/* Image Area */}
                             <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden bg-gray-100 mb-4 shadow-sm group-hover:shadow-xl transition-all duration-300">
                                 <img
                                     src={product.img}
@@ -280,7 +231,6 @@ export default function Home({ products = [] }) {
                                 </div>
                             </div>
 
-                            {/* Info Area */}
                             <div>
                                 <h3 className="font-bold text-gray-900 text-lg leading-tight group-hover:text-primary transition-colors">
                                     {product.name}
@@ -290,6 +240,7 @@ export default function Home({ products = [] }) {
                                         {product.loc}
                                     </span>
                                     <span className="font-bold text-primary">
+                                        Rp{" "}
                                         {product.price.toLocaleString("id-ID")}
                                     </span>
                                 </div>

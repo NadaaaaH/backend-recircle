@@ -1,29 +1,11 @@
 import React, { useState } from "react";
-// Tambahkan 'router' dari inertiajs
-import { Link, usePage, router } from "@inertiajs/react";
-import Dropdown from "@/Components/Dropdown";
-import { Search, Heart, ShoppingBag, Menu, X } from "lucide-react";
+import { Link, usePage } from "@inertiajs/react";
+import { Search, Heart, ShoppingBag, Menu, X, Store, ClipboardList, Package, ShieldCheck, LogOut } from "lucide-react";
 
 export default function Navbar() {
     const { auth } = usePage().props;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-    // 1. Tambahkan state untuk menyimpan teks pencarian
-    const [searchQuery, setSearchQuery] = useState("");
-
-    // 2. Buat fungsi ketika tombol Enter ditekan
-    const handleSearch = (e) => {
-        e.preventDefault();
-
-        // Jangan lakukan pencarian kalau input kosong
-        if (searchQuery.trim() === "") return;
-
-        // Pindah ke halaman product.index dengan membawa kata kunci 'search'
-        router.get(route("product.index"), { search: searchQuery });
-
-        // (Opsional) Tutup menu mobile jika pencarian dilakukan dari HP
-        setIsMenuOpen(false);
-    };
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     return (
         <nav className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-gray-100">
@@ -44,70 +26,81 @@ export default function Navbar() {
                         </div>
                     </Link>
 
-                    {/* --- Desktop Search --- */}
-                    {/* 3. Bungkus input dengan form dan beri event onSubmit */}
-                    <form
-                        onSubmit={handleSearch}
-                        className="hidden md:flex flex-1 mx-12 max-w-xl relative group"
-                    >
+                    {/* Desktop Search */}
+                    <div className="hidden md:flex flex-1 mx-12 max-w-xl relative group">
                         <input
                             type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Cari barang..."
                             className="w-full pl-12 pr-4 py-3 rounded-2xl bg-secondary border-transparent focus:bg-white focus:border-primary/30 focus:ring-4 focus:ring-primary/10 text-sm transition-all"
                         />
-                        {/* Tombol Search Submit */}
-                        <button
-                            type="submit"
-                            className="absolute left-4 top-3 text-gray-400 hover:text-primary transition-colors"
-                        >
-                            <Search className="w-5 h-5" />
-                        </button>
-                    </form>
+                        <Search className="absolute left-4 top-3 text-gray-400 w-5 h-5" />
+                    </div>
 
-                    {/* Menu Kanan (Desktop) */}
-                    <div className="hidden md:flex items-center space-x-6">
+                    {/* Menu */}
+                    <div className="hidden md:flex items-center space-x-4">
                         {auth.user ? (
                             <>
-                                <Dropdown>
-                                    <Dropdown.Trigger>
-                                        <span className="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none dark:bg-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                                            >
-                                                <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-                                                    <div className="text-right">
-                                                        <p className="text-sm font-bold text-gray-700">
-                                                            {auth.user.name}
-                                                        </p>
-                                                    </div>
-                                                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
-                                                        {auth.user.name.charAt(
-                                                            0,
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        </span>
-                                    </Dropdown.Trigger>
+                                <Link
+                                    href="/my-offers"
+                                    className="p-2 text-gray-500 hover:text-primary transition-colors"
+                                    title="Penawaran Saya"
+                                >
+                                    <ClipboardList className="w-5 h-5" />
+                                </Link>
+                                <Link
+                                    href="/orders"
+                                    className="p-2 text-gray-500 hover:text-primary transition-colors"
+                                    title="Pesanan Saya"
+                                >
+                                    <Package className="w-5 h-5" />
+                                </Link>
 
-                                    <Dropdown.Content>
-                                        <Dropdown.Link
-                                            href={route("profile.edit")}
-                                        >
-                                            Profile
-                                        </Dropdown.Link>
-                                        <Dropdown.Link
-                                            href={route("logout")}
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Log Out
-                                        </Dropdown.Link>
-                                    </Dropdown.Content>
-                                </Dropdown>
+                                {/* User Dropdown */}
+                                <div className="relative pl-3 border-l border-gray-200">
+                                    <button
+                                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                        className="flex items-center gap-3 focus:outline-none"
+                                    >
+                                        <div className="text-right hidden sm:block">
+                                            <p className="text-sm font-bold text-gray-700">
+                                                {auth.user.name}
+                                            </p>
+                                            <p className="text-xs text-gray-400">
+                                                {auth.user.is_seller ? 'Penjual' : auth.user.role === 'admin' ? 'Admin' : 'Pembeli'}
+                                            </p>
+                                        </div>
+                                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
+                                            {auth.user.name.charAt(0)}
+                                        </div>
+                                    </button>
+
+                                    {isDropdownOpen && (
+                                        <div className="absolute right-0 top-14 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 w-56 z-50">
+                                            {auth.user.is_seller && (
+                                                <Link href="/seller/dashboard" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary transition-colors">
+                                                    <Store className="w-4 h-4 text-primary" /> Dashboard Penjual
+                                                </Link>
+                                            )}
+                                            {!auth.user.is_seller && auth.user.role !== 'admin' && (
+                                                <Link href="/seller/verification" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary transition-colors">
+                                                    <ShieldCheck className="w-4 h-4 text-primary" /> Jadi Penjual
+                                                </Link>
+                                            )}
+                                            {auth.user.role === 'admin' && (
+                                                <Link href="/admin/verifications" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary transition-colors">
+                                                    <ShieldCheck className="w-4 h-4 text-primary" /> Admin Panel
+                                                </Link>
+                                            )}
+                                            <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary transition-colors">
+                                                <Heart className="w-4 h-4 text-gray-400" /> Profil Saya
+                                            </Link>
+                                            <div className="border-t border-gray-100 my-1"></div>
+                                            <Link href="/logout" method="post" as="button" className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
+                                                <LogOut className="w-4 h-4" /> Keluar
+                                            </Link>
+                                        </div>
+                                    )}
+                                </div>
                             </>
                         ) : (
                             <div className="flex items-center gap-4">
@@ -141,28 +134,30 @@ export default function Navbar() {
                 </div>
             </div>
 
-            {/* --- Mobile Menu --- */}
+            {/* Mobile Menu */}
             {isMenuOpen && (
                 <div className="md:hidden px-4 pb-4 bg-white border-b border-gray-100">
-                    {/* 4. Bungkus input mobile dengan form juga */}
-                    <form
-                        onSubmit={handleSearch}
-                        className="relative mb-4 mt-2"
-                    >
+                    <div className="relative mb-4 mt-2">
                         <input
                             type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Cari barang..."
                             className="w-full pl-10 pr-4 py-3 rounded-xl bg-secondary border-none text-sm"
                         />
-                        <button
-                            type="submit"
-                            className="absolute left-3 top-3 text-gray-400 hover:text-primary transition-colors"
-                        >
-                            <Search className="w-5 h-5" />
-                        </button>
-                    </form>
+                        <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                    </div>
+                    {auth.user && (
+                        <div className="space-y-1">
+                            <Link href="/my-offers" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary rounded-xl">Penawaran Saya</Link>
+                            <Link href="/orders" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary rounded-xl">Pesanan Saya</Link>
+                            {auth.user.is_seller && (
+                                <Link href="/seller/dashboard" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary rounded-xl">Dashboard Penjual</Link>
+                            )}
+                            {!auth.user.is_seller && auth.user.role !== 'admin' && (
+                                <Link href="/seller/verification" className="block px-4 py-2.5 text-sm text-primary font-medium hover:bg-secondary rounded-xl">Jadi Penjual</Link>
+                            )}
+                            <Link href="/logout" method="post" as="button" className="block w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 rounded-xl">Keluar</Link>
+                        </div>
+                    )}
                 </div>
             )}
         </nav>

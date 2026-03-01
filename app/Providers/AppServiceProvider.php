@@ -2,24 +2,20 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\Vite;
+use App\Contracts\PaymentGatewayInterface;
+use App\Services\MidtransPaymentService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
+        // Bind PaymentGateway interface ke implementasi Midtrans
+        $this->app->bind(PaymentGatewayInterface::class, MidtransPaymentService::class);
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        Vite::prefetch(concurrency: 3);
+        //
     }
 }

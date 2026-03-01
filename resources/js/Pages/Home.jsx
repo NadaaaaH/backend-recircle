@@ -1,7 +1,6 @@
 import React from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, usePage } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
-import * as Icons from "lucide-react"; // Import semua icon agar bisa dinamis
 import {
     ArrowRight,
     Search,
@@ -12,24 +11,25 @@ import {
     TrendingUp,
 } from "lucide-react";
 
-// TANGKAP PROPS DARI CONTROLLER DI SINI
-export default function Home({ categories = [], trendingProducts = [] }) {
-    // (Data Dummy dihapus karena sekarang menggunakan data dari database)
+export default function Home({ recommendations = [], categories = [] }) {
+    const { auth } = usePage().props;
 
     return (
         <MainLayout>
             <Head title="ReCircle - Marketplace Mahasiswa Indonesia" />
 
             {/* --- HERO SECTION: Clean Editorial Style --- */}
-            {/* ... (KODE HERO SECTION KAMU TETAP SAMA PERSIS, TIDAK ADA YANG DIUBAH) ... */}
             <section className="relative pt-8 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+                    {/* Left: Typography & Action */}
                     <div className="lg:col-span-7 relative z-10">
+                        {/* Minimalist Badge */}
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white text-gray-600 text-xs font-semibold tracking-wide uppercase mb-8 shadow-sm">
                             <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
                             Marketplace Mahasiswa Terpercaya
                         </div>
 
+                        {/* Heading: Mixed Typography (Sans + Serif) */}
                         <h1 className="text-[3.5rem] leading-[1] md:text-8xl font-black text-primary tracking-tighter mb-6">
                             {" "}
                             Dompet{" "}
@@ -51,17 +51,24 @@ export default function Home({ categories = [], trendingProducts = [] }) {
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4">
-                            <button className="group relative px-8 py-4 bg-primary text-white rounded-full font-bold overflow-hidden transition-all hover:shadow-xl hover:shadow-primary/20 hover:-translate-y-1">
-                                <span className="relative flex items-center gap-3">
+                            <Link
+                                href="/explore"
+                                className="group relative px-8 py-4 bg-primary text-white rounded-full font-bold overflow-hidden transition-all hover:shadow-xl hover:shadow-primary/20 hover:-translate-y-1 text-center"
+                            >
+                                <span className="relative flex items-center justify-center gap-3">
                                     Mulai Eksplorasi{" "}
                                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                 </span>
-                            </button>
-                            <button className="px-8 py-4 bg-white text-gray-900 border border-gray-200 rounded-full font-bold hover:border-primary hover:text-primary transition-colors flex items-center gap-2 shadow-sm hover:shadow-md">
+                            </Link>
+                            <Link
+                                href={auth?.user ? (auth.user.is_seller ? "/jual" : "/seller/verification") : "/login"}
+                                className="px-8 py-4 bg-white text-gray-900 border border-gray-200 rounded-full font-bold hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                            >
                                 Jual Barang Bekas
-                            </button>
+                            </Link>
                         </div>
 
+                        {/* Trust Indicators */}
                         <div className="mt-12 flex items-center gap-8 text-gray-400 text-sm font-medium">
                             <div className="flex items-center gap-2">
                                 <ShieldCheck className="w-4 h-4 text-primary" />{" "}
@@ -78,6 +85,7 @@ export default function Home({ categories = [], trendingProducts = [] }) {
                         </div>
                     </div>
 
+                    {/* Right: Visual Composition (Masonry/Collage) */}
                     <div className="lg:col-span-5 relative hidden lg:block">
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-secondary rounded-full blur-3xl -z-10"></div>
 
@@ -147,7 +155,7 @@ export default function Home({ categories = [], trendingProducts = [] }) {
                 </div>
             </div>
 
-            {/* --- CATEGORIES --- */}
+            {/* --- CATEGORIES (from server) --- */}
             <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
                 <div className="flex justify-between items-end mb-10">
                     <h2 className="text-3xl font-bold tracking-tight text-gray-900">
@@ -159,36 +167,31 @@ export default function Home({ categories = [], trendingProducts = [] }) {
                 </div>
 
                 <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide snap-x">
-                    {categories.map((cat, idx) => {
-                        // Render icon dinamis sesuai string dari database (fallback ke icon Search)
-                        const IconComponent = Icons[cat.icon] || Icons.Search;
-
-                        return (
-                            <Link
-                                key={idx}
-                                href={`/kategori/${cat.name.toLowerCase()}`}
-                                className="snap-start flex-shrink-0 group"
-                            >
-                                <div className="flex flex-col justify-between p-6 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-xl hover:shadow-gray-200/50 hover:border-primary/20 transition-all min-w-[160px] h-[160px]">
-                                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                                        <IconComponent className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-gray-900 text-lg mb-1">
-                                            {cat.name}
-                                        </h3>
-                                        <p className="text-xs text-gray-400 font-medium">
-                                            {cat.count} items
-                                        </p>
-                                    </div>
+                    {categories.map((cat) => (
+                        <Link
+                            key={cat.id}
+                            href={`/explore?category=${cat.slug}`}
+                            className="snap-start flex-shrink-0 group"
+                        >
+                            <div className="flex flex-col justify-between p-6 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-xl hover:shadow-gray-200/50 hover:border-primary/20 transition-all min-w-[160px] h-[160px]">
+                                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                                    <Search className="w-5 h-5" />
                                 </div>
-                            </Link>
-                        );
-                    })}
+                                <div>
+                                    <h3 className="font-bold text-gray-900 text-lg mb-1">
+                                        {cat.name}
+                                    </h3>
+                                    <p className="text-xs text-gray-400 font-medium">
+                                        {cat.count} items
+                                    </p>
+                                </div>
+                            </div>
+                        </Link>
+                    ))}
                 </div>
             </section>
 
-            {/* --- FEATURED GRID --- */}
+            {/* --- REKOMENDASI MINGGU INI (from server) --- */}
             <section className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto mb-24">
                 <div className="flex justify-between items-center gap-4 mb-12">
                     <div className="flex space-x-2">
@@ -201,53 +204,58 @@ export default function Home({ categories = [], trendingProducts = [] }) {
                         </h2>
                     </div>
                     <Link
-                        href={route("product.index")}
+                        href="/explore"
                         className="bg-primary text-white px-6 py-3 rounded-full font-bold hover:bg-primary-hover transition-all shadow-lg"
                     >
                         Eksplorasi Barang
                     </Link>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
-                    {trendingProducts.map((product) => (
-                        <Link
-                            href={route("product.show", product.id)}
-                            key={product.id}
-                            className="group cursor-pointer block"
-                        >
-                            <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden bg-gray-100 mb-4 shadow-sm group-hover:shadow-xl transition-all duration-300">
-                                <img
-                                    src={product.img}
-                                    alt={product.name}
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                />
-                                {product.tag && (
-                                    <div className="absolute top-4 left-4 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-primary shadow-sm border border-gray-100">
-                                        {product.tag}
+                {recommendations.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
+                        {recommendations.map((product) => (
+                            <Link
+                                href={`/product/${product.id}`}
+                                key={product.id}
+                                className="group cursor-pointer block"
+                            >
+                                <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden bg-gray-100 mb-4 shadow-sm group-hover:shadow-xl transition-all duration-300">
+                                    <img
+                                        src={product.img}
+                                        alt={product.name}
+                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                    />
+                                    {product.tag && (
+                                        <div className="absolute top-4 left-4 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-primary shadow-sm border border-gray-100">
+                                            {product.tag}
+                                        </div>
+                                    )}
+                                    <div className="absolute bottom-4 right-4 bg-white rounded-full p-2 shadow-lg translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                                        <ArrowRight className="w-5 h-5 text-gray-900" />
                                     </div>
-                                )}
-                                <div className="absolute bottom-4 right-4 bg-white rounded-full p-2 shadow-lg translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                                    <ArrowRight className="w-5 h-5 text-gray-900" />
                                 </div>
-                            </div>
 
-                            <div>
-                                <h3 className="font-bold text-gray-900 text-lg leading-tight group-hover:text-primary transition-colors">
-                                    {product.name}
-                                </h3>
-                                <div className="flex items-center justify-between mt-2">
-                                    <span className="text-gray-500 text-sm">
-                                        {product.loc}
-                                    </span>
-                                    <span className="font-bold text-primary">
-                                        Rp{" "}
-                                        {product.price.toLocaleString("id-ID")}
-                                    </span>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 text-lg leading-tight group-hover:text-primary transition-colors">
+                                        {product.name}
+                                    </h3>
+                                    <div className="flex items-center justify-between mt-2">
+                                        <span className="text-gray-500 text-sm">
+                                            {product.loc}
+                                        </span>
+                                        <span className="font-bold text-primary">
+                                            {Number(product.price).toLocaleString("id-ID")}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                        </Link>
-                    ))}
-                </div>
+                            </Link>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-16">
+                        <p className="text-gray-400 text-lg">Belum ada produk tersedia. Jadilah penjual pertama!</p>
+                    </div>
+                )}
             </section>
         </MainLayout>
     );

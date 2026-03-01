@@ -24,9 +24,12 @@ export default function NegoModal({ isOpen, onClose, product }) {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        setTimeout(() => {
-            setIsSuccess(true);
-        }, 1000);
+        post('/offers', {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsSuccess(true);
+            },
+        });
     };
 
     const handlePriceChange = (e) => {
@@ -108,8 +111,8 @@ export default function NegoModal({ isOpen, onClose, product }) {
                                 value={
                                     data.offer_price
                                         ? parseInt(
-                                              data.offer_price,
-                                          ).toLocaleString("id-ID")
+                                            data.offer_price,
+                                        ).toLocaleString("id-ID")
                                         : ""
                                 }
                                 onChange={handlePriceChange}

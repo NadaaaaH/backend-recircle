@@ -3,51 +3,126 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\Category;
 use App\Models\ProductImage;
+use App\Services\RecommendationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ProductController extends Controller
 {
-    public function create()
+    public function __construct(
+        protected RecommendationService $recommendationService,
+    ) {}
+
+    /**
+     * Halaman Explore (Index).
+     */
+    public function index(Request $request)
     {
-        return Inertia::render('Product/Create');
+        $categories = Category::all();
+
+        $products = Product::active()
+            ->with(['user', 'category', 'images'])
+            ->latest()
+            ->get()
+            ->map(fn ($product) => $this->mapProductToProps($product));
+
+        return Inertia::render('Product/Index', [
+            'initialProducts' => $products,
+            'categories'      => $categories->map(fn ($c) => [
+                'id'   => $c->id,
+                'name' => $c->nama_kategori,
+                'slug' => $c->slug,
+            ]),
+        ]);
     }
 
-    public function store(Request $request)
+    /**
+     * Halaman Detail Produk (Show).
+     */
+    public function show(Request $request, $id)
     {
-        // Validasi array image (maksimal 5 foto misalnya)
-        $validated = $request->validate([
-            'nama_barang' => 'required|string|max:255',
-            'harga' => 'required|numeric|min:1000',
-            'kategori' => 'required|string',
-            'kondisi' => 'required|string',
-            'deskripsi' => 'required|string',
-            'lokasi_kampus' => 'required|string',
+        $product = Product::with(['user', 'category', 'images', 'offers'])->findOrFail($id);
 
-            // Validasi Multiple File
-            'images' => 'required|array|min:1|max:5',
-            'images.*' => 'image|mimes:jpeg,png,jpg|max:5120',
+        // Rekam view untuk rekomendasi jika user login
+        if ($request->user()) {
+            $this->recommendationService->recordView($request->user(), $product);
+        }
+
+        return Inertia::render('Product/Show', [
+            'product' => [
+                'id'             => $product->id,
+                'name'           => $product->nama_barang,
+                'price'          => $product->harga,
+                'category'       => $product->category->nama_kategori,
+                'category_id'    => $product->category_id,
+                'condition'      => $product->kondisi,
+                'desc'           => $product->deskripsi,
+                'loc'            => $product->lokasi_kampus,
+                'img'            => $product->image,
+                'images'         => $product->images->pluck('path')->toArray(),
+                'status'         => $product->status,
+                'posted_at'      => $product->created_at->diffForHumans(),
+                'seller' => [
+                    'id'          => $product->user->id,
+                    'name'        => $product->user->name,
+                    'phone'       => $product->user->nomor_wa ?? '',
+                    'kampus'      => $product->user->kampus ?? '',
+                    'is_verified' => $product->user->is_seller,
+                    'avatar'      => $product->user->avatar
+                        ?? 'https://ui-avatars.com/api/?name=' . urlencode($product->user->name) . '&background=43552c&color=fff',
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Form Create Produk.
+     */
+    public function create()
+    {
+        $categories = Category::all()->map(fn ($c) => [
+            'id'   => $c->id,
+            'name' => $c->nama_kategori,
         ]);
 
-        // 1. Buat Produk Dulu (Tanpa Image Cover dulu)
+        return Inertia::render('Product/Create', [
+            'categories' => $categories,
+        ]);
+    }
+
+    /**
+     * Store Produk Baru.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'nama_barang'   => 'required|string|max:255',
+            'harga'         => 'required|numeric|min:1000',
+            'category_id'   => 'required|exists:categories,id',
+            'kondisi'       => 'required|string',
+            'deskripsi'     => 'required|string',
+            'lokasi_kampus' => 'required|string',
+            'images'        => 'required|array|min:1|max:5',
+            'images.*'      => 'image|mimes:jpeg,png,jpg|max:5120',
+        ]);
+
         $product = $request->user()->products()->create([
-            'nama_barang' => $validated['nama_barang'],
-            'harga' => $validated['harga'],
-            'kategori' => $validated['kategori'],
-            'kondisi' => $validated['kondisi'],
-            'deskripsi' => $validated['deskripsi'],
+            'nama_barang'   => $validated['nama_barang'],
+            'harga'         => $validated['harga'],
+            'category_id'   => $validated['category_id'],
+            'kondisi'       => $validated['kondisi'],
+            'deskripsi'     => $validated['deskripsi'],
             'lokasi_kampus' => $validated['lokasi_kampus'],
-            'image' => '', // Nanti diupdate pakai foto pertama
+            'image'         => '',
         ]);
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $index => $file) {
                 $path = $file->store('products', 'public');
                 $fullPath = '/storage/' . $path;
-                $product->images()->create([
-                    'path' => $fullPath
-                ]);
+                $product->images()->create(['path' => $fullPath]);
                 if ($index === 0) {
                     $product->update(['image' => $fullPath]);
                 }
@@ -57,60 +132,23 @@ class ProductController extends Controller
         return redirect()->route('product.index')->with('message', 'Barang berhasil tayang!');
     }
 
-    // PROSES TAMPIL DETAIL (SHOW)
-    public function show($id)
+    /**
+     * Map produk model ke props frontend.
+     */
+    protected function mapProductToProps(Product $product): array
     {
-        // Ambil data produk beserta data penjualnya
-        $product = Product::with('user')->findOrFail($id);
-
-        return Inertia::render('Product/Show', [
-            'product' => [
-                'id' => $product->id,
-                // MAPPING PENTING:
-                // Frontend butuh 'name', Database punya 'nama_barang'
-                'name' => $product->nama_barang,
-                'price' => $product->harga,
-                'category' => $product->kategori,
-                'condition' => $product->kondisi,
-                'desc' => $product->deskripsi,
-                'loc' => $product->lokasi_kampus,
-                'img' => $product->image, // Image tetap
-                'posted_at' => $product->created_at->diffForHumans(),
-                'seller' => [
-                    'name' => $product->user->name,
-                    // Pastikan kolom HP di tabel users sesuai (misal: whatsapp_number)
-                    'phone' => $product->user->whatsapp_number ?? '628123456789',
-                    'avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($product->user->name),
-                ]
-            ]
-        ]);
-    }
-
-    // HALAMAN EXPLORE (INDEX)
-    public function index(Request $request)
-    {
-        // 1. Mulai query dasar (hanya ambil produk aktif)
-        $query = Product::with(['images', 'category'])->where('status', 'active');
-
-        // 2. LOGIKA SEARCH: Jika ada parameter 'search' dari Navbar
-        if ($request->has('search') && $request->search != '') {
-            $searchTerm = $request->search;
-
-            // Filter berdasarkan nama barang ATAU deskripsi
-            $query->where(function ($q) use ($searchTerm) {
-                $q->where('nama_barang', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('deskripsi', 'like', '%' . $searchTerm . '%');
-            });
-        }
-
-        // 3. Ambil data dengan Pagination (misal 12 per halaman)
-        $products = $query->latest()->paginate(12)->withQueryString();
-
-        // 4. Kirim ke halaman React
-        return Inertia::render('Product/Index', [
-            'products' => $products,
-            // Kirim balik parameter pencarian biar bisa ditaruh di input search halamannya
-            'filters' => $request->only(['search'])
-        ]);
+        return [
+            'id'            => $product->id,
+            'name'          => $product->nama_barang,
+            'price'         => $product->harga,
+            'category'      => $product->category->nama_kategori ?? '',
+            'category_id'   => $product->category_id,
+            'location_uni'  => $product->lokasi_kampus,
+            'img'           => $product->image,
+            'seller_name'   => $product->user->name,
+            'seller_avatar' => $product->user->avatar
+                ?? 'https://ui-avatars.com/api/?name=' . urlencode($product->user->name) . '&background=43552c&color=fff',
+            'posted_at'     => $product->created_at->diffForHumans(),
+        ];
     }
 }

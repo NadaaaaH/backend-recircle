@@ -10,13 +10,12 @@ return new class extends Migration {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
 
-            // Relasi ke User (Penjual)
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('category_id')->constrained()->cascadeOnDelete();
 
             // Data Barang (Bahasa Indonesia)
             $table->string('nama_barang');
             $table->bigInteger('harga');
-            $table->string('kategori');        // Disimpan sebagai string (Elektronik, dll)
             $table->string('kondisi');         // Baru / Bekas
             $table->text('deskripsi');
             $table->string('lokasi_kampus');

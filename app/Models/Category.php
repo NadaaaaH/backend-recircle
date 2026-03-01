@@ -10,13 +10,18 @@ class Category extends Model
     use HasFactory;
 
     protected $fillable = [
-        'nama_kategori', // Indo
+        'nama_kategori',
         'slug',
-        'ikon',          // Indo (Dulu: icon)
+        'ikon',
     ];
 
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function userViews()
+    {
+        return $this->hasMany(UserCategoryView::class);
     }
 }

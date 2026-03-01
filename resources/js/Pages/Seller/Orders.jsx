@@ -1,203 +1,99 @@
-import React, { useState } from "react";
-import { Head, Link } from "@inertiajs/react";
-import SellerLayout from "@/Layouts/SellerLayout";
-import {
-    Search,
-    Clock,
-    CheckCircle2,
-    Truck,
-    PackageCheck,
-    MoreHorizontal,
-    Filter,
-} from "lucide-react";
+import React from 'react';
+import { Head, router, usePage } from '@inertiajs/react';
+import MainLayout from '@/Layouts/MainLayout';
+import { Truck, ArrowLeft, Package } from 'lucide-react';
 
-export default function Orders({ auth }) {
-    const [activeTab, setActiveTab] = useState("Semua");
-    const [search, setSearch] = useState("");
+export default function SellerOrders({ orders }) {
+    const { flash } = usePage().props;
+    const formatPrice = (price) => 'Rp ' + Number(price).toLocaleString('id-ID');
 
-    const tabs = ["Semua", "Menunggu Konfirmasi", "Sedang Dikirim", "Selesai"];
+    const statusColors = {
+        pending: 'bg-amber-100 text-amber-700',
+        dibayar: 'bg-blue-100 text-blue-700',
+        dikirim: 'bg-purple-100 text-purple-700',
+        selesai: 'bg-green-100 text-green-700',
+        dibatalkan: 'bg-red-100 text-red-700',
+    };
 
-    // Dummy Data Pesanan
-    const orders = [
-        {
-            id: "#ORD-092",
-            buyer: "Nadia H.",
-            product: "Meja Belajar Kayu",
-            price: "Rp 350.000",
-            date: "24 Feb 2026",
-            status: "Menunggu Konfirmasi",
-        },
-        {
-            id: "#ORD-091",
-            buyer: "Budi S.",
-            product: "Buku Kalkulus",
-            price: "Rp 120.000",
-            date: "23 Feb 2026",
-            status: "Sedang Dikirim",
-        },
-        {
-            id: "#ORD-089",
-            buyer: "Siti A.",
-            product: "Lampu Tidur",
-            price: "Rp 85.000",
-            date: "20 Feb 2026",
-            status: "Selesai",
-        },
-    ];
+    const statusLabels = {
+        pending: 'Menunggu Bayar',
+        dibayar: 'Dibayar',
+        dikirim: 'Dikirim',
+        selesai: 'Selesai',
+        dibatalkan: 'Dibatalkan',
+    };
 
-    // Logika Filter
-    const filteredOrders = orders.filter((order) => {
-        const matchTab = activeTab === "Semua" || order.status === activeTab;
-        const matchSearch =
-            order.id.toLowerCase().includes(search.toLowerCase()) ||
-            order.product.toLowerCase().includes(search.toLowerCase());
-        return matchTab && matchSearch;
-    });
-
-    // Helper Fungsi untuk Status Badge
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case "Menunggu Konfirmasi":
-                return (
-                    <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-600 px-3 py-1.5 rounded-xl text-xs font-bold">
-                        <Clock className="w-3.5 h-3.5" /> Menunggu
-                    </span>
-                );
-            case "Sedang Dikirim":
-                return (
-                    <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-1.5 rounded-xl text-xs font-bold">
-                        <Truck className="w-3.5 h-3.5" /> Dikirim
-                    </span>
-                );
-            case "Selesai":
-                return (
-                    <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-xl text-xs font-bold">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Selesai
-                    </span>
-                );
-            default:
-                return null;
+    const handleShip = (orderId) => {
+        if (confirm('Tandai barang sudah dikirim?')) {
+            router.post(`/seller/orders/${orderId}/ship`);
         }
     };
 
     return (
-        <SellerLayout user={auth.user}>
-            <Head title="Daftar Pesanan - ReCircle" />
+        <MainLayout>
+            <Head title="Pesanan Masuk" />
+            <div className="min-h-screen bg-secondary">
+                <div className="max-w-4xl mx-auto px-4 py-8 pt-28">
+                    <a href="/seller/dashboard" className="flex items-center gap-2 text-gray-500 hover:text-primary mb-6 transition-colors">
+                        <ArrowLeft className="w-4 h-4" />
+                        <span className="text-sm">Kembali ke Dashboard</span>
+                    </a>
 
-            <div className="max-w-7xl mx-auto space-y-8">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div>
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                            Daftar Pesanan
-                        </h1>
-                        <p className="text-slate-500 mt-1 text-sm font-medium">
-                            Kelola semua pesanan masuk dari pembeli.
-                        </p>
-                    </div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-8">Pesanan Masuk</h1>
 
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Cari No. Resi atau Produk..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-11 pr-4 py-3 bg-white border border-gray-100 shadow-sm rounded-2xl text-sm focus:ring-2 focus:ring-primary/20 w-full md:w-72 transition-all"
-                            />
+                    {flash?.success && (
+                        <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 mb-6 text-sm">{flash.success}</div>
+                    )}
+
+                    {orders.length === 0 ? (
+                        <div className="bg-white rounded-[2rem] p-10 text-center shadow-sm">
+                            <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-500">Belum ada pesanan masuk</p>
                         </div>
-                        <button className="p-3 bg-white border border-gray-100 shadow-sm rounded-2xl text-slate-400 hover:text-primary transition-all">
-                            <Filter className="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Sistem Tab Modern */}
-                <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-                    <div className="flex overflow-x-auto border-b border-gray-50 scrollbar-hide px-4 pt-4 gap-2">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`px-6 py-4 font-bold text-sm whitespace-nowrap transition-all border-b-2 -mb-[1px] ${
-                                    activeTab === tab
-                                        ? "text-primary border-primary"
-                                        : "text-slate-400 border-transparent hover:text-slate-600"
-                                }`}
-                            >
-                                {tab}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Tabel Pesanan yang Responsif */}
-                    <div className="overflow-x-auto p-4">
-                        <table className="w-full text-left text-sm whitespace-nowrap">
-                            <thead className="text-xs uppercase font-black tracking-wider text-slate-300">
-                                <tr>
-                                    <th className="px-6 py-4">Pesanan</th>
-                                    <th className="px-6 py-4">Pembeli</th>
-                                    <th className="px-6 py-4">Total Tagihan</th>
-                                    <th className="px-6 py-4">Tanggal</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4 text-center">
-                                        Aksi
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {filteredOrders.map((order, index) => (
-                                    <tr
-                                        key={index}
-                                        className="hover:bg-slate-50/50 transition-colors group"
-                                    >
-                                        <td className="px-6 py-5">
-                                            <p className="font-bold text-slate-900">
-                                                {order.id}
-                                            </p>
-                                            <p className="text-slate-500 font-medium mt-1 truncate max-w-[200px]">
-                                                {order.product}
-                                            </p>
-                                        </td>
-                                        <td className="px-6 py-5 font-bold text-slate-600">
-                                            {order.buyer}
-                                        </td>
-                                        <td className="px-6 py-5 font-black text-slate-900">
-                                            {order.price}
-                                        </td>
-                                        <td className="px-6 py-5 text-slate-500 font-medium">
-                                            {order.date}
-                                        </td>
-                                        <td className="px-6 py-5">
-                                            {getStatusBadge(order.status)}
-                                        </td>
-                                        <td className="px-6 py-5 text-center">
-                                            <button className="p-2 text-slate-300 hover:text-primary transition-colors bg-white rounded-xl shadow-sm border border-gray-50">
-                                                <MoreHorizontal className="w-5 h-5" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-
-                        {/* Tampilan jika data kosong */}
-                        {filteredOrders.length === 0 && (
-                            <div className="text-center py-20 px-6">
-                                <PackageCheck className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-                                <h3 className="font-black text-slate-900 text-lg">
-                                    Tidak ada pesanan ditemukan
-                                </h3>
-                                <p className="text-slate-500 text-sm mt-1">
-                                    Belum ada transaksi di kategori "{activeTab}
-                                    ".
-                                </p>
-                            </div>
-                        )}
-                    </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {orders.map((order) => (
+                                <div key={order.id} className="bg-white rounded-2xl p-5 shadow-sm">
+                                    <div className="flex items-start gap-4">
+                                        <img src={order.product.img} alt={order.product.name} className="w-16 h-16 rounded-xl object-cover" />
+                                        <div className="flex-1">
+                                            <div className="flex items-start justify-between">
+                                                <div>
+                                                    <p className="font-semibold text-gray-900">{order.product.name}</p>
+                                                    <p className="text-sm text-gray-500">Pembeli: {order.buyer.name}</p>
+                                                    <p className="text-xs text-gray-400 mt-1">{order.kode_pesanan}</p>
+                                                </div>
+                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
+                                                    {statusLabels[order.status]}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                                                <div className="flex items-center gap-4">
+                                                    <span className="font-bold text-primary">{formatPrice(order.total_harga)}</span>
+                                                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg">
+                                                        {order.metode_pengiriman === 'cod' ? 'COD' : 'Kirim Paket'}
+                                                    </span>
+                                                </div>
+                                                {order.status === 'dibayar' && (
+                                                    <button
+                                                        onClick={() => handleShip(order.id)}
+                                                        className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-hover transition-colors"
+                                                    >
+                                                        <Truck className="w-4 h-4" /> Kirim
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {order.alamat_pengiriman && (
+                                                <p className="text-sm text-gray-500 bg-gray-50 rounded-lg px-3 py-2 mt-3">📍 {order.alamat_pengiriman}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
-        </SellerLayout>
+        </MainLayout>
     );
 }

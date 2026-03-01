@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        // 1. TABEL USERS
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
@@ -18,6 +17,7 @@ return new class extends Migration {
             $table->string('avatar')->nullable();
             $table->boolean('is_verified')->default(false);
             $table->enum('role', ['admin', 'user'])->default('user');
+            $table->boolean('is_seller')->default(false);
             $table->string('nomor_wa')->nullable();
             $table->string('kampus')->nullable();
             $table->text('bio')->nullable();

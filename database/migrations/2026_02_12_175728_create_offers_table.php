@@ -13,7 +13,9 @@ return new class extends Migration {
             $table->foreignId('product_id')->constrained()->cascadeOnDelete(); // Barang
             $table->bigInteger('harga_tawar');
             $table->text('pesan')->nullable();
-            $table->enum('status', ['pending', 'accepted', 'rejected'])->default('pending');
+            $table->enum('status', ['pending', 'accepted', 'rejected', 'cancelled'])->default('pending');
+            $table->bigInteger('harga_deal')->nullable();
+            $table->timestamp('deal_expired_at')->nullable();
 
             $table->timestamps();
         });

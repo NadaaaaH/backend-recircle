@@ -19,6 +19,7 @@ import {
     Store,
     Search,
     Home,
+    Users,
 } from 'lucide-react';
 
 const sellerNav = [
@@ -31,10 +32,11 @@ const sellerNav = [
 
 const adminNav = [
     { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-    { label: 'Verifikasi KTM', href: '/admin/verifications', icon: ShieldCheck },
-    { label: 'Keuangan', href: '/admin/finance', icon: DollarSign },
-    { label: 'Kategori', href: '/admin/categories', icon: Grid3X3 },
-    { label: 'Produk', href: '/admin/products', icon: ShoppingBag },
+    { label: 'Verifikasi Seller', href: '/admin/verifications', icon: ShieldCheck },
+    { label: 'Kelola Pengguna', href: '/admin/users', icon: Users },
+    { label: 'Semua Produk', href: '/admin/products', icon: ShoppingBag },
+    { label: 'Monitoring Tawaran', href: '/admin/offers', icon: MessageSquare },
+    { label: 'Data Transaksi', href: '/admin/transactions', icon: ShoppingBag },
 ];
 
 function SidebarLink({ item, isActive }) {
@@ -42,8 +44,8 @@ function SidebarLink({ item, isActive }) {
         <Link
             href={item.href}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-medium transition-all duration-200 group ${isActive
-                    ? 'bg-[#43552c]/10 text-[#43552c] font-bold'
-                    : 'text-gray-500 hover:bg-[#f7f9f7] hover:text-gray-800'
+                ? 'bg-[#43552c]/10 text-[#43552c] font-bold'
+                : 'text-gray-500 hover:bg-[#f7f9f7] hover:text-gray-800'
                 }`}
         >
             <item.icon

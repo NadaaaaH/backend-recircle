@@ -42,6 +42,7 @@ class AdminVerificationController extends Controller
      */
     public function approve(SellerVerification $verification)
     {
+        
         $this->verificationService->approveVerification($verification);
         return back()->with('success', "User {$verification->user->name} disetujui sebagai penjual.");
     }

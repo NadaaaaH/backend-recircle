@@ -8,6 +8,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\SellerDashboardController;
 use App\Http\Controllers\SellerVerificationController;
 use App\Http\Controllers\AdminVerificationController;
+use App\Http\Controllers\AdminDashboardController;
 use App\Services\RecommendationService;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -18,22 +19,22 @@ Route::get('/', function (RecommendationService $recommendationService) {
     $user = auth()->user();
     $recommendations = $recommendationService->getRecommendations($user);
 
-    $categories = \App\Models\Category::withCount(['products' => fn ($q) => $q->where('status', 'active')])->get();
+    $categories = \App\Models\Category::withCount(['products' => fn($q) => $q->where('status', 'active')])->get();
 
     return Inertia::render('Home', [
-        'recommendations' => $recommendations->map(fn ($p) => [
-            'id'    => $p->id,
-            'name'  => $p->nama_barang,
+        'recommendations' => $recommendations->map(fn($p) => [
+            'id' => $p->id,
+            'name' => $p->nama_barang,
             'price' => $p->harga,
-            'loc'   => $p->lokasi_kampus,
-            'img'   => $p->image,
-            'tag'   => null,
+            'loc' => $p->lokasi_kampus,
+            'img' => $p->image,
+            'tag' => null,
             'seller' => $p->user->name,
         ]),
-        'categories' => $categories->map(fn ($c) => [
-            'id'    => $c->id,
-            'name'  => $c->nama_kategori,
-            'slug'  => $c->slug,
+        'categories' => $categories->map(fn($c) => [
+            'id' => $c->id,
+            'name' => $c->nama_kategori,
+            'slug' => $c->slug,
             'count' => $c->products_count . '+',
         ]),
     ]);
@@ -89,6 +90,13 @@ Route::middleware('auth')->group(function () {
 
     // Admin Routes
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/users', [AdminDashboardController::class, 'users'])->name('users.index');
+        Route::post('/users/{user}/toggle-status', [AdminDashboardController::class, 'toggleUserStatus'])->name('users.toggle-status');
+        Route::get('/products', [AdminDashboardController::class, 'products'])->name('products.index');
+        Route::post('/products/{product}/status', [AdminDashboardController::class, 'updateProductStatus'])->name('products.update-status');
+        Route::get('/offers', [AdminDashboardController::class, 'offers'])->name('offers.index');
+        Route::get('/transactions', [AdminDashboardController::class, 'transactions'])->name('transactions.index');
         Route::get('/verifications', [AdminVerificationController::class, 'index'])->name('verifications.index');
         Route::post('/verifications/{verification}/approve', [AdminVerificationController::class, 'approve'])->name('verifications.approve');
         Route::post('/verifications/{verification}/reject', [AdminVerificationController::class, 'reject'])->name('verifications.reject');
@@ -98,7 +106,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         $user = auth()->user();
         if ($user->isAdmin()) {
-            return redirect()->route('admin.verifications.index');
+            return redirect()->route('admin.dashboard');
         }
         if ($user->isSeller()) {
             return redirect()->route('seller.dashboard');

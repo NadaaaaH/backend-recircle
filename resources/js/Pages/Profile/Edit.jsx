@@ -138,11 +138,10 @@ export default function Edit({ auth, mustVerifyEmail, status, orders, stats }) {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                                activeTab === tab.id
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === tab.id
                                     ? "bg-secondary text-primary shadow-sm"
                                     : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                            }`}
+                                }`}
                         >
                             <tab.icon className="w-4 h-4" /> {tab.label}
                         </button>
@@ -271,7 +270,7 @@ export default function Edit({ auth, mustVerifyEmail, status, orders, stats }) {
                                 Edit Profil
                             </h4>
                             <p className="text-xs text-gray-500 mt-1">
-                                Nama, Email, Avatar, Bio
+                                Nama, Email, Foto Profil, Bio
                             </p>
                         </div>
 

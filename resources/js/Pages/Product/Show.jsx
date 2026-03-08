@@ -14,37 +14,11 @@ import {
 } from "lucide-react";
 import NegoModal from "@/Components/NegoModal";
 
-export default function Show() {
-    // --- DUMMY DATA (Backend Replacement Later) ---
-    const product = {
-        id: 1,
-        name: "Sony WH-1000XM4 Noise Cancelling",
-        price: 2100000,
-        original_price: 4500000,
-        description:
-            "Pemakaian 6 bulan, kondisi baterai masih awet banget. Jarang dipake karena sibuk skripsi. Kelengkapan fullset (box, kabel, pouch). Minus pemakaian wajar di earpad dikit, tapi ga ngaruh ke suara.",
-        condition: "Bekas Bagus", // Used Good
-        category: "Elektronik",
-        location: "Dramaga, Bogor",
-        posted_at: "2 hari lalu",
-        images: [
-            "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?q=80&w=1000&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=800&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1583394838336-acd977736f90?q=80&w=800&auto=format&fit=crop",
-        ],
-        seller: {
-            name: "Dian Sastro",
-            university: "Institut Pertanian Bogor",
-            major: "Ilmu Komputer 2023",
-            is_verified: true,
-            avatar: "https://i.pravatar.cc/150?u=dian",
-            joined: "Jan 2024",
-        },
-    };
+export default function Show({ product }) {
 
     // State for Image Gallery Interaction
     const [activeImage, setActiveImage] = useState(
-        product.images ? product.images[0] : "",
+        product.images?.length > 0 ? product.images[0] : product.img,
     );
     const [isWishlisted, setIsWishlisted] = useState(false);
     const [isNegoOpen, setIsNegoOpen] = useState(false);
@@ -114,7 +88,7 @@ export default function Show() {
                                     </span>
                                     <span className="flex items-center gap-1 text-gray-400 text-xs font-medium">
                                         <MapPin className="w-3 h-3" />{" "}
-                                        {product.location}
+                                        {product.loc}
                                     </span>
                                     <span className="flex items-center gap-1 text-gray-400 text-xs font-medium">
                                         <Calendar className="w-3 h-3" />{" "}
@@ -131,7 +105,7 @@ export default function Show() {
                                         Rp{" "}
                                         {product.price.toLocaleString("id-ID")}
                                     </span>
-                                    {product.original_price > product.price && (
+                                    {product.original_price && product.original_price > product.price && (
                                         <span className="text-lg text-gray-400 line-through font-medium">
                                             Rp{" "}
                                             {product.original_price.toLocaleString(
@@ -167,10 +141,7 @@ export default function Show() {
                                             {product.seller.name}
                                         </h3>
                                         <p className="text-xs text-gray-500">
-                                            {product.seller.major}
-                                        </p>
-                                        <p className="text-[10px] text-gray-400 mt-0.5">
-                                            {product.seller.university}
+                                            {product.seller.kampus}
                                         </p>
                                     </div>
                                 </div>
@@ -188,7 +159,7 @@ export default function Show() {
                                     </span>
                                 </h3>
                                 <div className="prose prose-sm prose-gray text-gray-500 leading-relaxed">
-                                    <p>{product.description}</p>
+                                    <p>{product.desc}</p>
                                 </div>
                             </div>
 
@@ -245,7 +216,7 @@ export default function Show() {
             {/* --- MOBILE STICKY BOTTOM BAR --- */}
             <div className="lg:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-4 z-40 safe-area-pb">
                 <div className="flex gap-3 max-w-7xl mx-auto">
-                    <button className="flex-1 px-4 py-3 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors text-sm">
+                    <button onClick={() => setIsNegoOpen(true)} className="flex-1 px-4 py-3 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors text-sm">
                         Nego Harga
                     </button>
                     <button className="flex-[2] bg-primary text-white font-bold py-3 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 text-sm">

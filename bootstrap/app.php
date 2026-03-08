@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        $middleware->validateCsrfTokens(except: [
+            'api/midtrans/webhook',
+        ]);
+
         $middleware->alias([
             'seller' => \App\Http\Middleware\EnsureSeller::class,
             'admin'  => \App\Http\Middleware\EnsureAdmin::class,

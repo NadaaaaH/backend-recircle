@@ -15,7 +15,7 @@ export default function NegoModal({ isOpen, onClose, product }) {
 
     // Hitung persentase turun harga untuk visual feedback
     const originalPrice = product.price;
-    const inputPrice = parseInt(data.offer_price.replace(/\D/g, "")) || 0;
+    const inputPrice = parseInt(data.offer_price.toString().replace(/\D/g, "")) || 0;
     const discountPercent =
         inputPrice > 0
             ? Math.round(((originalPrice - inputPrice) / originalPrice) * 100)
@@ -34,7 +34,7 @@ export default function NegoModal({ isOpen, onClose, product }) {
 
     const handlePriceChange = (e) => {
         // Format hanya angka
-        const value = e.target.value.replace(/\D/g, "");
+        const value = e.target.value.toString().replace(/\D/g, "");
         setData("offer_price", value);
     };
 
@@ -84,7 +84,7 @@ export default function NegoModal({ isOpen, onClose, product }) {
                             Ajukan Penawaran
                         </h3>
                         <p className="text-sm text-gray-400">
-                            Barang: {product.name}
+                            Barang: {product.name || product.nama_barang}
                         </p>
                     </div>
                     <button

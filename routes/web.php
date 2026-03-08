@@ -79,6 +79,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/orders', [SellerDashboardController::class, 'orders'])->name('orders');
         Route::post('/orders/{order}/ship', [SellerDashboardController::class, 'shipOrder'])->name('orders.ship');
         Route::get('/balance', [SellerDashboardController::class, 'balance'])->name('balance');
+        
+        // Product Management
+        Route::get('/products', [SellerDashboardController::class, 'products'])->name('products.index');
+        Route::get('/products/{product}/edit', [SellerDashboardController::class, 'editProduct'])->name('products.edit');
+        Route::put('/products/{product}', [SellerDashboardController::class, 'updateProduct'])->name('products.update');
+        Route::delete('/products/{product}', [SellerDashboardController::class, 'destroyProduct'])->name('products.destroy');
     });
 
     // Admin Routes

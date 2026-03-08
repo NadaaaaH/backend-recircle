@@ -23,7 +23,7 @@ class AdminVerificationController extends Controller
                 'id'           => $v->id,
                 'nama_kampus'  => $v->nama_kampus,
                 'nim'          => $v->nim,
-                'foto_ktm'     => $v->foto_ktm,
+                'foto_ktm'     => asset('storage/' . $v->foto_ktm),
                 'status'       => $v->status,
                 'created_at'   => $v->created_at->diffForHumans(),
                 'user' => [

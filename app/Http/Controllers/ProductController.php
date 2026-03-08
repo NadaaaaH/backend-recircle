@@ -129,7 +129,7 @@ class ProductController extends Controller
             }
         }
 
-        return redirect()->route('product.index')->with('message', 'Barang berhasil tayang!');
+        return redirect()->route('seller.products.index')->with('message', 'Barang berhasil tayang!');
     }
 
     /**

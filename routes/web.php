@@ -9,6 +9,7 @@ use App\Http\Controllers\SellerDashboardController;
 use App\Http\Controllers\SellerVerificationController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\ChatController;
 use App\Services\RecommendationService;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -72,6 +73,11 @@ Route::middleware('auth')->group(function () {
     // Seller Verification
     Route::get('/seller/verification', [SellerVerificationController::class, 'create'])->name('seller.verification.create');
     Route::post('/seller/verification', [SellerVerificationController::class, 'store'])->name('seller.verification.store');
+
+    // Chat System
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+    Route::get('/chat/{user}', [ChatController::class, 'show'])->name('chat.show');
+    Route::post('/chat', [ChatController::class, 'store'])->name('chat.store');
 
     // Seller Dashboard (requires verified seller)
     Route::middleware('seller')->prefix('seller')->name('seller.')->group(function () {

@@ -66,7 +66,7 @@ class ChatController extends Controller
                     'id' => $productModel->id,
                     'name' => $productModel->nama_barang,
                     'price' => $productModel->harga,
-                    'img' => asset($productModel->image),
+                    'img' => $productModel->foto_barang_url,
                 ];
             }
         }
@@ -116,7 +116,7 @@ class ChatController extends Controller
                         'id' => $msg->product->id,
                         'name' => $msg->product->nama_barang,
                         'price' => $msg->product->harga,
-                        'img' => asset($msg->product->image),
+                        'img' => $msg->product->foto_barang_url,
                     ] : null,
                 ];
             });
@@ -166,7 +166,7 @@ class ChatController extends Controller
                     'id' => $message->product->id,
                     'name' => $message->product->nama_barang,
                     'price' => $message->product->harga,
-                    'img' => asset($message->product->image),
+                    'img' => $message->product->foto_barang_url,
                 ] : null,
             ]
         ]);

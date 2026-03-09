@@ -19,9 +19,9 @@ import NegoModal from "@/Components/NegoModal";
 
 export default function Show({ product }) {
 
-    // State for Image Gallery Interaction
+    // State for Image Gallery Interaction: Default to first URL from backend array
     const [activeImage, setActiveImage] = useState(
-        product.images?.length > 0 ? product.images[0] : product.img,
+        product.images?.length > 0 ? product.images[0] : product.img
     );
     const [isWishlisted, setIsWishlisted] = useState(false);
     const [isNegoOpen, setIsNegoOpen] = useState(false);
@@ -47,9 +47,10 @@ export default function Show({ product }) {
                         {/* Main Image */}
                         <div className="aspect-[4/3] w-full rounded-[2rem] overflow-hidden bg-gray-100 border border-gray-100 shadow-sm relative group">
                             <img
-                                src={activeImage}
+                                src={activeImage || 'https://placehold.co/800x600/eeeeee/999999?text=Image+Not+Found'}
                                 alt={product.name}
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x600/eeeeee/999999?text=Image+Not+Found'; }}
                             />
                             {/* Floating Action (Desktop) */}
                             <button
@@ -62,22 +63,25 @@ export default function Show({ product }) {
                             </button>
                         </div>
 
-                        {/* Thumbnails Grid */}
-                        <div className="grid grid-cols-3 gap-4">
-                            {product.images.map((img, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => setActiveImage(img)}
-                                    className={`aspect-square rounded-2xl overflow-hidden border-2 transition-all ${activeImage === img ? "border-primary opacity-100" : "border-transparent opacity-70 hover:opacity-100"}`}
-                                >
-                                    <img
-                                        src={img}
-                                        alt="Thumbnail"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </button>
-                            ))}
-                        </div>
+                        {/* Thumbnails Grid (Only show if more than 1 image) */}
+                        {product.images?.length > 1 && (
+                            <div className="grid grid-cols-3 gap-4">
+                                {product.images.map((img, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => setActiveImage(img)}
+                                        className={`aspect-square rounded-[2rem] overflow-hidden border-2 transition-all shadow-sm ${activeImage === img ? "border-primary opacity-100" : "border-transparent opacity-70 hover:opacity-100"}`}
+                                    >
+                                        <img
+                                            src={img || 'https://placehold.co/800x600/eeeeee/999999?text=Image+Not+Found'}
+                                            alt={`${product.name} ${idx + 1}`}
+                                            className="w-full h-full object-cover rounded-xl"
+                                            onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x600/eeeeee/999999?text=Image+Not+Found'; }}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* --- RIGHT COLUMN: DETAILS & ACTION --- */}

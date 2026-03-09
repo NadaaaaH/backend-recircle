@@ -17,6 +17,7 @@ export default function Create({ categories = [] }) {
     });
 
     const [previewUrls, setPreviewUrls] = useState([]);
+    const [isDragging, setIsDragging] = useState(false);
 
     const conditions = [
         'Baru',
@@ -44,6 +45,34 @@ export default function Create({ categories = [] }) {
 
         setData('images', updatedImages);
         setPreviewUrls(updatedPreviews);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+            if (files.length > 0) {
+                const newImages = [...data.images, ...files].slice(0, 5);
+                setData('images', newImages);
+
+                const newPreviews = newImages.map((file) => {
+                    // if it's already a URL string from backend (in edit mode), wait this is create mode so it's all File objects
+                    return URL.createObjectURL(file);
+                });
+                setPreviewUrls(newPreviews);
+            }
+        }
     };
 
     // ── Submit with forceFormData ──
@@ -107,8 +136,13 @@ export default function Create({ categories = [] }) {
                             ))}
 
                             {data.images.length < 5 && (
-                                <label className="aspect-square border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-[#43552c]/40 hover:bg-[#43552c]/5 transition-all">
-                                    <Upload className="w-5 h-5 text-gray-300 mb-1" />
+                                <label 
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                    className={`aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all ${isDragging ? 'border-[#43552c] bg-[#43552c]/10' : 'border-gray-200 hover:border-[#43552c]/40 hover:bg-[#43552c]/5'}`}
+                                >
+                                    <Upload className={`w-5 h-5 mb-1 ${isDragging ? 'text-[#43552c]' : 'text-gray-300'}`} />
                                     <span className="text-[11px] text-gray-400 font-medium">Tambah</span>
                                     <input
                                         type="file"

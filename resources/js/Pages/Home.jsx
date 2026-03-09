@@ -221,9 +221,13 @@ export default function Home({ recommendations = [], categories = [] }) {
                             >
                                 <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden bg-gray-100 mb-4 shadow-sm group-hover:shadow-xl transition-all duration-300">
                                     <img
-                                        src={product.img}
+                                        src={product.img || '/images/placeholder-product.png'}
                                         alt={product.name}
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = '/images/placeholder-product.png';
+                                        }}
                                     />
                                     {product.tag && (
                                         <div className="absolute top-4 left-4 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-primary shadow-sm border border-gray-100">

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -35,6 +37,20 @@ class User extends Authenticatable
         'is_verified' => 'boolean',
         'is_seller' => 'boolean',
     ];
+
+    protected $appends = ['avatar_url'];
+
+    protected function avatarUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if ($this->avatar) {
+                    return filter_var($this->avatar, FILTER_VALIDATE_URL) ? $this->avatar : asset('storage/' . ltrim(str_replace('public/', '', $this->avatar), '/'));
+                }
+                return asset('images/default-avatar.png');
+            }
+        );
+    }
 
     // ── Relasi ─────────────────────────────────────
 

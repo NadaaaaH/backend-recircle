@@ -33,7 +33,7 @@ class OrderController extends Controller
                 'product' => [
                     'id'    => $order->product->id,
                     'name'  => $order->product->nama_barang,
-                    'img'   => $order->product->image,
+                    'img'   => $order->product->foto_barang_url,
                     'seller_name' => $order->product->user->name,
                 ],
             ]);

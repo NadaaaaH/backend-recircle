@@ -65,7 +65,7 @@ class AdminDashboardController extends Controller
             'category' => $p->category->nama_kategori ?? 'Umum',
             'price' => $p->harga,
             'status' => $p->status ?? 'pending',
-            'image' => $p->image,
+            'image' => $p->foto_barang_url,
             'created_at' => $p->created_at->format('d M Y'),
         ]);
 

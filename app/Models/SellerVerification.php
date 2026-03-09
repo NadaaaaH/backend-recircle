@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Facades\Storage;
 
 class SellerVerification extends Model
 {
@@ -17,6 +19,20 @@ class SellerVerification extends Model
         'status',
         'catatan_admin',
     ];
+
+    protected $appends = ['foto_ktm_url'];
+
+    protected function fotoKtmUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if ($this->foto_ktm) {
+                    return filter_var($this->foto_ktm, FILTER_VALIDATE_URL) ? $this->foto_ktm : asset('storage/' . ltrim(str_replace('public/', '', $this->foto_ktm), '/'));
+                }
+                return asset('images/placeholder-ktm.png');
+            }
+        );
+    }
 
     // ── Relasi ─────────────────────────────────────
 

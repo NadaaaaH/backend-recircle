@@ -98,7 +98,12 @@ export default function SellerProducts({ products }) {
                     {filteredProducts.map(p => (
                         <div key={p.id} className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgb(0,0,0,0.05)] border border-gray-100/50 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all group flex flex-col">
                             <div className="aspect-[4/3] bg-gray-100 relative">
-                                <img src={p.img || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}`} alt={p.name} className="w-full h-full object-cover" />
+                                <img 
+                                    src={p.img || '/images/placeholder-product.png'} 
+                                    alt={p.name} 
+                                    className="w-full h-full object-cover" 
+                                    onError={(e) => { e.target.onerror = null; e.target.src = '/images/placeholder-product.png'; }}
+                                />
 
                                 <div className="absolute top-2 right-2">
                                     {p.status === 'active' && <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-md">Active</span>}
@@ -153,7 +158,12 @@ export default function SellerProducts({ products }) {
                                     <tr key={p.id} className={`hover:bg-gray-50 transition-colors ${idx !== filteredProducts.length - 1 ? 'border-b border-gray-50' : ''}`}>
                                         <td className="py-3 px-6">
                                             <div className="flex items-center gap-3">
-                                                <img src={p.img || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}`} alt="" className="w-12 h-12 rounded-xl object-cover bg-gray-100" />
+                                                <img 
+                                                    src={p.img || '/images/placeholder-product.png'} 
+                                                    alt="" 
+                                                    className="w-12 h-12 rounded-xl object-cover bg-gray-100" 
+                                                    onError={(e) => { e.target.onerror = null; e.target.src = '/images/placeholder-product.png'; }}
+                                                />
                                                 <div>
                                                     <p className="font-semibold text-gray-900 text-sm max-w-[200px] truncate">{p.name}</p>
                                                     <p className="text-xs text-gray-500 mt-0.5">{p.created_at}</p>

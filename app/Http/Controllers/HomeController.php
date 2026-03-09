@@ -55,8 +55,7 @@ class HomeController extends Controller
                     'name' => $product->nama_barang,
                     'price' => $product->harga,
                     'loc' => $product->lokasi_kampus,
-                    // Ambil foto pertama, jika tidak ada pakai placeholder
-                    'img' => $product->images->first() ? $product->images->first()->path : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=800&auto=format&fit=crop',
+                    'img' => $product->foto_barang_url,
                     'tag' => $product->kondisi,
                     'seller' => $product->user->name,
                 ];

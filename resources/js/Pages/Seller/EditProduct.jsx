@@ -23,6 +23,7 @@ export default function EditProduct({ product, categories = [] }) {
 
     // ── 2. IMAGE PREVIEW LOGIC ──
     const [previewUrl, setPreviewUrl] = useState(product?.image || null);
+    const [isDragging, setIsDragging] = useState(false);
 
     const conditions = [
         'Baru',
@@ -48,6 +49,28 @@ export default function EditProduct({ product, categories = [] }) {
     const removeImage = () => {
         setData('image', null);
         setPreviewUrl(product?.image || null); // Revert to initial product cover
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                setData('image', file);
+                setPreviewUrl(URL.createObjectURL(file));
+            }
+        }
     };
 
     // ── 3. FORM SUBMISSION ──
@@ -117,7 +140,12 @@ export default function EditProduct({ product, categories = [] }) {
 
                         <div className="flex flex-col sm:flex-row gap-6 items-start">
                             {/* Image Preview Container */}
-                            <div className="w-full sm:w-48 aspect-square rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 bg-[#f7f9f7] flex-shrink-0 relative group">
+                            <div 
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                className={`w-full sm:w-48 aspect-square rounded-2xl overflow-hidden border-2 border-dashed bg-[#f7f9f7] flex-shrink-0 relative group transition-all ${isDragging ? 'border-[#43552c] bg-[#43552c]/5' : 'border-gray-200'}`}
+                            >
                                 {previewUrl ? (
                                     <>
                                         <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
@@ -134,8 +162,10 @@ export default function EditProduct({ product, categories = [] }) {
                                     </>
                                 ) : (
                                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
-                                        <ImageIcon className="w-8 h-8 mb-2 opacity-30" />
-                                        <span className="text-xs font-bold text-gray-400">Belum ada foto</span>
+                                        <ImageIcon className={`w-8 h-8 mb-2 ${isDragging ? 'text-[#43552c]' : 'opacity-30'}`} />
+                                        <span className={`text-xs font-bold ${isDragging ? 'text-[#43552c]' : 'text-gray-400'}`}>
+                                            {isDragging ? 'Drop foto di sini' : 'Belum ada foto'}
+                                        </span>
                                     </div>
                                 )}
                             </div>

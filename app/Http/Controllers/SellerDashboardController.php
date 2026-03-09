@@ -61,7 +61,7 @@ class SellerDashboardController extends Controller
                 'created_at'        => $order->created_at->diffForHumans(),
                 'buyer_name'        => $order->user->name,
                 'product_name'      => $order->product->nama_barang,
-                'product_img'       => $order->product->image,
+                'product_img'       => $order->product->foto_barang_url,
             ]);
 
         return Inertia::render('Seller/Dashboard', [
@@ -107,7 +107,7 @@ class SellerDashboardController extends Controller
                     'id'    => $offer->product->id,
                     'name'  => $offer->product->nama_barang,
                     'price' => $offer->product->harga,
-                    'img'   => $offer->product->image,
+                    'img'   => $offer->product->foto_barang_url,
                 ],
             ]);
 
@@ -140,7 +140,7 @@ class SellerDashboardController extends Controller
                 ],
                 'product' => [
                     'name' => $order->product->nama_barang,
-                    'img'  => $order->product->image,
+                    'img'  => $order->product->foto_barang_url,
                 ],
             ]);
 
@@ -213,7 +213,7 @@ class SellerDashboardController extends Controller
                 'price'         => $p->harga,
                 'category'      => $p->category->nama_kategori ?? '-',
                 'status'        => $p->status,
-                'img'           => $p->image,
+                'img'           => $p->foto_barang_url,
                 'created_at'    => $p->created_at->diffForHumans(),
                 'active_orders' => $p->orders->count(),
             ]);

@@ -90,7 +90,7 @@ class OfferController extends Controller
                     'id'    => $offer->product->id,
                     'name'  => $offer->product->nama_barang,
                     'price' => $offer->product->harga,
-                    'img'   => $offer->product->image,
+                    'img'   => $offer->product->foto_barang_url,
                     'seller_name' => $offer->product->user->name,
                 ],
             ]);

@@ -86,6 +86,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::get('/users', [AdminDashboardController::class, 'users'])->name('users.index');
+        Route::post('/users', [AdminDashboardController::class, 'storeUser'])->name('users.store');
+        Route::patch('/users/{user}', [AdminDashboardController::class, 'updateUser'])->name('users.update');
+        Route::delete('/users/{user}', [AdminDashboardController::class, 'destroyUser'])->name('users.destroy');
         Route::post('/users/{user}/toggle-status', [AdminDashboardController::class, 'toggleUserStatus'])->name('users.toggle-status');
         Route::get('/products', [AdminDashboardController::class, 'products'])->name('products.index');
         Route::post('/products/{product}/status', [AdminDashboardController::class, 'updateProductStatus'])->name('products.update-status');

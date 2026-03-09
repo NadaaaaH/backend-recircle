@@ -26,7 +26,8 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
             icon: Users,
             color: 'bg-blue-500',
             bg: 'bg-blue-50',
-            textColor: 'text-blue-600'
+            textColor: 'text-blue-600',
+            href: '/admin/users'
         },
         {
             label: 'Total Produk',
@@ -34,7 +35,8 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
             icon: ShoppingBag,
             color: 'bg-[#43552c]',
             bg: 'bg-[#43552c]/10',
-            textColor: 'text-[#43552c]'
+            textColor: 'text-[#43552c]',
+            href: '/admin/products'
         },
         {
             label: 'Transaksi Berhasil',
@@ -42,7 +44,8 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
             icon: ShoppingCart,
             color: 'bg-[#d4a373]',
             bg: 'bg-[#d4a373]/10',
-            textColor: 'text-[#d4a373]'
+            textColor: 'text-[#d4a373]',
+            href: '/admin/transactions'
         },
         {
             label: 'Verifikasi Pending',
@@ -50,7 +53,8 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
             icon: ShieldCheck,
             color: 'bg-red-500',
             bg: 'bg-red-50',
-            textColor: 'text-red-600'
+            textColor: 'text-red-600',
+            href: '/admin/verifications'
         },
     ];
 
@@ -76,14 +80,17 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {statCards.map((stat, idx) => (
-                        <div key={idx} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 group hover:shadow-md transition-shadow">
+                        <div key={idx} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 group hover:shadow-md transition-shadow relative">
                             <div className="flex items-start justify-between">
                                 <div className={`w-12 h-12 rounded-2xl ${stat.bg} flex items-center justify-center`}>
                                     <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
                                 </div>
-                                <button className="text-gray-300 hover:text-[#43552c] transition-colors">
+                                <Link
+                                    href={stat.href}
+                                    className="text-gray-300 hover:text-[#43552c] transition-colors p-1"
+                                >
                                     <ArrowUpRight className="w-5 h-5" />
-                                </button>
+                                </Link>
                             </div>
                             <div className="mt-4">
                                 <h3 className="text-sm font-medium text-gray-500">{stat.label}</h3>
@@ -95,6 +102,8 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
                                     </span>
                                 </div>
                             </div>
+                            {/* Overlay link for the whole card */}
+                            <Link href={stat.href} className="absolute inset-0 rounded-[2rem]" aria-label={stat.label} />
                         </div>
                     ))}
                 </div>

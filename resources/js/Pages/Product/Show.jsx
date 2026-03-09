@@ -11,40 +11,17 @@ import {
     Check,
     ArrowLeft,
     Calendar,
+    ShoppingBag,
+    Tags,
+    MessageSquare
 } from "lucide-react";
 import NegoModal from "@/Components/NegoModal";
 
-export default function Show() {
-    // --- DUMMY DATA (Backend Replacement Later) ---
-    const product = {
-        id: 1,
-        name: "Sony WH-1000XM4 Noise Cancelling",
-        price: 2100000,
-        original_price: 4500000,
-        description:
-            "Pemakaian 6 bulan, kondisi baterai masih awet banget. Jarang dipake karena sibuk skripsi. Kelengkapan fullset (box, kabel, pouch). Minus pemakaian wajar di earpad dikit, tapi ga ngaruh ke suara.",
-        condition: "Bekas Bagus", // Used Good
-        category: "Elektronik",
-        location: "Dramaga, Bogor",
-        posted_at: "2 hari lalu",
-        images: [
-            "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?q=80&w=1000&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1546435770-a3e426bf472b?q=80&w=800&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1583394838336-acd977736f90?q=80&w=800&auto=format&fit=crop",
-        ],
-        seller: {
-            name: "Dian Sastro",
-            university: "Institut Pertanian Bogor",
-            major: "Ilmu Komputer 2023",
-            is_verified: true,
-            avatar: "https://i.pravatar.cc/150?u=dian",
-            joined: "Jan 2024",
-        },
-    };
+export default function Show({ product }) {
 
     // State for Image Gallery Interaction
     const [activeImage, setActiveImage] = useState(
-        product.images ? product.images[0] : "",
+        product.images?.length > 0 ? product.images[0] : product.img,
     );
     const [isWishlisted, setIsWishlisted] = useState(false);
     const [isNegoOpen, setIsNegoOpen] = useState(false);
@@ -114,7 +91,7 @@ export default function Show() {
                                     </span>
                                     <span className="flex items-center gap-1 text-gray-400 text-xs font-medium">
                                         <MapPin className="w-3 h-3" />{" "}
-                                        {product.location}
+                                        {product.loc}
                                     </span>
                                     <span className="flex items-center gap-1 text-gray-400 text-xs font-medium">
                                         <Calendar className="w-3 h-3" />{" "}
@@ -131,7 +108,7 @@ export default function Show() {
                                         Rp{" "}
                                         {product.price.toLocaleString("id-ID")}
                                     </span>
-                                    {product.original_price > product.price && (
+                                    {product.original_price && product.original_price > product.price && (
                                         <span className="text-lg text-gray-400 line-through font-medium">
                                             Rp{" "}
                                             {product.original_price.toLocaleString(
@@ -167,10 +144,7 @@ export default function Show() {
                                             {product.seller.name}
                                         </h3>
                                         <p className="text-xs text-gray-500">
-                                            {product.seller.major}
-                                        </p>
-                                        <p className="text-[10px] text-gray-400 mt-0.5">
-                                            {product.seller.university}
+                                            {product.seller.kampus}
                                         </p>
                                     </div>
                                 </div>
@@ -188,7 +162,7 @@ export default function Show() {
                                     </span>
                                 </h3>
                                 <div className="prose prose-sm prose-gray text-gray-500 leading-relaxed">
-                                    <p>{product.description}</p>
+                                    <p>{product.desc}</p>
                                 </div>
                             </div>
 
@@ -225,17 +199,27 @@ export default function Show() {
                             </div>
 
                             {/* Desktop Actions */}
-                            <div className="hidden lg:flex gap-4 pt-4">
-                                <button
-                                    onClick={() => setIsNegoOpen(true)} // TRIGGER MODAL
-                                    className="flex-1 bg-white border-2 border-primary text-primary font-bold py-4 rounded-full hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2"
+                            <div className="hidden lg:flex flex-col gap-3 pt-4">
+                                <Link 
+                                    href={`/checkout/${product.id}`}
+                                    className="w-full bg-[#43552c] text-white font-bold py-4 rounded-full shadow-lg shadow-[#43552c]/20 hover:shadow-xl hover:-translate-y-1 hover:scale-[0.98] active:scale-95 transition-all flex items-center justify-center gap-2"
                                 >
-                                    Nego Harga
-                                </button>
-                                <button className="flex-[2] bg-primary text-white font-bold py-4 rounded-full shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2">
-                                    <MessageCircle className="w-5 h-5" /> Beli
-                                    Langsung
-                                </button>
+                                    <ShoppingBag className="w-5 h-5" /> Beli Langsung
+                                </Link>
+                                <div className="grid grid-cols-2 gap-3 w-full">
+                                    <button
+                                        onClick={() => setIsNegoOpen(true)}
+                                        className="w-full bg-[#d4a373] text-white font-bold py-3.5 rounded-full shadow-md shadow-[#d4a373]/20 hover:shadow-lg hover:-translate-y-0.5 hover:scale-[0.98] active:scale-95 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Tags className="w-5 h-5" /> Nego Harga
+                                    </button>
+                                    <Link 
+                                        href={`/chat?user_id=${product.seller.id}&product_id=${product.id}`}
+                                        className="w-full bg-transparent border-2 border-[#43552c] text-[#43552c] font-bold py-3.5 rounded-full hover:bg-[#43552c]/5 hover:scale-[0.98] active:scale-95 transition-all flex items-center justify-center gap-2 shadow-sm"
+                                    >
+                                        <MessageSquare className="w-5 h-5" /> Chat Penjual
+                                    </Link>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -243,14 +227,26 @@ export default function Show() {
             </section>
 
             {/* --- MOBILE STICKY BOTTOM BAR --- */}
-            <div className="lg:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-4 z-40 safe-area-pb">
-                <div className="flex gap-3 max-w-7xl mx-auto">
-                    <button className="flex-1 px-4 py-3 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors text-sm">
-                        Nego Harga
+            <div className="lg:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-4 z-40 safe-area-pb shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                <div className="flex flex-col gap-3 max-w-7xl mx-auto">
+                    <Link 
+                        href={`/checkout/${product.id}`}
+                        className="w-full bg-[#43552c] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#43552c]/20 hover:scale-[0.98] active:scale-95 transition-all flex items-center justify-center gap-2 text-sm"
+                    >
+                        <ShoppingBag className="w-5 h-5" /> Beli Langsung
+                    </Link>
+                    <button 
+                        onClick={() => setIsNegoOpen(true)}
+                        className="w-full bg-[#d4a373] text-white font-bold py-3.5 rounded-xl shadow-md shadow-[#d4a373]/20 hover:scale-[0.98] active:scale-95 transition-all flex items-center justify-center gap-2 text-sm"
+                    >
+                        <Tags className="w-5 h-5" /> Nego Harga
                     </button>
-                    <button className="flex-[2] bg-primary text-white font-bold py-3 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 text-sm">
-                        <MessageCircle className="w-4 h-4" /> Chat WhatsApp
-                    </button>
+                    <Link 
+                        href={`/chat?user_id=${product.seller.id}&product_id=${product.id}`}
+                        className="w-full bg-transparent border-2 border-[#43552c] text-[#43552c] font-bold py-3.5 rounded-xl hover:bg-[#43552c]/5 hover:scale-[0.98] active:scale-95 transition-all text-sm flex items-center justify-center gap-2"
+                    >
+                        <MessageSquare className="w-5 h-5" /> Chat Penjual
+                    </Link>
                 </div>
             </div>
             <NegoModal

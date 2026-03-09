@@ -60,8 +60,8 @@ class ProductController extends Controller
                 'condition'      => $product->kondisi,
                 'desc'           => $product->deskripsi,
                 'loc'            => $product->lokasi_kampus,
-                'img'            => $product->image,
-                'images'         => $product->images->pluck('path')->toArray(),
+                'img'            => asset($product->image),
+                'images'         => $product->images->map(fn($img) => asset($img->path))->toArray(),
                 'status'         => $product->status,
                 'posted_at'      => $product->created_at->diffForHumans(),
                 'seller' => [
@@ -129,7 +129,7 @@ class ProductController extends Controller
             }
         }
 
-        return redirect()->route('product.index')->with('message', 'Barang berhasil tayang!');
+        return redirect()->route('seller.products.index')->with('message', 'Barang berhasil tayang!');
     }
 
     /**
@@ -144,7 +144,7 @@ class ProductController extends Controller
             'category'      => $product->category->nama_kategori ?? '',
             'category_id'   => $product->category_id,
             'location_uni'  => $product->lokasi_kampus,
-            'img'           => $product->image,
+            'img'           => asset($product->image),
             'seller_name'   => $product->user->name,
             'seller_avatar' => $product->user->avatar
                 ?? 'https://ui-avatars.com/api/?name=' . urlencode($product->user->name) . '&background=43552c&color=fff',

@@ -12,11 +12,11 @@ class MidtransPaymentService implements PaymentGatewayInterface
 {
     public function __construct()
     {
-        Config::$serverKey    = config('services.midtrans.server_key');
-        Config::$clientKey    = config('services.midtrans.client_key');
-        Config::$isProduction = config('services.midtrans.is_production');
-        Config::$isSanitized  = true;
-        Config::$is3ds        = true;
+        $serverKey    = env('MIDTRANS_SERVER_KEY');
+        $clientKey    = env('MIDTRANS_CLIENT_KEY');
+        $isProduction = env('MIDTRANS_IS_PRODUCTION');
+        $isSanitized  = true;
+        $is3ds        = true;
     }
 
     /**
@@ -24,9 +24,11 @@ class MidtransPaymentService implements PaymentGatewayInterface
      */
     public function createTransaction(Order $order): array
     {
+        $orderIdUnique = $order->kode_pesanan . '-' . time();
+
         $params = [
             'transaction_details' => [
-                'order_id'     => $order->kode_pesanan,
+                'order_id'     => $orderIdUnique,
                 'gross_amount' => $order->total_harga,
             ],
             'customer_details' => [
@@ -44,12 +46,18 @@ class MidtransPaymentService implements PaymentGatewayInterface
             ],
         ];
 
-        $snapToken = Snap::getSnapToken($params);
-
-        return [
-            'token'        => $snapToken,
-            'redirect_url' => "https://app.sandbox.midtrans.com/snap/v2/vtweb/{$snapToken}",
-        ];
+        try {
+            $snapToken = Snap::getSnapToken($params);
+            
+            return [
+                'token'        => $snapToken,
+                'redirect_url' => "https://app.sandbox.midtrans.com/snap/v2/vtweb/{$snapToken}",
+                'midtrans_order_id' => $orderIdUnique,
+            ];
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Midtrans Snap Error: ' . $e->getMessage());
+            throw new \Exception('Failed to generate payment token.');
+        }
     }
 
     /**
@@ -58,7 +66,7 @@ class MidtransPaymentService implements PaymentGatewayInterface
     public function handleNotification(array $payload): void
     {
         // Verifikasi signature key
-        $serverKey    = config('services.midtrans.server_key');
+        $serverKey    = config('midtrans.server_key');
         $orderId      = $payload['order_id'];
         $statusCode   = $payload['status_code'];
         $grossAmount  = $payload['gross_amount'];

@@ -63,8 +63,8 @@ export default function SellerOffers({ offers }) {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-start justify-between gap-4">
                                                 <div>
-                                                    <p className="font-semibold text-gray-900">{offer.product.name}</p>
-                                                    <p className="text-sm text-gray-500 mt-0.5">dari {offer.buyer.name}</p>
+                                                    <p className="font-semibold text-gray-900">{offer.product?.name || 'Produk'}</p>
+                                                    <p className="text-sm text-gray-500 mt-0.5">dari {offer.buyer?.name || 'Pembeli'}</p>
                                                 </div>
                                                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[offer.status]}`}>
                                                     {statusLabels[offer.status]}
@@ -73,7 +73,7 @@ export default function SellerOffers({ offers }) {
                                             <div className="flex items-center gap-4 mt-3">
                                                 <div>
                                                     <p className="text-xs text-gray-400">Harga asli</p>
-                                                    <p className="text-sm font-medium text-gray-600">{formatPrice(offer.product.price)}</p>
+                                                    <p className="text-sm font-medium text-gray-600">{formatPrice(offer.product?.price || 0)}</p>
                                                 </div>
                                                 <div className="text-gray-300">→</div>
                                                 <div>

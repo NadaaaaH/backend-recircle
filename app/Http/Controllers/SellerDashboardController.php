@@ -195,4 +195,107 @@ class SellerDashboardController extends Controller
             'total_dilepas' => $totalDilepas,
         ]);
     }
+
+    /**
+     * Seller: Kelola Produk (List Produk Sendiri).
+     */
+    public function products(Request $request)
+    {
+        $products = $request->user()->products()
+            ->with(['category', 'orders' => function($q) {
+                $q->whereIn('status', ['pending', 'dibayar', 'dikirim']);
+            }])
+            ->latest()
+            ->get()
+            ->map(fn ($p) => [
+                'id'            => $p->id,
+                'name'          => $p->nama_barang,
+                'price'         => $p->harga,
+                'category'      => $p->category->nama_kategori ?? '-',
+                'status'        => $p->status,
+                'img'           => $p->image,
+                'created_at'    => $p->created_at->diffForHumans(),
+                'active_orders' => $p->orders->count(),
+            ]);
+
+        return Inertia::render('Seller/Products', [
+            'products' => $products,
+        ]);
+    }
+
+    /**
+     * Halaman Edit Produk.
+     */
+    public function editProduct(Request $request, \App\Models\Product $product)
+    {
+        if ($product->user_id !== $request->user()->id) abort(403);
+
+        $categories = \App\Models\Category::all()->map(fn ($c) => [
+            'id'   => $c->id,
+            'name' => $c->nama_kategori,
+        ]);
+
+        return Inertia::render('Seller/EditProduct', [
+            'product' => [
+                'id'            => $product->id,
+                'nama_barang'   => $product->nama_barang,
+                'harga'         => $product->harga,
+                'category_id'   => $product->category_id,
+                'kondisi'       => $product->kondisi,
+                'deskripsi'     => $product->deskripsi,
+                'status'        => $product->status,
+                'image'         => $product->image,
+            ],
+            'categories' => $categories,
+        ]);
+    }
+
+    /**
+     * Update Produk.
+     */
+    public function updateProduct(Request $request, \App\Models\Product $product)
+    {
+        if ($product->user_id !== $request->user()->id) abort(403);
+
+        $validated = $request->validate([
+            'nama_barang'   => 'required|string|max:255',
+            'harga'         => 'required|numeric|min:1000',
+            'category_id'   => 'required|exists:categories,id',
+            'kondisi'       => 'required|string',
+            'deskripsi'     => 'required|string',
+            'status'        => 'required|in:active,sold,draft',
+            'image'         => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+        ]);
+
+        $data = [
+            'nama_barang'   => $validated['nama_barang'],
+            'harga'         => $validated['harga'],
+            'category_id'   => $validated['category_id'],
+            'kondisi'       => $validated['kondisi'],
+            'deskripsi'     => $validated['deskripsi'],
+            'status'        => $validated['status'],
+        ];
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('products', 'public');
+            $data['image'] = '/storage/' . $path;
+        }
+
+        $product->update($data);
+
+        return redirect()->route('seller.products.index')->with('success', 'Produk berhasil diperbarui.');
+    }
+
+    /**
+     * Delete Produk (Change status to draft / soft delete).
+     */
+    public function destroyProduct(Request $request, \App\Models\Product $product)
+    {
+        if ($product->user_id !== $request->user()->id) abort(403);
+
+        // Jika ada order aktif, ga boleh dihapus/draft? (Opsional, kita cukup ubah status dan hide di public)
+        $product->update(['status' => 'draft']);
+
+        return back()->with('success', 'Produk berhasil di-Takedown (diubah ke Draft).');
+    }
 }

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
-import { Search, Heart, ShoppingBag, Menu, X, Store, ClipboardList, Package, ShieldCheck, LogOut } from "lucide-react";
+import { Search, Heart, ShoppingBag, Menu, X, Store, ClipboardList, Package, ShieldCheck, LogOut, MessageCircle } from "lucide-react";
 
 export default function Navbar() {
     const { auth } = usePage().props;
@@ -40,6 +40,13 @@ export default function Navbar() {
                     <div className="hidden md:flex items-center space-x-4">
                         {auth.user ? (
                             <>
+                                <Link
+                                    href="/chat"
+                                    className="p-2 text-gray-500 hover:text-primary transition-colors"
+                                    title="Pesan"
+                                >
+                                    <MessageCircle className="w-5 h-5" />
+                                </Link>
                                 <Link
                                     href="/my-offers"
                                     className="p-2 text-gray-500 hover:text-primary transition-colors"
@@ -147,6 +154,7 @@ export default function Navbar() {
                     </div>
                     {auth.user && (
                         <div className="space-y-1">
+                            <Link href="/chat" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary rounded-xl">Pesan</Link>
                             <Link href="/my-offers" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary rounded-xl">Penawaran Saya</Link>
                             <Link href="/orders" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary rounded-xl">Pesanan Saya</Link>
                             {auth.user.is_seller && (

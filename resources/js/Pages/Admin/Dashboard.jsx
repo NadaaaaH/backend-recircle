@@ -23,6 +23,7 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
         {
             label: 'Total Pengguna',
             value: stats.total_users,
+            trend: stats.users_trend,
             icon: Users,
             color: 'bg-blue-500',
             bg: 'bg-blue-50',
@@ -32,6 +33,7 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
         {
             label: 'Total Produk',
             value: stats.total_products,
+            trend: stats.products_trend,
             icon: ShoppingBag,
             color: 'bg-[#43552c]',
             bg: 'bg-[#43552c]/10',
@@ -39,8 +41,9 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
             href: '/admin/products'
         },
         {
-            label: 'Transaksi Berhasil',
+            label: 'Transaksi',
             value: stats.total_transactions,
+            trend: stats.transactions_trend,
             icon: ShoppingCart,
             color: 'bg-[#d4a373]',
             bg: 'bg-[#d4a373]/10',
@@ -50,6 +53,7 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
         {
             label: 'Verifikasi Pending',
             value: stats.pending_verifications,
+            trend: stats.verifications_trend,
             icon: ShieldCheck,
             color: 'bg-red-500',
             bg: 'bg-red-50',
@@ -96,10 +100,14 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
                                 <h3 className="text-sm font-medium text-gray-500">{stat.label}</h3>
                                 <div className="flex items-end gap-2 mt-1">
                                     <span className="text-2xl font-bold text-gray-900">{stat.value}</span>
-                                    {/* Dummy trend */}
-                                    <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full mb-1">
-                                        +12%
-                                    </span>
+                                    {stat.trend !== undefined && (
+                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full mb-1 ${stat.trend > 0 ? 'text-green-600 bg-green-50' :
+                                            stat.trend < 0 ? 'text-red-600 bg-red-50' :
+                                                'text-gray-500 bg-gray-50'
+                                            }`}>
+                                            {stat.trend > 0 ? '+' : ''}{stat.trend}%
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                             {/* Overlay link for the whole card */}
@@ -167,7 +175,7 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
                         <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-lg font-bold text-gray-900">Aktivitas Terbaru</h3>
-                                <Link href="#" className="text-xs font-bold text-[#43552c] hover:underline">Lihat Semua</Link>
+                                <Link href="/admin/activities" className="text-xs font-bold text-[#43552c] hover:underline">Lihat Semua</Link>
                             </div>
 
                             <div className="space-y-6">

@@ -86,7 +86,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/orders', [SellerDashboardController::class, 'orders'])->name('orders');
         Route::post('/orders/{order}/ship', [SellerDashboardController::class, 'shipOrder'])->name('orders.ship');
         Route::get('/balance', [SellerDashboardController::class, 'balance'])->name('balance');
-        
+
         // Product Management
         Route::get('/products', [SellerDashboardController::class, 'products'])->name('products.index');
         Route::get('/products/{product}/edit', [SellerDashboardController::class, 'editProduct'])->name('products.edit');
@@ -106,6 +106,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/products/{product}/status', [AdminDashboardController::class, 'updateProductStatus'])->name('products.update-status');
         Route::get('/offers', [AdminDashboardController::class, 'offers'])->name('offers.index');
         Route::get('/transactions', [AdminDashboardController::class, 'transactions'])->name('transactions.index');
+        Route::get('/activities', [AdminDashboardController::class, 'activities'])->name('activities.index');
         Route::get('/verifications', [AdminVerificationController::class, 'index'])->name('verifications.index');
         Route::post('/verifications/{verification}/approve', [AdminVerificationController::class, 'approve'])->name('verifications.approve');
         Route::post('/verifications/{verification}/reject', [AdminVerificationController::class, 'reject'])->name('verifications.reject');

@@ -17,9 +17,13 @@ class AdminDashboardController extends Controller
     {
         $stats = [
             'total_users' => User::count(),
+            'users_trend' => $this->calculateTrend(User::class),
             'total_products' => Product::count(),
+            'products_trend' => $this->calculateTrend(Product::class),
             'pending_verifications' => SellerVerification::where('status', 'pending')->count(),
+            'verifications_trend' => $this->calculateTrend(SellerVerification::class),
             'total_transactions' => Order::count(),
+            'transactions_trend' => $this->calculateTrend(Order::class),
             'total_revenue' => Order::where('status', 'completed')->sum('total_harga'),
             'active_offers' => Offer::where('status', 'pending')->count(),
         ];
@@ -232,30 +236,55 @@ class AdminDashboardController extends Controller
         return back()->with('success', "User {$user->name} berhasil {$status}.");
     }
 
-    private function getRecentActivities()
+    public function activities()
+    {
+        $activities = $this->getRecentActivities(50); // Fetch more for the full page
+
+        return Inertia::render('Admin/Activities', [
+            'activities' => $activities,
+        ]);
+    }
+
+    private function getRecentActivities($limit = 5)
     {
         // Combine recent users, products, and orders into a single activity feed
-        $users = User::latest()->limit(3)->get()->map(fn($u) => [
+        $subLimit = max(1, (int) ($limit / 2)); // Fetch enough to have variety after merge
+
+        $users = User::latest()->limit($subLimit)->get()->map(fn($u) => [
             'type' => 'user',
             'title' => 'User Baru terdaftar',
             'description' => "{$u->name} bergabung sebagai " . ($u->role ?? 'user'),
             'time' => $u->created_at->diffForHumans(),
         ]);
 
-        $products = Product::latest()->limit(3)->get()->map(fn($p) => [
+        $products = Product::latest()->limit($subLimit)->get()->map(fn($p) => [
             'type' => 'product',
             'title' => 'Produk Baru diunggah',
             'description' => "{$p->nama_barang} diunggah oleh {$p->user->name}",
             'time' => $p->created_at->diffForHumans(),
         ]);
 
-        $orders = Order::latest()->limit(3)->get()->map(fn($o) => [
+        $orders = Order::latest()->limit($subLimit)->get()->map(fn($o) => [
             'type' => 'order',
             'title' => 'Pesanan Baru',
-            'description' => "Pesanan #{$o->id} senilai Rp " . number_format($o->total_price, 0, ',', '.'),
+            'description' => "Pesanan #{$o->id} senilai Rp " . number_format($o->total_harga, 0, ',', '.'),
             'time' => $o->created_at->diffForHumans(),
         ]);
 
-        return $users->concat($products)->concat($orders)->sortByDesc('time')->values()->take(5);
+        return $users->concat($products)->concat($orders)->sortByDesc('time')->values()->take($limit);
+    }
+
+    private function calculateTrend($modelClass, $days = 30)
+    {
+        $currentPeriod = $modelClass::where('created_at', '>=', now()->subDays($days))->count();
+        $previousPeriod = $modelClass::where('created_at', '>=', now()->subDays($days * 2))
+            ->where('created_at', '<', now()->subDays($days))
+            ->count();
+
+        if ($previousPeriod == 0) {
+            return $currentPeriod > 0 ? 100 : 0;
+        }
+
+        return round((($currentPeriod - $previousPeriod) / $previousPeriod) * 100, 1);
     }
 }

@@ -2,9 +2,14 @@ import React from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/Layouts/MainLayout';
 import { Truck, ArrowLeft, Package } from 'lucide-react';
+import ConfirmModal from '@/Components/ConfirmModal';
 
 export default function SellerOrders({ orders }) {
     const { flash } = usePage().props;
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [orderToShip, setOrderToShip] = useState(null);
+    const [isShipping, setIsShipping] = useState(false);
+
     const formatPrice = (price) => 'Rp ' + Number(price).toLocaleString('id-ID');
 
     const statusColors = {
@@ -23,10 +28,21 @@ export default function SellerOrders({ orders }) {
         dibatalkan: 'Dibatalkan',
     };
 
-    const handleShip = (orderId) => {
-        if (confirm('Tandai barang sudah dikirim?')) {
-            router.post(`/seller/orders/${orderId}/ship`);
-        }
+    const triggerShip = (orderId) => {
+        setOrderToShip(orderId);
+        setIsConfirmOpen(true);
+    };
+
+    const confirmShip = () => {
+        if (!orderToShip) return;
+        setIsShipping(true);
+        router.post(`/seller/orders/${orderToShip}/ship`, {}, {
+            onFinish: () => {
+                setIsShipping(false);
+                setIsConfirmOpen(false);
+                setOrderToShip(null);
+            }
+        });
     };
 
     return (
@@ -76,7 +92,7 @@ export default function SellerOrders({ orders }) {
                                                 </div>
                                                 {order.status === 'dibayar' && (
                                                     <button
-                                                        onClick={() => handleShip(order.id)}
+                                                        onClick={() => triggerShip(order.id)}
                                                         className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-hover transition-colors"
                                                     >
                                                         <Truck className="w-4 h-4" /> Kirim
@@ -94,6 +110,18 @@ export default function SellerOrders({ orders }) {
                     )}
                 </div>
             </div>
+
+            <ConfirmModal 
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={confirmShip}
+                title="Konfirmasi Pengiriman"
+                subtitle="Apakah Anda yakin telah mengirimkan barang ini dan ingin memperbarui statusnya menjadi 'Dikirim'?"
+                confirmText="Tandai Dikirim"
+                cancelText="Batal"
+                type="info"
+                isLoading={isShipping}
+            />
         </MainLayout>
     );
 }

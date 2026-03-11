@@ -34,8 +34,8 @@ class MessageSent implements ShouldBroadcastNow
     {
         // Broadcasts to the receiver's private channel
         return [
-            new PrivateChannel('App.Models.User.' . $this->message->receiver_id),
-            new PrivateChannel('App.Models.User.' . $this->message->sender_id), // Send to sender too, so their other tabs sync
+            new PrivateChannel('chat.' . $this->message->receiver_id),
+            new PrivateChannel('chat.' . $this->message->sender_id),
         ];
     }
 
@@ -51,7 +51,7 @@ class MessageSent implements ShouldBroadcastNow
             'product_id' => $this->message->product_id,
             'message' => $this->message->message,
             'is_read' => $this->message->is_read,
-            'created_at' => $this->message->created_at->toISOString(),
+            'created_at' => $this->message->created_at ? $this->message->created_at->toISOString() : now()->toISOString(),
             // Optionally load the product or sender details
             'product' => $this->message->product ? [
                 'id' => $this->message->product->id,

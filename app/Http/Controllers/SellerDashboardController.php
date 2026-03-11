@@ -263,7 +263,7 @@ class SellerDashboardController extends Controller
             'category_id'   => 'required|exists:categories,id',
             'kondisi'       => 'required|string',
             'deskripsi'     => 'required|string',
-            'status'        => 'required|in:active,sold,draft',
+            'status'        => 'required|in:active,sold,archived',
             'image'         => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
         ]);
 
@@ -287,15 +287,15 @@ class SellerDashboardController extends Controller
     }
 
     /**
-     * Delete Produk (Change status to draft / soft delete).
+     * Delete Produk (Change status to archived / soft delete).
      */
     public function destroyProduct(Request $request, \App\Models\Product $product)
     {
         if ($product->user_id !== $request->user()->id) abort(403);
 
-        // Jika ada order aktif, ga boleh dihapus/draft? (Opsional, kita cukup ubah status dan hide di public)
-        $product->update(['status' => 'draft']);
+        // Jika ada order aktif, ga boleh dihapus/archived? (Opsional, kita cukup ubah status dan hide di public)
+        $product->update(['status' => 'archived']);
 
-        return back()->with('success', 'Produk berhasil di-Takedown (diubah ke Draft).');
+        return back()->with('success', 'Produk berhasil di-Takedown (diubah ke Archived).');
     }
 }

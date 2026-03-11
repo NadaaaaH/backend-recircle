@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ChatController extends Controller
 {
@@ -148,8 +149,12 @@ class ChatController extends Controller
         // Eager load for broadcast
         $message->load(['product', 'sender']);
 
-        // Broadcast event automatically dispatches to pusher/reverb
-        broadcast(new MessageSent($message));
+        try {
+            // Broadcast event automatically dispatches to pusher/reverb
+            broadcast(new MessageSent($message))->toOthers();
+        } catch (\Exception $e) {
+            Log::error('Reverb Broadcast Error: ' . $e->getMessage());
+        }
 
         return response()->json([
             'status' => 'success',

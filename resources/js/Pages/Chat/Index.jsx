@@ -48,7 +48,7 @@ export default function ChatIndex({
 
         // Listen to my own private channel for incoming messages
         const channel = window.Echo.private(
-            `App.Models.User.${currentUser.id}`,
+            `chat.${currentUser.id}`,
         );
 
         channel.listen("MessageSent", (e) => {

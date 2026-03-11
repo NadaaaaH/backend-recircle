@@ -1,15 +1,7 @@
 import React from "react";
 import { Head, Link, usePage } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
-import {
-    ArrowRight,
-    Search,
-    Globe,
-    ShieldCheck,
-    RefreshCw,
-    Zap,
-    TrendingUp,
-} from "lucide-react";
+import { ArrowRight, Search } from "lucide-react";
 
 export default function Home({ recommendations = [], categories = [] }) {
     const { auth } = usePage().props;
@@ -18,121 +10,37 @@ export default function Home({ recommendations = [], categories = [] }) {
         <MainLayout>
             <Head title="ReCircle - Marketplace Mahasiswa Indonesia" />
 
-            {/* --- HERO SECTION: Clean Editorial Style --- */}
-            <section className="relative pt-8 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
-                    {/* Left: Typography & Action */}
-                    <div className="lg:col-span-7 relative z-10">
-                        {/* Minimalist Badge */}
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white text-gray-600 text-xs font-semibold tracking-wide uppercase mb-8 shadow-sm">
-                            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                            Marketplace Mahasiswa Terpercaya
-                        </div>
+            {/* --- HERO SECTION: Premium Edge-to-Edge --- */}
+            <section className="relative w-full min-h-[70vh] flex items-center justify-center overflow-hidden">
+                {/* Background Image */}
+                <img
+                    src="https://images.unsplash.com/photo-1489987707023-af0825ae1eeb?q=80&w=2000&auto=format&fit=crop"
+                    alt="Vintage Student Fashion"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                />
 
-                        {/* Heading: Mixed Typography (Sans + Serif) */}
-                        <h1 className="text-[3.5rem] leading-[1] md:text-8xl font-black text-primary tracking-tighter mb-6">
-                            {" "}
-                            Dompet{" "}
-                            <span className="font-serif italic font-thin text-gray-800 ml-2">
-                                {" "}
-                                Aman.{" "}
-                            </span>{" "}
-                            <br /> Kamar{" "}
-                            <span className="font-serif italic font-thin text-gray-800 ml-4">
-                                {" "}
-                                Nyaman.{" "}
-                            </span>{" "}
-                        </h1>
+                {/* Dark Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/30"></div>
 
-                        <p className="text-lg text-gray-500 mb-10 max-w-lg leading-relaxed font-medium">
-                            Platform jual beli eksklusif untuk mahasiswa di
-                            seluruh Indonesia. Transaksi aman, harga terjangkau,
-                            dan mendukung gaya hidup berkelanjutan.
-                        </p>
-
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <Link
-                                href="/explore"
-                                className="group relative px-8 py-4 bg-primary text-white rounded-full font-bold overflow-hidden transition-all hover:shadow-xl hover:shadow-primary/20 hover:-translate-y-1 text-center"
-                            >
-                                <span className="relative flex items-center justify-center gap-3">
-                                    Mulai Eksplorasi{" "}
-                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                </span>
-                            </Link>
-                            <Link
-                                href={auth?.user ? (auth.user.is_seller ? "/jual" : "/seller/verification") : "/login"}
-                                className="px-8 py-4 bg-white text-gray-900 border border-gray-200 rounded-full font-bold hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
-                            >
-                                Jual Barang Bekas
-                            </Link>
-                        </div>
-
-                        {/* Trust Indicators */}
-                        <div className="mt-12 flex items-center gap-8 text-gray-400 text-sm font-medium">
-                            <div className="flex items-center gap-2">
-                                <ShieldCheck className="w-4 h-4 text-primary" />{" "}
-                                Verified Students
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <RefreshCw className="w-4 h-4 text-primary" />{" "}
-                                Sustainable
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Globe className="w-4 h-4 text-primary" />{" "}
-                                Seluruh Indonesia
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right: Visual Composition (Masonry/Collage) */}
-                    <div className="lg:col-span-5 relative hidden lg:block">
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-secondary rounded-full blur-3xl -z-10"></div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-4 translate-y-8">
-                                <div className="aspect-[3/4] rounded-[2rem] overflow-hidden shadow-2xl shadow-gray-200 border border-white">
-                                    <img
-                                        src="https://images.unsplash.com/photo-1593640408182-31c70c8268f5?q=80&w=600&auto=format&fit=crop"
-                                        className="object-cover w-full h-full hover:scale-110 transition-transform duration-700"
-                                        alt="Study Desk"
-                                    />
-                                </div>
-                                <div className="p-4 bg-white rounded-2xl shadow-lg border border-gray-100">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-xs font-bold text-gray-400 uppercase">
-                                            Featured
-                                        </span>
-                                        <TrendingUp className="w-4 h-4 text-primary" />
-                                    </div>
-                                    <p className="font-bold text-gray-800">
-                                        Meja Belajar Aesthetic
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="p-4 bg-primary text-white rounded-2xl shadow-lg flex items-center justify-between">
-                                    <div>
-                                        <p className="text-2xl font-bold">
-                                            12k+
-                                        </p>
-                                        <p className="text-xs opacity-80">
-                                            Transaksi Sukses
-                                        </p>
-                                    </div>
-                                    <ShieldCheck className="w-8 h-8 opacity-50" />
-                                </div>
-                                <div className="aspect-[3/4] rounded-[2rem] overflow-hidden shadow-2xl shadow-gray-200 border border-white">
-                                    <img
-                                        src="https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=600&auto=format&fit=crop"
-                                        className="object-cover w-full h-full hover:scale-110 transition-transform duration-700"
-                                        alt="Fashion"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                {/* Content */}
+                <div className="relative z-10 flex flex-col items-center justify-center px-4 sm:px-6 w-full max-w-4xl mx-auto text-center mt-16">
+                    <h1 className="text-5xl md:text-7xl font-extrabold text-white uppercase tracking-tight leading-none mb-4">
+                        Preloved & Reborn
+                    </h1>
+                    <p className="text-lg text-gray-200 mt-2 mb-8 max-w-2xl mx-auto">
+                        Platform jual beli eksklusif untuk mahasiswa. Transaksi
+                        aman, harga terjangkau, dan mendukung gaya hidup
+                        berkelanjutan.
+                    </p>
+                    <Link
+                        href="/explore"
+                        className="bg-white text-[#43552c] hover:bg-gray-100 rounded-full px-10 py-4 font-bold tracking-wide uppercase transition-all active:scale-95 shadow-xl"
+                    >
+                        Mulai Belanja
+                    </Link>
                 </div>
             </section>
 
@@ -221,12 +129,16 @@ export default function Home({ recommendations = [], categories = [] }) {
                             >
                                 <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden bg-gray-100 mb-4 shadow-sm group-hover:shadow-xl transition-all duration-300">
                                     <img
-                                        src={product.img || '/images/placeholder-product.png'}
+                                        src={
+                                            product.img ||
+                                            "/images/placeholder-product.png"
+                                        }
                                         alt={product.name}
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                         onError={(e) => {
                                             e.target.onerror = null;
-                                            e.target.src = '/images/placeholder-product.png';
+                                            e.target.src =
+                                                "/images/placeholder-product.png";
                                         }}
                                     />
                                     {product.tag && (
@@ -248,7 +160,9 @@ export default function Home({ recommendations = [], categories = [] }) {
                                             {product.loc}
                                         </span>
                                         <span className="font-bold text-primary">
-                                            {Number(product.price).toLocaleString("id-ID")}
+                                            {Number(
+                                                product.price,
+                                            ).toLocaleString("id-ID")}
                                         </span>
                                     </div>
                                 </div>
@@ -257,7 +171,9 @@ export default function Home({ recommendations = [], categories = [] }) {
                     </div>
                 ) : (
                     <div className="text-center py-16">
-                        <p className="text-gray-400 text-lg">Belum ada produk tersedia. Jadilah penjual pertama!</p>
+                        <p className="text-gray-400 text-lg">
+                            Belum ada produk tersedia. Jadilah penjual pertama!
+                        </p>
                     </div>
                 )}
             </section>

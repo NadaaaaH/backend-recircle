@@ -34,7 +34,7 @@ export default function EditProduct({ product, categories = [] }) {
 
     const statuses = [
         { value: 'active', label: 'Aktif / Tayang' },
-        { value: 'draft', label: 'Draft / Takedown' },
+        { value: 'archived', label: 'Archived / Takedown' },
         { value: 'sold', label: 'Terjual' },
     ];
 

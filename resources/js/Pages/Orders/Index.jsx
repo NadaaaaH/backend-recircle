@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage, Link } from '@inertiajs/react';
 import MainLayout from '@/Layouts/MainLayout';
 import { ShoppingBag, ArrowLeft, Package, CheckCircle2 } from 'lucide-react';
 
@@ -53,13 +53,13 @@ export default function BuyerOrders({ orders }) {
                                     <div className="flex items-start gap-4">
                                         <img src={order.product.img} alt={order.product.name} className="w-16 h-16 rounded-xl object-cover" />
                                         <div className="flex-1">
-                                            <div className="flex items-start justify-between">
-                                                <div>
-                                                    <p className="font-semibold text-gray-900">{order.product.name}</p>
-                                                    <p className="text-sm text-gray-500">{order.product.seller_name}</p>
-                                                    <p className="text-xs text-gray-400 mt-1">{order.kode_pesanan} · {order.created_at}</p>
-                                                </div>
-                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
+                                            <div className="flex items-start justify-between mb-2">
+                                                <Link href={`/orders/${order.id}`} className="hover:text-primary transition-colors block">
+                                                    <p className="font-bold text-gray-900 text-lg">{order.product.name}</p>
+                                                    <p className="text-sm font-medium text-gray-500 mb-1">{order.product.seller_name}</p>
+                                                    <p className="text-xs text-gray-400 font-medium">{order.kode_pesanan} &bull; {order.created_at}</p>
+                                                </Link>
+                                                <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${statusColors[order.status]}`}>
                                                     {statusLabels[order.status]}
                                                 </span>
                                             </div>
@@ -70,14 +70,22 @@ export default function BuyerOrders({ orders }) {
                                                         {order.metode_pengiriman === 'cod' ? 'COD' : 'Kirim Paket'}
                                                     </span>
                                                 </div>
-                                                {order.status === 'dikirim' && (
-                                                    <button
-                                                        onClick={() => handleConfirm(order.id)}
-                                                        className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-hover transition-colors"
+                                                <div className="flex items-center gap-3">
+                                                    <Link 
+                                                        href={`/orders/${order.id}`}
+                                                        className="px-4 py-2 rounded-xl text-sm font-bold text-primary border border-primary/20 hover:bg-primary/5 transition-colors"
                                                     >
-                                                        <CheckCircle2 className="w-4 h-4" /> Terima Barang
-                                                    </button>
-                                                )}
+                                                        Lihat Detail
+                                                    </Link>
+                                                    {order.status === 'dikirim' && (
+                                                        <button
+                                                            onClick={(e) => { e.preventDefault(); handleConfirm(order.id); }}
+                                                            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-sm shadow-primary/20"
+                                                        >
+                                                            <CheckCircle2 className="w-4 h-4" /> Terima Barang
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

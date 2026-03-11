@@ -2,9 +2,13 @@ import React from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import MainLayout from '@/Layouts/MainLayout';
 import { Check, X, Clock, ArrowLeft } from 'lucide-react';
+import ConfirmModal from '@/Components/ConfirmModal';
 
 export default function SellerOffers({ offers }) {
     const { flash } = usePage().props;
+    const [confirmState, setConfirmState] = useState({ isOpen: false, offerId: null, action: null });
+    const [isProcessing, setIsProcessing] = useState(false);
+
     const formatPrice = (price) => 'Rp ' + Number(price).toLocaleString('id-ID');
 
     const statusColors = {
@@ -21,16 +25,24 @@ export default function SellerOffers({ offers }) {
         cancelled: 'Dibatalkan',
     };
 
-    const handleAccept = (offerId) => {
-        if (confirm('Terima tawaran ini? Tawaran lainnya akan otomatis ditolak.')) {
-            router.post(`/offers/${offerId}/accept`);
-        }
+    const triggerConfirm = (offerId, action) => {
+        setConfirmState({ isOpen: true, offerId, action });
     };
 
-    const handleReject = (offerId) => {
-        if (confirm('Tolak tawaran ini?')) {
-            router.post(`/offers/${offerId}/reject`);
-        }
+    const confirmAction = () => {
+        if (!confirmState.offerId) return;
+        setIsProcessing(true);
+        
+        const route = confirmState.action === 'accept' 
+            ? `/offers/${confirmState.offerId}/accept` 
+            : `/offers/${confirmState.offerId}/reject`;
+
+        router.post(route, {}, {
+            onFinish: () => {
+                setIsProcessing(false);
+                setConfirmState({ isOpen: false, offerId: null, action: null });
+            }
+        });
     };
 
     return (
@@ -88,13 +100,13 @@ export default function SellerOffers({ offers }) {
                                             {offer.status === 'pending' && (
                                                 <div className="flex gap-3 mt-4">
                                                     <button
-                                                        onClick={() => handleAccept(offer.id)}
+                                                        onClick={() => triggerConfirm(offer.id, 'accept')}
                                                         className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-hover transition-colors"
                                                     >
                                                         <Check className="w-4 h-4" /> Terima
                                                     </button>
                                                     <button
-                                                        onClick={() => handleReject(offer.id)}
+                                                        onClick={() => triggerConfirm(offer.id, 'reject')}
                                                         className="flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors"
                                                     >
                                                         <X className="w-4 h-4" /> Tolak
@@ -109,6 +121,18 @@ export default function SellerOffers({ offers }) {
                     )}
                 </div>
             </div>
+
+            <ConfirmModal 
+                isOpen={confirmState.isOpen}
+                onClose={() => setConfirmState({ isOpen: false, offerId: null, action: null })}
+                onConfirm={confirmAction}
+                title={confirmState.action === 'accept' ? 'Terima Tawaran' : 'Tolak Tawaran'}
+                subtitle={confirmState.action === 'accept' ? 'Terima tawaran ini? Tawaran lainnya akan otomatis ditolak.' : 'Apakah Anda yakin ingin menolak tawaran ini?'}
+                confirmText={confirmState.action === 'accept' ? 'Terima' : 'Tolak'}
+                cancelText="Batal"
+                type={confirmState.action === 'accept' ? 'success' : 'danger'}
+                isLoading={isProcessing}
+            />
         </MainLayout>
     );
 }

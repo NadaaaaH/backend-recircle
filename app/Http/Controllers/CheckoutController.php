@@ -3,15 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Offer;
+use App\Models\Order;
 use App\Models\Product;
-use App\Services\OrderService;
+use App\Models\SellerBalance;
+use App\Services\OfferService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Midtrans\Config;
+use Midtrans\Snap;
 
 class CheckoutController extends Controller
 {
     public function __construct(
-        protected OrderService $orderService,
+        protected OfferService $offerService
     ) {}
 
     /**
@@ -43,13 +48,15 @@ class CheckoutController extends Controller
                 'img'   => $product->foto_barang_url,
                 'loc'   => $product->lokasi_kampus,
                 'seller_name' => $product->user->name,
+                'seller_city_id' => $product->user->city_id ?? 152, // Fallback to Jakarta Pusat if undefined
             ],
             'offer' => $offer ? [
                 'id'         => $offer->id,
                 'harga_deal' => $offer->harga_deal,
                 'expired_at' => $offer->deal_expired_at->toISOString(),
             ] : null,
-            'final_price'       => $finalPrice,
+            // final_price di sini untuk initial state. Frontend akan menambahkannya dengan shipping_cost nanti.
+            'final_price'       => $finalPrice, 
             'midtrans_client_key' => config('services.midtrans.client_key'),
         ]);
     }
@@ -65,13 +72,17 @@ class CheckoutController extends Controller
             'metode_pengiriman'  => 'required|in:cod,kirim_paket',
             'alamat_pengiriman'  => 'required_if:metode_pengiriman,kirim_paket|nullable|string',
             'catatan'            => 'nullable|string|max:500',
+            // Tambahkan validasi ongkir
+            'shipping_cost'      => 'nullable|numeric|min:0', 
+            // Opsional: simpan info kurir/layanan untuk referensi jika dibutuhkan
+            'courier_info'       => 'nullable|string'
         ]);
 
         $product = Product::findOrFail($validated['product_id']);
 
         // Verifikasi produk masih active
         if (!$product->isActive()) {
-            return back()->withErrors(['product' => 'Produk sudah tidak tersedia.']);
+            return response()->json(['message' => 'Produk sudah tidak tersedia.'], 400);
         }
 
         $offer = null;
@@ -84,42 +95,114 @@ class CheckoutController extends Controller
         }
 
         try {
-            $result = $this->orderService->createOrder(
-                user: $request->user(),
-                product: $product,
-                metodePengiriman: $validated['metode_pengiriman'],
-                offer: $offer,
-                alamat: $validated['alamat_pengiriman'] ?? null,
-                catatan: $validated['catatan'] ?? null,
-            );
+            DB::beginTransaction();
 
-            // Untuk kirim_paket: kembalikan snap_token ke frontend
-            if ($result['snap_token']) {
-                return Inertia::render('Checkout', [
-                    'order' => [
-                        'id'            => $result['order']->id,
-                        'kode_pesanan'  => $result['order']->kode_pesanan,
-                        'total_harga'   => $result['order']->total_harga,
+            $subTotal = $offer ? $offer->harga_deal : $product->harga;
+            $ongkir = ($validated['metode_pengiriman'] === 'kirim_paket' && isset($validated['shipping_cost'])) 
+                      ? (int) $validated['shipping_cost'] 
+                      : 0;
+
+            $totalHarga = $subTotal + $ongkir; 
+            
+            $orderKode = 'RC-' . strtoupper(uniqid()) . '-' . time();
+
+            // Gabungkan info kurir ke catatan atau alamat (asumsi tabel orders tidak punya field 'courier')
+            $alamatLengkap = $validated['alamat_pengiriman'] ?? null;
+            if ($alamatLengkap && isset($validated['courier_info'])) {
+                $alamatLengkap .= " (Kurir: " . $validated['courier_info'] . ")";
+            }
+
+            // 1. Buat Order
+            $order = Order::create([
+                'kode_pesanan'       => $orderKode,
+                'user_id'            => $request->user()->id,
+                'product_id'         => $product->id,
+                'offer_id'           => $offer?->id,
+                'total_harga'        => $totalHarga, // Subtotal + Ongkir
+                'metode_pengiriman'  => $validated['metode_pengiriman'],
+                'status'             => 'pending',
+                'alamat_pengiriman'  => $alamatLengkap,
+                'catatan'            => $validated['catatan'] ?? null,
+                'dana_ditahan'       => $validated['metode_pengiriman'] === 'kirim_paket',
+            ]);
+
+            // 2. Tandai produk sebagai sold
+            $product->markAsSold();
+
+            // 3. Auto-cancel penawaran lain untuk produk ini
+            $this->offerService->cancelAllOffersForProduct($product);
+
+            $snapToken = null;
+
+            // 4. Generate Midtrans Snap Token Jika Kirim Paket
+            if ($validated['metode_pengiriman'] === 'kirim_paket') {
+                // Setup Midtrans Configuration
+                Config::$serverKey = config('services.midtrans.server_key');
+                Config::$isProduction = config('services.midtrans.is_production');
+                Config::$isSanitized = true;
+                Config::$is3ds = true;
+
+                $params = [
+                    'transaction_details' => [
+                        'order_id'     => $order->kode_pesanan,
+                        'gross_amount' => $order->total_harga,
                     ],
-                    'snap_token'          => $result['snap_token'],
-                    'midtrans_client_key' => config('services.midtrans.client_key'),
-                    'product' => [
-                        'id'    => $product->id,
-                        'name'  => $product->nama_barang,
-                        'price' => $product->harga,
-                        'img'   => $product->foto_barang_url,
-                        'loc'   => $product->lokasi_kampus,
-                        'seller_name' => $product->user->name,
+                    'customer_details' => [
+                        'first_name' => $request->user()->name,
+                        'email'      => $request->user()->email,
+                        'phone'      => $request->user()->nomor_wa ?? '',
                     ],
-                    'final_price' => $result['order']->total_harga,
+                    'item_details' => [
+                        [
+                            'id'       => $product->id,
+                            'price'    => $subTotal,
+                            'quantity' => 1,
+                            'name'     => substr($product->nama_barang, 0, 50),
+                        ],
+                    ],
+                ];
+
+                // Tambahkan ongkir sebagai item terpisah di Midtrans jika > 0
+                if ($ongkir > 0) {
+                    $params['item_details'][] = [
+                        'id'       => 'shipping_cost',
+                        'price'    => $ongkir,
+                        'quantity' => 1,
+                        'name'     => 'Biaya Pengiriman',
+                    ];
+                }
+
+                $snapToken = Snap::getSnapToken($params);
+
+                // Update Order with Snap Token
+                $order->update([
+                    'midtrans_snap_token' => $snapToken,
+                ]);
+
+                // Buat record Seller Balance (ditahan)
+                SellerBalance::create([
+                    'user_id'  => $product->user_id,
+                    'order_id' => $order->id,
+                    'jumlah'   => $totalHarga,
+                    'status'   => 'ditahan',
                 ]);
             }
 
-            // COD: redirect ke halaman sukses
-            return redirect()->route('orders.index')->with('success', 'Order berhasil dibuat! Hubungi penjual untuk COD.');
+            DB::commit();
+
+            // Return JSON response supaya frontend bisa langsung trigger Snap Modal
+            return response()->json([
+                'success' => true,
+                'order_id' => $order->id,
+                'metode_pengiriman' => $validated['metode_pengiriman'],
+                'snap_token' => $snapToken,
+                'client_key' => config('services.midtrans.client_key'),
+                'redirect_url' => route('orders.index') // Fallback redirect url
+            ]);
 
         } catch (\Exception $e) {
-            return back()->withErrors(['checkout' => $e->getMessage()]);
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal memproses checkout: ' . $e->getMessage()], 500);
         }
     }
 }

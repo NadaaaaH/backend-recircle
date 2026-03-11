@@ -10,6 +10,7 @@ use App\Http\Controllers\SellerVerificationController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\RajaOngkirController;
 use App\Services\RecommendationService;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -68,6 +69,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout/{product}', [CheckoutController::class, 'show'])->name('checkout.show');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('/orders/{order}/confirm', [OrderController::class, 'confirmReceipt'])->name('orders.confirm');
 
     // Seller Verification
@@ -86,7 +88,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/orders', [SellerDashboardController::class, 'orders'])->name('orders');
         Route::post('/orders/{order}/ship', [SellerDashboardController::class, 'shipOrder'])->name('orders.ship');
         Route::get('/balance', [SellerDashboardController::class, 'balance'])->name('balance');
-        
+
         // Product Management
         Route::get('/products', [SellerDashboardController::class, 'products'])->name('products.index');
         Route::get('/products/{product}/edit', [SellerDashboardController::class, 'editProduct'])->name('products.edit');
@@ -119,6 +121,13 @@ Route::middleware('auth')->group(function () {
         }
         return Inertia::render('Dashboard');
     })->name('dashboard');
+
+    // ── API Routes (RajaOngkir) ───────────────────────
+    Route::prefix('api/rajaongkir')->group(function () {
+        Route::get('/provinces', [RajaOngkirController::class, 'getProvinces']);
+        Route::get('/cities/{province_id}', [RajaOngkirController::class, 'getCities']);
+        Route::post('/cost', [RajaOngkirController::class, 'getCost']);
+    });
 });
 
 require __DIR__ . '/auth.php';

@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
-import { Package, Plus, Edit, Trash2, Search, ArrowRight, EyeOff, LayoutGrid, List } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Search, ArrowRight, LayoutGrid, List, CheckCircle } from 'lucide-react';
+import ConfirmModal from '@/Components/ConfirmModal';
 
 export default function SellerProducts({ products }) {
     const { flash } = usePage().props;
     const [search, setSearch] = useState('');
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+
+    // Confirmation Modal State
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [productToDelete, setProductToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const formatPrice = (p) => 'Rp ' + Number(p).toLocaleString('id-ID');
 
@@ -14,10 +20,21 @@ export default function SellerProducts({ products }) {
         p.name.toLowerCase().includes(search.toLowerCase())
     );
 
-    const handleDelete = (id) => {
-        if (confirm('Takedown produk ini? Barang tidak akan muncul lagi di marketplace.')) {
-            router.delete(`/seller/products/${id}`);
-        }
+    const triggerDelete = (id) => {
+        setProductToDelete(id);
+        setIsConfirmOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (!productToDelete) return;
+        setIsDeleting(true);
+        router.delete(`/seller/products/${productToDelete}`, {
+            onFinish: () => {
+                setIsDeleting(false);
+                setIsConfirmOpen(false);
+                setProductToDelete(null);
+            }
+        });
     };
 
     return (
@@ -108,7 +125,7 @@ export default function SellerProducts({ products }) {
                                 <div className="absolute top-2 right-2">
                                     {p.status === 'active' && <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-md">Active</span>}
                                     {p.status === 'sold' && <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-md">Sold</span>}
-                                    {p.status === 'draft' && <span className="bg-gray-200 text-gray-600 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-md">Draft</span>}
+                                    {p.status === 'archived' && <span className="bg-gray-200 text-gray-600 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-md">Archived</span>}
                                 </div>
                                 {p.active_orders > 0 && (
                                     <div className="absolute bottom-2 left-2 bg-blue-500 text-white px-2 py-1 rounded-lg text-[10px] font-bold shadow-md">
@@ -130,7 +147,7 @@ export default function SellerProducts({ products }) {
                                         <Edit className="w-3.5 h-3.5" /> Edit
                                     </Link>
                                     <button
-                                        onClick={() => handleDelete(p.id)}
+                                        onClick={() => triggerDelete(p.id)}
                                         className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                                     >
                                         <Trash2 className="w-3.5 h-3.5" /> Takedown
@@ -176,7 +193,7 @@ export default function SellerProducts({ products }) {
                                             <div className="flex flex-col gap-1 items-start">
                                                 {p.status === 'active' && <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg text-xs font-bold">Active</span>}
                                                 {p.status === 'sold' && <span className="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg text-xs font-bold">Sold</span>}
-                                                {p.status === 'draft' && <span className="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-lg text-xs font-bold">Draft</span>}
+                                                {p.status === 'archived' && <span className="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-lg text-xs font-bold">Archived</span>}
                                                 {p.active_orders > 0 && <span className="text-[10px] text-blue-600 font-semibold">{p.active_orders} pesanan aktif</span>}
                                             </div>
                                         </td>
@@ -190,7 +207,7 @@ export default function SellerProducts({ products }) {
                                                     <Edit className="w-4 h-4" />
                                                 </Link>
                                                 <button
-                                                    onClick={() => handleDelete(p.id)}
+                                                    onClick={() => triggerDelete(p.id)}
                                                     className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 hover:text-red-700 transition-colors"
                                                     title="Takedown/Hapus"
                                                 >
@@ -205,6 +222,18 @@ export default function SellerProducts({ products }) {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={confirmDelete}
+                title="Takedown Produk"
+                subtitle="Apakah Anda yakin ingin men-takedown produk ini? Barang tidak akan muncul lagi di marketplace."
+                confirmText="Takedown"
+                cancelText="Batal"
+                type="danger"
+                isLoading={isDeleting}
+            />
         </DashboardLayout>
     );
 }

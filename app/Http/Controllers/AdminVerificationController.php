@@ -11,7 +11,8 @@ class AdminVerificationController extends Controller
 {
     public function __construct(
         protected SellerVerificationService $verificationService,
-    ) {}
+    ) {
+    }
 
     /**
      * Halaman admin: daftar verifikasi pending.
@@ -19,15 +20,15 @@ class AdminVerificationController extends Controller
     public function index()
     {
         $verifications = $this->verificationService->getPendingVerifications()
-            ->map(fn ($v) => [
-                'id'           => $v->id,
-                'nama_kampus'  => $v->nama_kampus,
-                'nim'          => $v->nim,
-                'foto_ktm'     => asset('storage/' . $v->foto_ktm),
-                'status'       => $v->status,
-                'created_at'   => $v->created_at->diffForHumans(),
+            ->map(fn($v) => [
+                'id' => $v->id,
+                'nama_kampus' => $v->nama_kampus,
+                'nim' => $v->nim,
+                'foto_ktm' => asset('storage/' . $v->foto_ktm),
+                'status' => $v->status,
+                'created_at' => $v->created_at->diffForHumans(),
                 'user' => [
-                    'name'  => $v->user->name,
+                    'name' => $v->user->name,
                     'email' => $v->user->email,
                 ],
             ]);
@@ -42,7 +43,6 @@ class AdminVerificationController extends Controller
      */
     public function approve(SellerVerification $verification)
     {
-        
         $this->verificationService->approveVerification($verification);
         return back()->with('success', "User {$verification->user->name} disetujui sebagai penjual.");
     }

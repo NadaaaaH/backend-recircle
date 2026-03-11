@@ -100,11 +100,15 @@ Route::middleware('auth')->group(function () {
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::get('/users', [AdminDashboardController::class, 'users'])->name('users.index');
+        Route::post('/users', [AdminDashboardController::class, 'storeUser'])->name('users.store');
+        Route::patch('/users/{user}', [AdminDashboardController::class, 'updateUser'])->name('users.update');
+        Route::delete('/users/{user}', [AdminDashboardController::class, 'destroyUser'])->name('users.destroy');
         Route::post('/users/{user}/toggle-status', [AdminDashboardController::class, 'toggleUserStatus'])->name('users.toggle-status');
         Route::get('/products', [AdminDashboardController::class, 'products'])->name('products.index');
         Route::post('/products/{product}/status', [AdminDashboardController::class, 'updateProductStatus'])->name('products.update-status');
         Route::get('/offers', [AdminDashboardController::class, 'offers'])->name('offers.index');
         Route::get('/transactions', [AdminDashboardController::class, 'transactions'])->name('transactions.index');
+        Route::get('/activities', [AdminDashboardController::class, 'activities'])->name('activities.index');
         Route::get('/verifications', [AdminVerificationController::class, 'index'])->name('verifications.index');
         Route::post('/verifications/{verification}/approve', [AdminVerificationController::class, 'approve'])->name('verifications.approve');
         Route::post('/verifications/{verification}/reject', [AdminVerificationController::class, 'reject'])->name('verifications.reject');

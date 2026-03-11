@@ -127,15 +127,23 @@ export default function Offers({ offers, filters }) {
                         </p>
                         <div className="flex gap-2">
                             {offers.links.map((link, idx) => (
-                                <Link
-                                    key={idx}
-                                    href={link.url}
-                                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all
-                                        ${link.active ? 'bg-[#43552c] text-white shadow-sm' :
-                                            link.url ? 'bg-white border border-gray-100 text-gray-500 hover:border-[#43552c] hover:text-[#43552c]' :
-                                                'text-gray-300 pointer-events-none'}`}
-                                    dangerouslySetInnerHTML={{ __html: link.label }}
-                                />
+                                link.url ? (
+                                    <Link
+                                        key={idx}
+                                        href={link.url}
+                                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all
+                                            ${link.active ? 'bg-[#43552c] text-white shadow-sm' :
+                                                link.url ? 'bg-white border border-gray-100 text-gray-500 hover:border-[#43552c] hover:text-[#43552c]' :
+                                                    'text-gray-300 pointer-events-none'}`}
+                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                    />
+                                ) : (
+                                    <span
+                                        key={idx}
+                                        className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-gray-300"
+                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                    />
+                                )
                             ))}
                         </div>
                     </div>

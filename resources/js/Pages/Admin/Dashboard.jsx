@@ -23,34 +23,42 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
         {
             label: 'Total Pengguna',
             value: stats.total_users,
+            trend: stats.users_trend,
             icon: Users,
             color: 'bg-blue-500',
             bg: 'bg-blue-50',
-            textColor: 'text-blue-600'
+            textColor: 'text-blue-600',
+            href: '/admin/users'
         },
         {
             label: 'Total Produk',
             value: stats.total_products,
+            trend: stats.products_trend,
             icon: ShoppingBag,
             color: 'bg-[#43552c]',
             bg: 'bg-[#43552c]/10',
-            textColor: 'text-[#43552c]'
+            textColor: 'text-[#43552c]',
+            href: '/admin/products'
         },
         {
-            label: 'Transaksi Berhasil',
+            label: 'Transaksi',
             value: stats.total_transactions,
+            trend: stats.transactions_trend,
             icon: ShoppingCart,
             color: 'bg-[#d4a373]',
             bg: 'bg-[#d4a373]/10',
-            textColor: 'text-[#d4a373]'
+            textColor: 'text-[#d4a373]',
+            href: '/admin/transactions'
         },
         {
             label: 'Verifikasi Pending',
             value: stats.pending_verifications,
+            trend: stats.verifications_trend,
             icon: ShieldCheck,
             color: 'bg-red-500',
             bg: 'bg-red-50',
-            textColor: 'text-red-600'
+            textColor: 'text-red-600',
+            href: '/admin/verifications'
         },
     ];
 
@@ -76,25 +84,34 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     {statCards.map((stat, idx) => (
-                        <div key={idx} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 group hover:shadow-md transition-shadow">
+                        <div key={idx} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 group hover:shadow-md transition-shadow relative">
                             <div className="flex items-start justify-between">
                                 <div className={`w-12 h-12 rounded-2xl ${stat.bg} flex items-center justify-center`}>
                                     <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
                                 </div>
-                                <button className="text-gray-300 hover:text-[#43552c] transition-colors">
+                                <Link
+                                    href={stat.href}
+                                    className="text-gray-300 hover:text-[#43552c] transition-colors p-1"
+                                >
                                     <ArrowUpRight className="w-5 h-5" />
-                                </button>
+                                </Link>
                             </div>
                             <div className="mt-4">
                                 <h3 className="text-sm font-medium text-gray-500">{stat.label}</h3>
                                 <div className="flex items-end gap-2 mt-1">
                                     <span className="text-2xl font-bold text-gray-900">{stat.value}</span>
-                                    {/* Dummy trend */}
-                                    <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full mb-1">
-                                        +12%
-                                    </span>
+                                    {stat.trend !== undefined && (
+                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full mb-1 ${stat.trend > 0 ? 'text-green-600 bg-green-50' :
+                                            stat.trend < 0 ? 'text-red-600 bg-red-50' :
+                                                'text-gray-500 bg-gray-50'
+                                            }`}>
+                                            {stat.trend > 0 ? '+' : ''}{stat.trend}%
+                                        </span>
+                                    )}
                                 </div>
                             </div>
+                            {/* Overlay link for the whole card */}
+                            <Link href={stat.href} className="absolute inset-0 rounded-[2rem]" aria-label={stat.label} />
                         </div>
                     ))}
                 </div>
@@ -158,7 +175,7 @@ export default function Dashboard({ stats, monthlyStats, recentActivities }) {
                         <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-lg font-bold text-gray-900">Aktivitas Terbaru</h3>
-                                <Link href="#" className="text-xs font-bold text-[#43552c] hover:underline">Lihat Semua</Link>
+                                <Link href="/admin/activities" className="text-xs font-bold text-[#43552c] hover:underline">Lihat Semua</Link>
                             </div>
 
                             <div className="space-y-6">

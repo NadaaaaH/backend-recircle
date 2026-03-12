@@ -94,6 +94,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/products/{product}/edit', [SellerDashboardController::class, 'editProduct'])->name('products.edit');
         Route::put('/products/{product}', [SellerDashboardController::class, 'updateProduct'])->name('products.update');
         Route::delete('/products/{product}', [SellerDashboardController::class, 'destroyProduct'])->name('products.destroy');
+        Route::get('/activities', [SellerDashboardController::class, 'activities'])->name('activities');
     });
 
     // Admin Routes

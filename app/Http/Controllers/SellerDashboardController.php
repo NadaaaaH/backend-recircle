@@ -298,4 +298,16 @@ class SellerDashboardController extends Controller
 
         return back()->with('success', 'Produk berhasil di-Takedown (diubah ke Archived).');
     }
+
+    /**
+     * Halaman List Semua Aktivitas Seller.
+     */
+    public function activities(Request $request)
+    {
+        $activities = \App\Services\ActivityService::getSellerActivities($request->user()->id, 20);
+
+        return Inertia::render('Seller/Activities', [
+            'activities' => $activities,
+        ]);
+    }
 }

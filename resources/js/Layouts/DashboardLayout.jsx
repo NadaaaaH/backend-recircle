@@ -20,6 +20,7 @@ import {
     Search,
     Home,
     Users,
+    Clock,
 } from 'lucide-react';
 
 const sellerNav = [
@@ -62,9 +63,14 @@ export default function DashboardLayout({ children, title, breadcrumbs = [] }) {
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+    const { adminActivities, sellerActivities } = usePage().props;
 
     const isAdmin = auth?.user?.role === 'admin';
+    const isSeller = auth?.user?.is_seller;
     const navItems = isAdmin ? adminNav : sellerNav;
+    const activities = isAdmin ? adminActivities : (isSeller ? sellerActivities : []);
 
     const isActive = (href) => currentPath.startsWith(href);
 
@@ -185,10 +191,78 @@ export default function DashboardLayout({ children, title, breadcrumbs = [] }) {
                         </button>
 
                         {/* Notification bell */}
-                        <button className="relative p-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors">
-                            <Bell className="w-[18px] h-[18px]" />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-[#d4a373] rounded-full ring-2 ring-[#43552c]" />
-                        </button>
+                        <div className="relative">
+                            <button
+                                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                                className={`relative p-2.5 rounded-xl transition-colors ${notificationsOpen ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
+                                    }`}
+                            >
+                                <Bell className="w-[18px] h-[18px]" />
+                                {(activities && activities.length > 0) && (
+                                    <span className="absolute top-2 right-2 w-2 h-2 bg-[#d4a373] rounded-full ring-2 ring-[#43552c]" />
+                                )}
+                            </button>
+
+                            {notificationsOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)} />
+                                    <div className="absolute right-0 top-12 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100/60 w-80 sm:w-96 z-50 overflow-hidden transform origin-top-right transition-all">
+                                        <div className="px-4 py-4 border-b border-gray-100/60 flex items-center justify-between bg-gray-50/50">
+                                            <h3 className="text-sm font-bold text-gray-900">Notifikasi Aktivitas</h3>
+                                            <span className="text-[10px] bg-[#43552c]/10 text-[#43552c] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Terbaru</span>
+                                        </div>
+
+                                        <div className="max-h-[400px] overflow-y-auto">
+                                            {activities && activities.length > 0 ? (
+                                                <div className="divide-y divide-gray-50">
+                                                    {activities.map((activity, idx) => (
+                                                        <div key={idx} className="p-4 flex gap-3 hover:bg-gray-50 transition-colors group">
+                                                            <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center shadow-sm
+                                                                ${activity.type === 'user' ? 'bg-blue-50 text-blue-500' :
+                                                                    activity.type === 'product' || activity.type === 'order' ? 'bg-[#43552c]/10 text-[#43552c]' :
+                                                                        activity.type === 'offer' ? 'bg-blue-50 text-blue-500' :
+                                                                            'bg-[#d4a373]/10 text-[#d4a373]'}`}
+                                                            >
+                                                                {activity.type === 'user' ? <Users className="w-4 h-4" /> :
+                                                                    activity.type === 'product' ? <Package className="w-4 h-4" /> :
+                                                                        activity.type === 'offer' ? <MessageSquare className="w-4 h-4" /> :
+                                                                            <ShoppingBag className="w-4 h-4" />}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-bold text-gray-900 line-clamp-1 group-hover:text-[#43552c] transition-colors">
+                                                                    {activity.title}
+                                                                </p>
+                                                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">
+                                                                    {activity.description}
+                                                                </p>
+                                                                <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                                                                    <Clock className="w-3 h-3" /> {activity.time}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="p-8 text-center">
+                                                    <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                        <Bell className="w-6 h-6 text-gray-300" />
+                                                    </div>
+                                                    <p className="text-sm text-gray-400">Tidak ada aktivitas baru</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <Link
+                                            href={isAdmin ? "/admin/activities" : "/seller/activities"}
+                                            onClick={() => setNotificationsOpen(false)}
+                                            className="block py-3 text-center text-xs font-bold text-[#43552c] bg-gray-50 hover:bg-gray-100 transition-colors border-t border-gray-100/60"
+                                        >
+                                            Lihat Semua Aktivitas
+                                        </Link>
+                                    </div>
+                                </>
+                            )}
+                        </div>
 
                         {/* Profile Dropdown */}
                         <div className="relative ml-1">

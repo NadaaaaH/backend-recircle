@@ -34,6 +34,12 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'adminActivities' => fn () => $request->user() && $request->user()->isAdmin() 
+                ? \App\Services\ActivityService::getRecentActivities(5) 
+                : null,
+            'sellerActivities' => fn () => $request->user() && $request->user()->is_seller
+                ? \App\Services\ActivityService::getSellerActivities($request->user()->id, 5)
+                : null,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error'   => fn () => $request->session()->get('error'),

@@ -238,7 +238,7 @@ class AdminDashboardController extends Controller
 
     public function activities()
     {
-        $activities = $this->getRecentActivities(50); // Fetch more for the full page
+        $activities = \App\Services\ActivityService::getRecentActivities(50);
 
         return Inertia::render('Admin/Activities', [
             'activities' => $activities,
@@ -247,31 +247,7 @@ class AdminDashboardController extends Controller
 
     private function getRecentActivities($limit = 5)
     {
-        // Combine recent users, products, and orders into a single activity feed
-        $subLimit = max(1, (int) ($limit / 2)); // Fetch enough to have variety after merge
-
-        $users = User::latest()->limit($subLimit)->get()->map(fn($u) => [
-            'type' => 'user',
-            'title' => 'User Baru terdaftar',
-            'description' => "{$u->name} bergabung sebagai " . ($u->role ?? 'user'),
-            'time' => $u->created_at->diffForHumans(),
-        ]);
-
-        $products = Product::latest()->limit($subLimit)->get()->map(fn($p) => [
-            'type' => 'product',
-            'title' => 'Produk Baru diunggah',
-            'description' => "{$p->nama_barang} diunggah oleh {$p->user->name}",
-            'time' => $p->created_at->diffForHumans(),
-        ]);
-
-        $orders = Order::latest()->limit($subLimit)->get()->map(fn($o) => [
-            'type' => 'order',
-            'title' => 'Pesanan Baru',
-            'description' => "Pesanan #{$o->id} senilai Rp " . number_format($o->total_harga, 0, ',', '.'),
-            'time' => $o->created_at->diffForHumans(),
-        ]);
-
-        return $users->concat($products)->concat($orders)->sortByDesc('time')->values()->take($limit);
+        return \App\Services\ActivityService::getRecentActivities($limit);
     }
 
     private function calculateTrend($modelClass, $days = 30)

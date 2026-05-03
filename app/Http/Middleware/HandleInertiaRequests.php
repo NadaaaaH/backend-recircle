@@ -33,6 +33,9 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $request->user(),
+                'wishlist_ids' => fn () => $request->user() 
+                    ? $request->user()->wishlists()->pluck('products.id')->toArray() 
+                    : [],
             ],
             'adminActivities' => fn () => $request->user() && $request->user()->isAdmin() 
                 ? \App\Services\ActivityService::getRecentActivities(5) 

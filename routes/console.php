@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Escrow auto-release: jalan setiap hari, lepas dana untuk order 'dikirim' > 3 hari
 Schedule::command('escrow:release')->daily();
+
+// Hapus otomatis produk yang di soft-delete > 30 hari
+Schedule::command('products:cleanup-trash')->daily();

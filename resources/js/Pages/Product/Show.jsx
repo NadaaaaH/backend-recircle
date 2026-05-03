@@ -6,7 +6,6 @@ import {
     ShieldCheck,
     MessageCircle,
     Share2,
-    Heart,
     AlertCircle,
     Check,
     ArrowLeft,
@@ -16,6 +15,7 @@ import {
     MessageSquare
 } from "lucide-react";
 import NegoModal from "@/Components/NegoModal";
+import LikeButton from "@/Components/LikeButton";
 
 export default function Show({ product }) {
 
@@ -23,7 +23,6 @@ export default function Show({ product }) {
     const [activeImage, setActiveImage] = useState(
         product.images?.length > 0 ? product.images[0] : product.img
     );
-    const [isWishlisted, setIsWishlisted] = useState(false);
     const [isNegoOpen, setIsNegoOpen] = useState(false);
 
     return (
@@ -53,14 +52,9 @@ export default function Show({ product }) {
                                 onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/800x600/eeeeee/999999?text=Image+Not+Found'; }}
                             />
                             {/* Floating Action (Desktop) */}
-                            <button
-                                onClick={() => setIsWishlisted(!isWishlisted)}
-                                className="absolute top-4 right-4 p-3 bg-white/80 backdrop-blur rounded-full hover:bg-white text-gray-400 hover:text-red-500 transition-all shadow-sm"
-                            >
-                                <Heart
-                                    className={`w-5 h-5 ${isWishlisted ? "fill-red-500 text-red-500" : ""}`}
-                                />
-                            </button>
+                            <div className="absolute top-4 right-4 z-10 transition-transform duration-300">
+                                <LikeButton productId={product.id} className="p-3" />
+                            </div>
                         </div>
 
                         {/* Thumbnails Grid (Only show if more than 1 image) */}

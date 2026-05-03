@@ -48,7 +48,7 @@ class CheckoutController extends Controller
                 'img'   => $product->foto_barang_url,
                 'loc'   => $product->lokasi_kampus,
                 'seller_name' => $product->user->name,
-                'seller_city_id' => $product->user->city_id ?? 152, // Fallback to Jakarta Pusat if undefined
+                'seller_area_id' => 'IDNP10CT66ID', // Biteship Default Valid Area ID
             ],
             'offer' => $offer ? [
                 'id'         => $offer->id,

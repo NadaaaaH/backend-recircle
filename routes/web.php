@@ -10,7 +10,10 @@ use App\Http\Controllers\SellerVerificationController;
 use App\Http\Controllers\AdminVerificationController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\RajaOngkirController;
+use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\SellerProductController;
 use App\Services\RecommendationService;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -61,6 +64,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/offers', [OfferController::class, 'store'])->name('offers.store');
     Route::get('/my-offers', [OfferController::class, 'myOffers'])->name('offers.index');
 
+    // Cart
+    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+
+    // Wishlist
+    Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
+    Route::post('/wishlist/{product}/toggle', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
+
     // Offers (Seller Actions)
     Route::post('/offers/{offer}/accept', [OfferController::class, 'accept'])->name('offers.accept');
     Route::post('/offers/{offer}/reject', [OfferController::class, 'reject'])->name('offers.reject');
@@ -90,10 +100,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/balance', [SellerDashboardController::class, 'balance'])->name('balance');
 
         // Product Management
-        Route::get('/products', [SellerDashboardController::class, 'products'])->name('products.index');
+        Route::get('/products', [SellerProductController::class, 'index'])->name('products.index');
         Route::get('/products/{product}/edit', [SellerDashboardController::class, 'editProduct'])->name('products.edit');
         Route::put('/products/{product}', [SellerDashboardController::class, 'updateProduct'])->name('products.update');
-        Route::delete('/products/{product}', [SellerDashboardController::class, 'destroyProduct'])->name('products.destroy');
+        Route::post('/products/{product}/toggle-archive', [SellerProductController::class, 'toggleArchive'])->name('products.toggleArchive');
+        Route::delete('/products/{product}', [SellerProductController::class, 'destroy'])->name('products.destroy');
+        Route::post('/products/{id}/restore', [SellerProductController::class, 'restore'])->name('products.restore');
+        Route::delete('/products/{id}/force', [SellerProductController::class, 'forceDestroy'])->name('products.forceDestroy');
+        
         Route::get('/activities', [SellerDashboardController::class, 'activities'])->name('activities');
     });
 
@@ -127,11 +141,10 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-    // ── API Routes (RajaOngkir) ───────────────────────
+    // RajaOngkir Komerce V2 Logistics Integration
     Route::prefix('api/rajaongkir')->group(function () {
-        Route::get('/provinces', [RajaOngkirController::class, 'getProvinces']);
-        Route::get('/cities/{province_id}', [RajaOngkirController::class, 'getCities']);
-        Route::post('/cost', [RajaOngkirController::class, 'getCost']);
+        Route::get('/destination', [RajaOngkirController::class, 'searchDestination']);
+        Route::post('/calculate', [RajaOngkirController::class, 'calculateCost']);
     });
 });
 

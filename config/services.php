@@ -41,4 +41,9 @@ return [
         'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
     ],
 
+    'rajaongkir' => [
+        'key' => env('RAJAONGKIR_API_KEY'),
+        'type' => env('RAJAONGKIR_TYPE', 'starter'),
+    ],
+
 ];

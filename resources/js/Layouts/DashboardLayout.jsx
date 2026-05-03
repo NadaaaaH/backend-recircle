@@ -1,301 +1,174 @@
 import React, { useState } from 'react';
 import { Link, usePage } from '@inertiajs/react';
-import {
-    LayoutDashboard,
-    Package,
-    MessageSquare,
-    Truck,
+import { 
+    LayoutDashboard, 
+    PackageSearch, 
+    MessageSquareText, 
+    ShoppingCart, 
     Wallet,
-    ShieldCheck,
-    DollarSign,
-    Grid3X3,
-    ShoppingBag,
+    Bell,
+    Search,
+    ChevronDown,
+    LogOut,
     Menu,
     X,
-    Bell,
-    ChevronRight,
-    LogOut,
-    ChevronDown,
-    Store,
-    Search,
-    Home,
-    Users,
-    Clock,
+    User
 } from 'lucide-react';
 
-const sellerNav = [
-    { label: 'Dashboard', href: '/seller/dashboard', icon: LayoutDashboard },
-    { label: 'Produk Saya', href: '/seller/products', icon: Package },
-    { label: 'Penawaran', href: '/seller/offers', icon: MessageSquare },
-    { label: 'Pesanan', href: '/seller/orders', icon: Truck },
-    { label: 'Dompet', href: '/seller/balance', icon: Wallet },
-];
-
-const adminNav = [
-    { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-    { label: 'Verifikasi Seller', href: '/admin/verifications', icon: ShieldCheck },
-    { label: 'Kelola Pengguna', href: '/admin/users', icon: Users },
-    { label: 'Semua Produk', href: '/admin/products', icon: ShoppingBag },
-    { label: 'Monitoring Tawaran', href: '/admin/offers', icon: MessageSquare },
-    { label: 'Data Transaksi', href: '/admin/transactions', icon: ShoppingBag },
-];
-
-function SidebarLink({ item, isActive }) {
-    return (
-        <Link
-            href={item.href}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-medium transition-all duration-200 group ${isActive
-                ? 'bg-[#43552c]/10 text-[#43552c] font-bold'
-                : 'text-gray-500 hover:bg-[#f7f9f7] hover:text-gray-800'
-                }`}
-        >
-            <item.icon
-                className={`w-[18px] h-[18px] flex-shrink-0 transition-colors ${isActive ? 'text-[#43552c]' : 'text-gray-400 group-hover:text-gray-600'
-                    }`}
-            />
-            {item.label}
-        </Link>
-    );
-}
-
-export default function DashboardLayout({ children, title, breadcrumbs = [] }) {
+export default function DashboardLayout({ children }) {
     const { auth } = usePage().props;
-    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [profileOpen, setProfileOpen] = useState(false);
-    const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const { url } = usePage();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
-    const { adminActivities, sellerActivities } = usePage().props;
+    // Helper to determine if a route is active
+    const isActive = (path) => {
+        const currentUrl = url || '';
+        if (path === '/seller/dashboard') {
+            return currentUrl === path || currentUrl === '/seller';
+        }
+        return currentUrl.startsWith(path);
+    };
 
-    const isAdmin = auth?.user?.role === 'admin';
-    const isSeller = auth?.user?.is_seller;
-    const navItems = isAdmin ? adminNav : sellerNav;
-    const activities = isAdmin ? adminActivities : (isSeller ? sellerActivities : []);
-
-    const isActive = (href) => currentPath.startsWith(href);
+    const navigation = [
+        { name: 'Beranda', href: '/seller/dashboard', icon: LayoutDashboard },
+        { name: 'Produk Saya', href: '/seller/products', icon: PackageSearch },
+        { name: 'Penawaran', href: '/seller/offers', icon: MessageSquareText },
+        { name: 'Pesanan', href: '/seller/orders', icon: ShoppingCart },
+        { name: 'Saldo', href: '/seller/balance', icon: Wallet },
+    ];
 
     return (
-        <div className="min-h-screen bg-[#f7f9f7]">
-            {/* ── Mobile Overlay ── */}
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-black/25 backdrop-blur-sm z-40 lg:hidden"
-                    onClick={() => setSidebarOpen(false)}
+        <div className="min-h-screen bg-[#F8F9FA] flex">
+            {/* Mobile Sidebar Overlay */}
+            {isMobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-slate-900/50 z-40 lg:hidden backdrop-blur-sm"
+                    onClick={() => setIsMobileMenuOpen(false)}
                 />
             )}
 
-            {/* ═══════════════════════════════════════
-                SIDEBAR (Fixed, white)
-            ═══════════════════════════════════════ */}
-            <aside
-                className={`fixed top-0 left-0 z-50 h-full w-[260px] bg-white flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-[4px_0_24px_rgb(0,0,0,0.04)] ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-                    }`}
-            >
-                {/* Logo area */}
-                <div className="flex items-center justify-between px-6 h-[72px]">
-                    <Link href="/" className="flex items-center gap-2.5 group">
-                        <div className="w-9 h-9 bg-[#43552c] rounded-xl flex items-center justify-center text-white shadow-sm group-hover:bg-[#364423] transition-colors">
-                            <Store className="w-4 h-4" />
+            {/* Sidebar */}
+            <aside className={`
+                fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200/60 transform transition-transform duration-300 ease-in-out flex flex-col
+                ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+            `}>
+                <div className="h-20 flex items-center px-8 border-b border-slate-200/60">
+                    <Link href="/" className="flex items-center gap-2 group">
+                        <div className="w-8 h-8 bg-[#4A5D23] rounded-lg flex items-center justify-center text-white shadow-soft group-hover:bg-[#3d4d1d] transition-colors">
+                            <PackageSearch className="w-4 h-4" />
                         </div>
-                        <span className="text-lg font-bold text-[#43552c] tracking-tight">
-                            Re<span className="text-[#5e7244]">Circle</span>
+                        <span className="text-xl font-bold tracking-tight text-slate-900">
+                            Re<span className="text-[#4A5D23]">Circle</span>
                         </span>
                     </Link>
-                    <button
-                        onClick={() => setSidebarOpen(false)}
-                        className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
+                    {/* Mobile Close Button */}
+                    <button 
+                        className="ml-auto lg:hidden text-slate-500 hover:text-slate-900"
+                        onClick={() => setIsMobileMenuOpen(false)}
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                {/* Role Badge */}
-                <div className="px-6 pt-3 pb-4">
-                    <div
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wider uppercase ${isAdmin ? 'bg-red-50 text-red-600' : 'bg-[#43552c]/8 text-[#43552c]'
-                            }`}
-                    >
-                        {isAdmin ? (
-                            <><ShieldCheck className="w-3.5 h-3.5" /> Administrator</>
-                        ) : (
-                            <><Package className="w-3.5 h-3.5" /> Seller Panel</>
-                        )}
+                <div className="flex-1 py-6 overflow-y-auto">
+                    <div className="px-4 mb-4">
+                        <p className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Menu Utama</p>
                     </div>
+                    <nav className="space-y-1">
+                        {navigation.map((item) => {
+                            const active = isActive(item.href);
+                            const Icon = item.icon;
+                            return (
+                                <Link
+                                    key={item.name}
+                                    href={item.href}
+                                    className={`
+                                        flex items-center gap-3 px-8 py-3 text-sm font-medium transition-all duration-200
+                                        ${active 
+                                            ? 'bg-[#4A5D23]/10 text-[#4A5D23] border-l-4 border-[#4A5D23]' 
+                                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 border-l-4 border-transparent'
+                                        }
+                                    `}
+                                >
+                                    <Icon className={`w-5 h-5 ${active ? 'text-[#4A5D23]' : 'text-slate-400'}`} />
+                                    {item.name}
+                                </Link>
+                            );
+                        })}
+                    </nav>
                 </div>
 
-                {/* Divider */}
-                <div className="mx-6 border-t border-gray-100/60" />
-
-                {/* Navigation */}
-                <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-                    {navItems.map((item) => (
-                        <SidebarLink key={item.href} item={item} isActive={isActive(item.href)} />
-                    ))}
-                </nav>
-
-                {/* Bottom: Back to Store */}
-                <div className="px-3 pb-6 pt-3">
-                    <div className="mx-3 mb-3 border-t border-gray-100/60" />
-                    <Link
-                        href="/"
-                        className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] text-gray-400 hover:text-[#43552c] hover:bg-[#f7f9f7] transition-colors"
+                <div className="p-4 border-t border-slate-200/60">
+                    <Link 
+                        href="/logout" 
+                        method="post" 
+                        as="button"
+                        className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors w-full"
                     >
-                        <Home className="w-[18px] h-[18px]" />
-                        Kembali ke Beranda
+                        <LogOut className="w-5 h-5" />
+                        Keluar
                     </Link>
                 </div>
             </aside>
 
-            {/* ═══════════════════════════════════════
-                MAIN CONTENT (right of sidebar)
-            ═══════════════════════════════════════ */}
-            <div className="lg:pl-[260px] min-h-screen flex flex-col">
-                {/* ── TOPBAR: Solid Primary (cloned from reference image header) ── */}
-                <header className="sticky top-0 z-30 h-[64px] bg-[#43552c] flex items-center justify-between px-4 lg:px-8 shadow-sm">
-                    {/* Left: Hamburger + Breadcrumb */}
+            {/* Main Content Area */}
+            <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
+                {/* Header */}
+                <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/60 h-20 flex items-center justify-between px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setSidebarOpen(true)}
-                            className="lg:hidden p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                        <button 
+                            className="lg:hidden p-2 text-slate-500 hover:bg-slate-50 rounded-xl"
+                            onClick={() => setIsMobileMenuOpen(true)}
                         >
                             <Menu className="w-5 h-5" />
                         </button>
-
-                        {/* Breadcrumb — white text on dark */}
-                        <nav className="hidden sm:flex items-center gap-1.5 text-sm">
-                            {breadcrumbs.length > 0 ? (
-                                breadcrumbs.map((crumb, idx) => (
-                                    <React.Fragment key={idx}>
-                                        {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-white/30" />}
-                                        {idx === breadcrumbs.length - 1 ? (
-                                            <span className="font-semibold text-white">{crumb.label}</span>
-                                        ) : (
-                                            <Link href={crumb.href} className="text-white/50 hover:text-white/80 transition-colors">
-                                                {crumb.label}
-                                            </Link>
-                                        )}
-                                    </React.Fragment>
-                                ))
-                            ) : (
-                                <span className="font-semibold text-white">{title}</span>
-                            )}
-                        </nav>
-                        <span className="sm:hidden font-semibold text-white text-sm">{title}</span>
+                        
+                        <div className="hidden sm:flex relative group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#4A5D23] transition-colors" />
+                            <input 
+                                type="text" 
+                                placeholder="Cari pesanan, produk..." 
+                                className="pl-10 pr-4 py-2 bg-[#F8F9FA] border-transparent rounded-xl text-sm w-64 focus:bg-white focus:border-[#4A5D23]/30 focus:ring-4 focus:ring-[#4A5D23]/10 transition-all placeholder:text-slate-400"
+                            />
+                        </div>
                     </div>
 
-                    {/* Right: Search, Bell, Profile */}
-                    <div className="flex items-center gap-1.5">
-                        {/* Mini search */}
-                        <button className="p-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors hidden md:block">
-                            <Search className="w-[18px] h-[18px]" />
+                    <div className="flex items-center gap-3 sm:gap-6">
+                        <button className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors rounded-full hover:bg-slate-50">
+                            <Bell className="w-5 h-5" />
+                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
                         </button>
 
-                        {/* Notification bell */}
+                        <div className="w-px h-8 bg-slate-200/60 hidden sm:block"></div>
+
                         <div className="relative">
-                            <button
-                                onClick={() => setNotificationsOpen(!notificationsOpen)}
-                                className={`relative p-2.5 rounded-xl transition-colors ${notificationsOpen ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
-                                    }`}
+                            <button 
+                                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                                className="flex items-center gap-3 hover:bg-slate-50 p-1.5 rounded-xl transition-colors"
                             >
-                                <Bell className="w-[18px] h-[18px]" />
-                                {(activities && activities.length > 0) && (
-                                    <span className="absolute top-2 right-2 w-2 h-2 bg-[#d4a373] rounded-full ring-2 ring-[#43552c]" />
-                                )}
-                            </button>
-
-                            {notificationsOpen && (
-                                <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)} />
-                                    <div className="absolute right-0 top-12 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100/60 w-80 sm:w-96 z-50 overflow-hidden transform origin-top-right transition-all">
-                                        <div className="px-4 py-4 border-b border-gray-100/60 flex items-center justify-between bg-gray-50/50">
-                                            <h3 className="text-sm font-bold text-gray-900">Notifikasi Aktivitas</h3>
-                                            <span className="text-[10px] bg-[#43552c]/10 text-[#43552c] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Terbaru</span>
-                                        </div>
-
-                                        <div className="max-h-[400px] overflow-y-auto">
-                                            {activities && activities.length > 0 ? (
-                                                <div className="divide-y divide-gray-50">
-                                                    {activities.map((activity, idx) => (
-                                                        <div key={idx} className="p-4 flex gap-3 hover:bg-gray-50 transition-colors group">
-                                                            <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center shadow-sm
-                                                                ${activity.type === 'user' ? 'bg-blue-50 text-blue-500' :
-                                                                    activity.type === 'product' || activity.type === 'order' ? 'bg-[#43552c]/10 text-[#43552c]' :
-                                                                        activity.type === 'offer' ? 'bg-blue-50 text-blue-500' :
-                                                                            'bg-[#d4a373]/10 text-[#d4a373]'}`}
-                                                            >
-                                                                {activity.type === 'user' ? <Users className="w-4 h-4" /> :
-                                                                    activity.type === 'product' ? <Package className="w-4 h-4" /> :
-                                                                        activity.type === 'offer' ? <MessageSquare className="w-4 h-4" /> :
-                                                                            <ShoppingBag className="w-4 h-4" />}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-bold text-gray-900 line-clamp-1 group-hover:text-[#43552c] transition-colors">
-                                                                    {activity.title}
-                                                                </p>
-                                                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">
-                                                                    {activity.description}
-                                                                </p>
-                                                                <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
-                                                                    <Clock className="w-3 h-3" /> {activity.time}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="p-8 text-center">
-                                                    <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                        <Bell className="w-6 h-6 text-gray-300" />
-                                                    </div>
-                                                    <p className="text-sm text-gray-400">Tidak ada aktivitas baru</p>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <Link
-                                            href={isAdmin ? "/admin/activities" : "/seller/activities"}
-                                            onClick={() => setNotificationsOpen(false)}
-                                            className="block py-3 text-center text-xs font-bold text-[#43552c] bg-gray-50 hover:bg-gray-100 transition-colors border-t border-gray-100/60"
-                                        >
-                                            Lihat Semua Aktivitas
-                                        </Link>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
-                        {/* Profile Dropdown */}
-                        <div className="relative ml-1">
-                            <button
-                                onClick={() => setProfileOpen(!profileOpen)}
-                                className="flex items-center gap-2.5 p-1.5 pr-3 rounded-xl hover:bg-white/10 transition-colors"
-                            >
-                                <div className="w-8 h-8 rounded-lg bg-white/15 text-white flex items-center justify-center font-bold text-sm">
-                                    {auth?.user?.name?.charAt(0) || 'U'}
+                                <div className="text-right hidden sm:block">
+                                    <p className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-1">{auth?.user?.name}</p>
+                                    <p className="text-xs text-slate-500 font-medium">Toko Terverifikasi</p>
                                 </div>
-                                <span className="text-sm font-medium text-white hidden md:block">
-                                    {auth?.user?.name}
-                                </span>
-                                <ChevronDown className="w-3.5 h-3.5 text-white/40 hidden md:block" />
+                                <div className="w-9 h-9 rounded-full bg-[#4A5D23]/10 text-[#4A5D23] flex items-center justify-center border border-[#4A5D23]/20">
+                                    {auth?.user?.name?.charAt(0) || <User className="w-4 h-4" />}
+                                </div>
+                                <ChevronDown className="w-4 h-4 text-slate-400 hidden sm:block" />
                             </button>
 
-                            {profileOpen && (
+                            {isProfileDropdownOpen && (
                                 <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
-                                    <div className="absolute right-0 top-12 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100/60 py-2 w-52 z-50">
-                                        <div className="px-4 py-2.5 border-b border-gray-100/60">
-                                            <p className="text-sm font-semibold text-gray-800">{auth?.user?.name}</p>
-                                            <p className="text-xs text-gray-400">{auth?.user?.email}</p>
-                                        </div>
-                                        <Link href="/profile" className="block px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                                            Profil Saya
+                                    <div 
+                                        className="fixed inset-0 z-40" 
+                                        onClick={() => setIsProfileDropdownOpen(false)}
+                                    />
+                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-slate-100 py-2 z-50">
+                                        <Link href="/profile" className="flex items-center px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                                            Pengaturan Profil
                                         </Link>
-                                        <Link href="/" className="block px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                                            Ke Marketplace
-                                        </Link>
-                                        <div className="border-t border-gray-100/60 my-1" />
-                                        <Link href="/logout" method="post" as="button" className="w-full text-left block px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
-                                            <span className="flex items-center gap-2"><LogOut className="w-4 h-4" /> Keluar</span>
+                                        <Link href="/" className="flex items-center px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                                            Kembali ke Beranda
                                         </Link>
                                     </div>
                                 </>
@@ -305,7 +178,7 @@ export default function DashboardLayout({ children, title, breadcrumbs = [] }) {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 p-5 lg:p-8">
+                <main className="flex-1 p-4 sm:p-6 lg:p-8">
                     {children}
                 </main>
             </div>

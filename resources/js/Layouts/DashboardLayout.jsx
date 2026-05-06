@@ -12,15 +12,40 @@ import {
     LogOut,
     Menu,
     X,
-    User
+    User,
+    PackageSearch,
+    Users,
+    ShoppingBag,
+    Clock,
+    FileText,
+    BadgeCheck
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
     const { auth } = usePage().props;
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [profileOpen, setProfileOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+    const adminNav = [
+        { name: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
+        { name: "Pengguna", icon: Users, href: "/admin/users" },
+        { name: "Produk", icon: Package, href: "/admin/products" },
+        { name: "Penawaran", icon: MessageSquare, href: "/admin/offers" },
+        { name: "Transaksi", icon: Wallet, href: "/admin/transactions" },
+        { name: "Verifikasi", icon: BadgeCheck, href: "/admin/verifications" },
+        { name: "Aktivitas", icon: FileText, href: "/admin/activities" },
+    ];
+
+    const sellerNav = [
+        { name: "Dashboard", icon: LayoutDashboard, href: "/seller/dashboard" },
+        { name: "Produk Saya", icon: Package, href: "/seller/products" },
+        { name: "Penawaran", icon: MessageSquare, href: "/seller/offers" },
+        { name: "Pesanan", icon: Truck, href: "/seller/orders" },
+        { name: "Keuangan", icon: Wallet, href: "/seller/balance" },
+        { name: "Aktivitas", icon: FileText, href: "/seller/activities" },
+    ];
 
     const { adminActivities, sellerActivities } = usePage().props;
 
@@ -69,7 +94,7 @@ export default function DashboardLayout({ children }) {
                         <p className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Menu Utama</p>
                     </div>
                     <nav className="space-y-1">
-                        {navigation.map((item) => {
+                        {navItems.map((item) => {
                             const active = isActive(item.href);
                             const Icon = item.icon;
                             return (
@@ -211,7 +236,7 @@ export default function DashboardLayout({ children }) {
                         {/* Profile Dropdown */}
                         <div className="relative ml-1">
                             <button
-                                onClick={() => setProfileOpen(!profileOpen)}
+                                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                                 className="flex items-center gap-2.5 p-1.5 pr-3 rounded-xl hover:bg-white/10 transition-colors"
                             >
                                 <div className="w-8 h-8 rounded-lg bg-white/15 text-white flex items-center justify-center font-bold text-sm">

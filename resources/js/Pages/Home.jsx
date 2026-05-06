@@ -1,6 +1,7 @@
 import React from "react";
 import { Head, Link, usePage } from "@inertiajs/react";
 import MainLayout from "@/Layouts/MainLayout";
+import LikeButton from "@/Components/LikeButton";
 import {
     ArrowRight,
     Search,
@@ -244,6 +245,9 @@ export default function Home({ recommendations = [], categories = [] }) {
                                             {product.tag}
                                         </div>
                                     )}
+                                    <div className="absolute top-4 right-4 z-10 transition-transform duration-300">
+                                        <LikeButton productId={product.id} className="p-2" />
+                                    </div>
                                     <div className="absolute bottom-4 right-4 bg-white rounded-full p-2 shadow-lg translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
                                         <ArrowRight className="w-5 h-5 text-gray-900" />
                                     </div>

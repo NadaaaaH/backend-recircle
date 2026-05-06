@@ -4,12 +4,19 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
+
+    public function __construct(array $attributes = [])
+    {
+        $this->connection = config('database.default');
+        parent::__construct($attributes);
+    }
 
     protected $fillable = [
         'user_id',
@@ -21,6 +28,7 @@ class Product extends Model
         'lokasi_kampus',
         'image',
         'status',
+        'is_archived',
     ];
 
     protected $casts = [
@@ -151,11 +159,21 @@ class Product extends Model
         return $this->hasMany(ProductImage::class);
     }
 
+    public function wishlistedBy()
+    {
+        return $this->belongsToMany(User::class, 'wishlists')->withTimestamps();
+    }
+
     // ── Scopes ─────────────────────────────────────
 
     public function scopeActive($query)
     {
-        return $query->where('status', 'active');
+        return $query->where('status', 'active')->where('is_archived', false);
+    }
+
+    public function scopeArchived($query)
+    {
+        return $query->where('is_archived', true);
     }
 
     // ── Helpers ────────────────────────────────────

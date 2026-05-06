@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, usePage } from "@inertiajs/react";
-import { Search, Heart, ShoppingBag, Menu, X, Store, ClipboardList, Package, ShieldCheck, LogOut, MessageCircle } from "lucide-react";
+import { Search, Heart, ShoppingBag, ShoppingCart, Menu, X, Store, ClipboardList, Package, ShieldCheck, LogOut, MessageCircle } from "lucide-react";
 
 export default function Navbar() {
     const { auth } = usePage().props;
@@ -41,6 +41,13 @@ export default function Navbar() {
                         {auth.user ? (
                             <>
                                 <Link
+                                    href="/cart"
+                                    className="p-2 text-gray-500 hover:text-primary transition-colors relative"
+                                    title="Keranjang"
+                                >
+                                    <ShoppingCart className="w-5 h-5" />
+                                </Link>
+                                <Link
                                     href="/chat"
                                     className="p-2 text-gray-500 hover:text-primary transition-colors"
                                     title="Pesan"
@@ -60,6 +67,13 @@ export default function Navbar() {
                                     title="Pesanan Saya"
                                 >
                                     <Package className="w-5 h-5" />
+                                </Link>
+                                <Link
+                                    href="/wishlist"
+                                    className="p-2 text-gray-500 hover:text-red-500 transition-colors"
+                                    title="Wishlist Saya"
+                                >
+                                    <Heart className="w-5 h-5" />
                                 </Link>
 
                                 {/* User Dropdown */}
@@ -154,9 +168,11 @@ export default function Navbar() {
                     </div>
                     {auth.user && (
                         <div className="space-y-1">
+                            <Link href="/cart" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary rounded-xl">Keranjang</Link>
                             <Link href="/chat" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary rounded-xl">Pesan</Link>
                             <Link href="/my-offers" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary rounded-xl">Penawaran Saya</Link>
                             <Link href="/orders" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary rounded-xl">Pesanan Saya</Link>
+                            <Link href="/wishlist" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-xl">Wishlist Saya</Link>
                             {auth.user.is_seller && (
                                 <Link href="/seller/dashboard" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-secondary rounded-xl">Dashboard Penjual</Link>
                             )}

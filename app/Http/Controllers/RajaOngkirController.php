@@ -2,88 +2,46 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\RajaOngkirService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class RajaOngkirController extends Controller
 {
-    protected $apiKey;
-    protected $baseUrl = 'https://api.rajaongkir.com/starter';
+    private RajaOngkirService $rajaOngkir;
 
-    public function __construct()
+    public function __construct(RajaOngkirService $rajaOngkir)
     {
-        $this->apiKey = config('services.rajaongkir.key');
+        $this->rajaOngkir = $rajaOngkir;
     }
 
-    public function getProvinces()
+    public function searchDestination(Request $request)
     {
-        try {
-            $response = Http::withHeaders([
-                'key' => $this->apiKey,
-            ])->get("{$this->baseUrl}/province");
-
-            if ($response->successful()) {
-                return response()->json($response->json()['rajaongkir']['results']);
-            }
-
-            Log::error('RajaOngkir Get Provinces Error: ' . $response->body());
-            return response()->json(['error' => 'Gagal mengambil data provinsi'], 500);
-        } catch (\Exception $e) {
-            Log::error('RajaOngkir Get Provinces Exception: ' . $e->getMessage());
-            return response()->json(['error' => 'Terjadi kesalahan sistem'], 500);
+        $keyword = $request->query('keyword', '');
+        if (strlen($keyword) < 3) {
+            return response()->json([]);
         }
+        return response()->json($this->rajaOngkir->searchDestination($keyword));
     }
 
-    public function getCities($province_id)
-    {
-        try {
-            $response = Http::withHeaders([
-                'key' => $this->apiKey,
-            ])->get("{$this->baseUrl}/city", [
-                'province' => $province_id
-            ]);
-
-            if ($response->successful()) {
-                return response()->json($response->json()['rajaongkir']['results']);
-            }
-
-            Log::error('RajaOngkir Get Cities Error: ' . $response->body());
-            return response()->json(['error' => 'Gagal mengambil data kota'], 500);
-        } catch (\Exception $e) {
-            Log::error('RajaOngkir Get Cities Exception: ' . $e->getMessage());
-            return response()->json(['error' => 'Terjadi kesalahan sistem'], 500);
-        }
-    }
-
-    public function getCost(Request $request)
+    public function calculateCost(Request $request)
     {
         $request->validate([
-            'origin'      => 'required|numeric',
-            'destination' => 'required|numeric',
-            'weight'      => 'required|numeric',
-            'courier'     => 'required|in:jne,pos,tiki'
+            'origin' => 'required',
+            'destination' => 'required',
+            'weight' => 'required|numeric',
+            'courier' => 'required|string',
         ]);
 
         try {
-            $response = Http::withHeaders([
-                'key' => $this->apiKey,
-            ])->post("{$this->baseUrl}/cost", [
-                'origin'      => $request->origin,
-                'destination' => $request->destination,
-                'weight'      => $request->weight,
-                'courier'     => $request->courier,
-            ]);
-
-            if ($response->successful()) {
-                return response()->json($response->json()['rajaongkir']['results'][0]['costs']);
-            }
-
-            Log::error('RajaOngkir Get Cost Error: ' . $response->body());
-            return response()->json(['error' => 'Gagal menghitung ongkos kirim'], 500);
+            $cost = $this->rajaOngkir->calculateCost(
+                $request->origin,
+                $request->destination,
+                $request->weight,
+                $request->courier
+            );
+            return response()->json($cost);
         } catch (\Exception $e) {
-            Log::error('RajaOngkir Get Cost Exception: ' . $e->getMessage());
-            return response()->json(['error' => 'Terjadi kesalahan saat menghitung ongkir'], 500);
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 }

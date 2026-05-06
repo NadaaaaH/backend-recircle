@@ -7,6 +7,7 @@ import {
     ArrowUpRight,
     CheckCircle2,
     AlertCircle,
+    TrendingUp
 } from "lucide-react";
 
 export default function Finance({ auth }) {
@@ -49,170 +50,188 @@ export default function Finance({ auth }) {
     ];
 
     return (
-        <SellerLayout user={auth.user}>
-            <Head title="Keuangan Toko - ReCircle" />
+        <div className="pb-12 max-w-[1200px] mx-auto">
+            <Head>
+                <title>Keuangan Toko | ReCircle</title>
+                <meta name="robots" content="noindex, nofollow" />
+            </Head>
 
-            <div className="max-w-7xl mx-auto space-y-8">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                        Keuangan Toko
-                    </h1>
-                    <p className="text-slate-500 mt-1 text-sm font-medium">
-                        Pantau saldo pendapatan dan tarik dana ke rekeningmu.
-                    </p>
-                </div>
+            <div className="mb-6 lg:mb-8">
+                <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                    Keuangan Toko
+                </h1>
+                <p className="text-sm text-slate-500 mt-1 font-medium">
+                    Pantau saldo pendapatan dan tarik dana ke rekeningmu.
+                </p>
+            </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Kolom Kiri: Saldo Card */}
-                    <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl shadow-slate-900/20 relative overflow-hidden">
-                            {/* Dekorasi Card */}
-                            <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
-
-                            <div className="flex items-center gap-3 text-slate-300 mb-6">
-                                <Wallet className="w-5 h-5" />
-                                <span className="font-bold text-sm tracking-widest uppercase">
-                                    Saldo Aktif
-                                </span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+                {/* Kolom Kiri: Saldo Card */}
+                <div className="lg:col-span-1 space-y-6">
+                    <div className="bg-white p-8 rounded-[1.25rem] border border-slate-200/70 shadow-[0_2px_4px_rgba(0,0,0,0.02)] relative overflow-hidden group hover:border-[#4A5D23]/30 transition-all">
+                        {/* Decorative Background Accent */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#4A5D23]/5 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                        
+                        <div className="flex items-center justify-between mb-6 relative z-10">
+                            <div className="w-12 h-12 bg-[#4A5D23]/10 text-[#4A5D23] rounded-xl flex items-center justify-center">
+                                <Wallet className="w-6 h-6" />
                             </div>
-                            <h2 className="text-4xl font-black mb-8">
-                                Rp 1.450.000
-                            </h2>
-
-                            <button className="w-full bg-primary text-white font-black py-4 rounded-2xl shadow-lg hover:scale-[1.02] transition-transform">
-                                Tarik Dana Sekarang
-                            </button>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
-                                <AlertCircle className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                                    Dana Tertunda
-                                </p>
-                                <p className="text-xl font-black text-slate-900">
-                                    Rp 120.000
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Kolom Kanan: Grafik Pendapatan */}
-                    <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col">
-                        <div className="flex justify-between items-center mb-8">
-                            <div>
-                                <h3 className="text-xl font-black text-slate-900">
-                                    Statistik Pendapatan
-                                </h3>
-                                <p className="text-sm font-medium text-slate-500">
-                                    7 Hari Terakhir
-                                </p>
-                            </div>
-                            <span className="font-black text-primary bg-primary/10 px-4 py-2 rounded-xl text-sm">
-                                +24%
+                            <span className="bg-[#4A5D23]/10 text-[#4A5D23] text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider">
+                                Saldo Siap Tarik
                             </span>
                         </div>
+                        
+                        <div className="relative z-10">
+                            <p className="text-sm font-bold text-slate-500 mb-1 uppercase tracking-widest">Saldo Aktif</p>
+                            <h2 className="text-4xl font-black text-slate-900 mb-8 tracking-tight">
+                                Rp 1.450.000
+                            </h2>
+                            <button className="w-full bg-[#4A5D23] text-white font-bold py-3.5 rounded-xl hover:bg-[#3B4A1C] shadow-sm transition-all flex items-center justify-center gap-2">
+                                <ArrowUpRight className="w-5 h-5" /> Tarik Dana Sekarang
+                            </button>
+                        </div>
+                    </div>
 
-                        {/* CSS Simple Bar Chart */}
-                        <div className="flex-1 flex items-end justify-between gap-2 sm:gap-4 mt-auto pt-10 h-64">
-                            {chartData.map((data, index) => (
-                                <div
-                                    key={index}
-                                    className="flex flex-col items-center w-full group"
-                                >
-                                    <div className="relative w-full flex justify-center h-48 items-end">
-                                        <div
-                                            className={`w-full max-w-[3rem] rounded-xl transition-all duration-500 group-hover:opacity-80 ${
-                                                data.value === 100
-                                                    ? "bg-primary"
-                                                    : "bg-slate-100"
-                                            }`}
-                                            style={{ height: `${data.value}%` }}
-                                        >
-                                            {/* Tooltip Hover */}
-                                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-bold py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {data.value}%
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <span
-                                        className={`mt-4 text-sm font-bold ${data.value === 100 ? "text-primary" : "text-slate-400"}`}
-                                    >
-                                        {data.label}
-                                    </span>
-                                </div>
-                            ))}
+                    <div className="bg-white p-6 rounded-[1.25rem] border border-slate-200/70 shadow-[0_2px_4px_rgba(0,0,0,0.02)] flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0 border border-amber-100">
+                            <AlertCircle className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-0.5">
+                                Dana Tertunda
+                            </p>
+                            <p className="text-xl font-black text-slate-900 leading-tight">
+                                Rp 120.000
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Tabel Riwayat */}
-                <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="px-8 py-6 border-b border-gray-50">
-                        <h2 className="text-lg font-bold text-slate-900">
-                            Riwayat Transaksi
-                        </h2>
+                {/* Kolom Kanan: Grafik Pendapatan */}
+                <div className="lg:col-span-2 bg-white p-6 md:p-8 rounded-[1.25rem] border border-slate-200/70 shadow-[0_2px_4px_rgba(0,0,0,0.02)] flex flex-col">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-900">
+                                Statistik Pendapatan
+                            </h3>
+                            <p className="text-sm font-medium text-slate-500">
+                                7 Hari Terakhir
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-100 w-fit">
+                            <TrendingUp className="w-4 h-4" />
+                            <span className="font-bold text-sm">+24%</span>
+                        </div>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm whitespace-nowrap">
-                            <thead className="bg-slate-50/50 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                                <tr>
-                                    <th className="px-8 py-4">ID Transaksi</th>
-                                    <th className="px-8 py-4">Keterangan</th>
-                                    <th className="px-8 py-4">Nominal</th>
-                                    <th className="px-8 py-4">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {history.map((item, i) => (
-                                    <tr
-                                        key={i}
-                                        className="hover:bg-slate-50 transition-colors"
+
+                    {/* CSS Simple Bar Chart */}
+                    <div className="flex-1 flex items-end justify-between gap-2 sm:gap-4 mt-auto pt-10 h-64 border-b border-slate-100 pb-2 relative">
+                        {/* Background lines */}
+                        <div className="absolute inset-0 flex flex-col justify-between pt-10 pb-2 pointer-events-none">
+                            <div className="w-full border-t border-slate-100 border-dashed"></div>
+                            <div className="w-full border-t border-slate-100 border-dashed"></div>
+                            <div className="w-full border-t border-slate-100 border-dashed"></div>
+                            <div className="w-full"></div>
+                        </div>
+
+                        {chartData.map((data, index) => (
+                            <div
+                                key={index}
+                                className="flex flex-col items-center w-full group relative z-10"
+                            >
+                                <div className="relative w-full flex justify-center h-48 items-end">
+                                    <div
+                                        className={`w-full max-w-[2.5rem] rounded-t-lg transition-all duration-300 group-hover:opacity-90 ${
+                                            data.value === 100
+                                                ? "bg-[#4A5D23]"
+                                                : "bg-slate-200"
+                                        }`}
+                                        style={{ height: `${data.value}%` }}
                                     >
-                                        <td className="px-8 py-5">
-                                            <p className="font-bold text-slate-900">
-                                                {item.id}
-                                            </p>
-                                            <p className="text-xs text-slate-500 font-medium">
-                                                {item.date}
-                                            </p>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <p className="font-bold text-slate-700">
-                                                {item.type}
-                                            </p>
-                                            <p className="text-xs text-slate-500 font-medium">
-                                                {item.method}
-                                            </p>
-                                        </td>
-                                        <td
-                                            className={`px-8 py-5 font-black text-lg ${item.amount.includes("+") ? "text-primary" : "text-slate-900"}`}
-                                        >
-                                            {item.amount}
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            {item.status === "Berhasil" ||
-                                            item.status === "Masuk" ? (
-                                                <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-xl text-xs font-bold">
-                                                    <CheckCircle2 className="w-3.5 h-3.5" />{" "}
-                                                    {item.status}
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-600 px-3 py-1.5 rounded-xl text-xs font-bold">
-                                                    <AlertCircle className="w-3.5 h-3.5" />{" "}
-                                                    {item.status}
-                                                </span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                        {/* Tooltip Hover */}
+                                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs font-bold py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                                            {data.value}%
+                                            {/* Arrow indicator */}
+                                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <span
+                                    className={`mt-3 text-[11px] font-bold uppercase tracking-wider ${data.value === 100 ? "text-[#4A5D23]" : "text-slate-400"}`}
+                                >
+                                    {data.label}
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
-        </SellerLayout>
+
+            {/* Tabel Riwayat */}
+            <div className="mt-8 bg-white rounded-[1.25rem] border border-slate-200/70 shadow-[0_2px_4px_rgba(0,0,0,0.02)] overflow-hidden">
+                <div className="px-6 md:px-8 py-5 border-b border-slate-100">
+                    <h2 className="text-lg font-bold text-slate-900">
+                        Riwayat Transaksi
+                    </h2>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm whitespace-nowrap">
+                        <thead className="bg-slate-50/50 text-slate-500 font-bold text-[11px] uppercase tracking-wider">
+                            <tr>
+                                <th className="px-6 md:px-8 py-4 border-b border-slate-100">ID Transaksi</th>
+                                <th className="px-6 md:px-8 py-4 border-b border-slate-100">Keterangan</th>
+                                <th className="px-6 md:px-8 py-4 border-b border-slate-100">Nominal</th>
+                                <th className="px-6 md:px-8 py-4 border-b border-slate-100">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {history.map((item, i) => (
+                                <tr
+                                    key={i}
+                                    className="hover:bg-slate-50/50 transition-colors"
+                                >
+                                    <td className="px-6 md:px-8 py-4 md:py-5">
+                                        <p className="font-bold text-slate-900">
+                                            {item.id}
+                                        </p>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            {item.date}
+                                        </p>
+                                    </td>
+                                    <td className="px-6 md:px-8 py-4 md:py-5">
+                                        <p className="font-bold text-slate-700">
+                                            {item.type}
+                                        </p>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            {item.method}
+                                        </p>
+                                    </td>
+                                    <td
+                                        className={`px-6 md:px-8 py-4 md:py-5 font-black text-base md:text-lg tracking-tight ${item.amount.includes("+") ? "text-emerald-600" : "text-slate-900"}`}
+                                    >
+                                        {item.amount}
+                                    </td>
+                                    <td className="px-6 md:px-8 py-4 md:py-5">
+                                        {item.status === "Berhasil" || item.status === "Masuk" ? (
+                                            <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-100 text-xs font-bold">
+                                                <CheckCircle2 className="w-3.5 h-3.5" />{" "}
+                                                {item.status}
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg border border-amber-100 text-xs font-bold">
+                                                <AlertCircle className="w-3.5 h-3.5" />{" "}
+                                                {item.status}
+                                            </span>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     );
 }
+
+Finance.layout = page => <SellerLayout>{page}</SellerLayout>;

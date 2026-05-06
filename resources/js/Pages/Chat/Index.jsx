@@ -14,6 +14,13 @@ export default function ChatIndex({
 
     const [contacts, setContacts] = useState(initialContacts || []);
     const [selectedUser, setSelectedUser] = useState(null);
+    const selectedUserRef = useRef(null);
+
+    // Keep ref updated for non-reactive closure use
+    useEffect(() => {
+        selectedUserRef.current = selectedUser;
+    }, [selectedUser]);
+
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [activeProduct, setActiveProduct] = useState(initial_product || null);
@@ -53,6 +60,14 @@ export default function ChatIndex({
 
         channel.listen("MessageSent", (e) => {
             const incomingMsg = e;
+            
+            // Reformat time dynamically if strictly loaded from backend created_at
+            if (!incomingMsg.time && incomingMsg.created_at) {
+                 incomingMsg.time = new Date(incomingMsg.created_at).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                 });
+            }
 
             // Update messages if we have the chat open with this sender
             setSelectedUser((currentSelected) => {
@@ -80,22 +95,24 @@ export default function ChatIndex({
                     contact.last_message = incomingMsg.message;
                     contact.created_at = incomingMsg.time || "Baru saja";
 
-                    // Only increment unread if chat is NOT currently open
-                    // We must access selectedUser from the state via a ref or careful dependency check
-                    // For simplicity, we just check if it's not the currently actively viewed sender
+                    // Increment unread count ONLY if the user isn't currently looking at this chat room
+                    if (!selectedUserRef.current || selectedUserRef.current.id !== incomingMsg.sender_id) {
+                        contact.unread_count = (contact.unread_count || 0) + 1;
+                        contact.is_read = false;
+                    }
 
                     updatedContacts.splice(existingIndex, 1);
                     updatedContacts.unshift(contact);
                 } else {
-                    // New contact
+                    // New contact jump to top
                     updatedContacts.unshift({
                         id: incomingMsg.sender_id,
                         name: incomingMsg.sender?.name || "Pengguna",
-                        avatar: `https://ui-avatars.com/api/?name=${incomingMsg.sender?.name || "U"}&background=f3f4f6&color=43552c`,
+                        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(incomingMsg.sender?.name || "U")}&background=f3f4f6&color=43552c`,
                         last_message: incomingMsg.message,
-                        created_at: "Baru saja",
+                        created_at: incomingMsg.time || "Baru saja",
                         is_read: false,
-                        unread_count: 1,
+                        unread_count: (!selectedUserRef.current || selectedUserRef.current.id !== incomingMsg.sender_id) ? 1 : 0,
                     });
                 }
                 return updatedContacts;

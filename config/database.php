@@ -113,6 +113,12 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        'mongodb' => [
+            'driver' => 'mongodb',
+            'dsn' => env('DB_URI_MONGO', 'mongodb+srv://<username>:<password>@<cluster-url>?retryWrites=true&w=majority'),
+            'database' => env('DB_DATABASE_MONGO', 'recircle_mongodb'),
+        ],
+
     ],
 
     /*

@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/profile/notifications/read', [ProfileController::class, 'markNotificationsAsRead'])->name('profile.notifications.read');
 
     // Jual Barang (semua user yang login bisa buat, tapi harus seller untuk akses dashboard)
     Route::get('/jual', [ProductController::class, 'create'])->name('product.create')->middleware('seller');

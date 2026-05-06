@@ -75,4 +75,16 @@ class ProfileController extends Controller
 
         return Redirect::to('/');
     }
+
+    /**
+     * Mark notifications as read for the current user.
+     */
+    public function markNotificationsAsRead(Request $request): RedirectResponse
+    {
+        $request->user()->update([
+            'notifications_read_at' => now(),
+        ]);
+
+        return back();
+    }
 }

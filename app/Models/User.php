@@ -36,6 +36,7 @@ class User extends Authenticatable
         'password' => 'hashed',
         'is_verified' => 'boolean',
         'is_seller' => 'boolean',
+        'notifications_read_at' => 'datetime',
     ];
 
     protected $appends = ['avatar_url'];
@@ -104,5 +105,13 @@ class User extends Authenticatable
     public function latestVerification()
     {
         return $this->hasOne(SellerVerification::class)->latestOfMany();
+    }
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     */
+    protected function serializeDate(\DateTimeInterface $date)
+    {
+        return $date->format('c'); // ISO 8601
     }
 }

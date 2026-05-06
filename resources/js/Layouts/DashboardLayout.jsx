@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import {
     LayoutDashboard,
     Package,
@@ -73,6 +73,35 @@ export default function DashboardLayout({ children, title, breadcrumbs = [] }) {
     const activities = isAdmin ? adminActivities : (isSeller ? sellerActivities : []);
 
     const isActive = (href) => currentPath.startsWith(href);
+
+    const hasUnread = React.useMemo(() => {
+        if (!activities || !Array.isArray(activities) || activities.length === 0) return false;
+        if (!auth.user.notifications_read_at) return true;
+
+        try {
+            const lastReadAt = new Date(auth.user.notifications_read_at).getTime();
+            // Cek jika ada aktivitas yang lebih baru dari waktu baca terakhir (+ toleransi 5 detik untuk amannya)
+            return activities.some(a => {
+                const activityTime = new Date(a.timestamp).getTime();
+                return activityTime > (lastReadAt + 5000);
+            });
+        } catch (e) {
+            console.error("Error comparing timestamps:", e);
+            return activities.length > 0;
+        }
+    }, [activities, auth.user.notifications_read_at]);
+
+    const markAsRead = () => {
+        if (hasUnread) {
+            router.post(route('profile.notifications.read'), {}, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Refresh data
+                    router.reload({ only: ['auth', 'adminActivities', 'sellerActivities'] });
+                }
+            });
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#f7f9f7]">
@@ -193,12 +222,15 @@ export default function DashboardLayout({ children, title, breadcrumbs = [] }) {
                         {/* Notification bell */}
                         <div className="relative">
                             <button
-                                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                                onClick={() => {
+                                    setNotificationsOpen(!notificationsOpen);
+                                    if (!notificationsOpen) markAsRead();
+                                }}
                                 className={`relative p-2.5 rounded-xl transition-colors ${notificationsOpen ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
                                     }`}
                             >
                                 <Bell className="w-[18px] h-[18px]" />
-                                {(activities && activities.length > 0) && (
+                                {hasUnread && (
                                     <span className="absolute top-2 right-2 w-2 h-2 bg-[#d4a373] rounded-full ring-2 ring-[#43552c]" />
                                 )}
                             </button>

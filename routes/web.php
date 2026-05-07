@@ -126,7 +126,7 @@ require __DIR__ . '/auth.php';
 //         Route::delete('/products/{product}', [SellerProductController::class, 'destroy'])->name('products.destroy');
 //         Route::post('/products/{id}/restore', [SellerProductController::class, 'restore'])->name('products.restore');
 //         Route::delete('/products/{id}/force', [SellerProductController::class, 'forceDestroy'])->name('products.forceDestroy');
-        
+
 //         Route::get('/activities', [SellerDashboardController::class, 'activities'])->name('activities');
 //     });
 

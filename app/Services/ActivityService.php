@@ -18,7 +18,7 @@ class ActivityService
             'title' => 'User Baru terdaftar',
             'description' => "{$u->name} bergabung sebagai " . ($u->role ?? 'user'),
             'time' => $u->created_at->diffForHumans(),
-            'timestamp' => $u->created_at->toDateTimeString(),
+            'timestamp' => $u->created_at->toIso8601String(),
         ]);
 
         $products = Product::latest()->limit($subLimit)->get()->map(fn($p) => [
@@ -26,7 +26,7 @@ class ActivityService
             'title' => 'Produk Baru diunggah',
             'description' => "{$p->nama_barang} diunggah oleh {$p->user->name}",
             'time' => $p->created_at->diffForHumans(),
-            'timestamp' => $p->created_at->toDateTimeString(),
+            'timestamp' => $p->created_at->toIso8601String(),
         ]);
 
         $orders = Order::latest()->limit($subLimit)->get()->map(fn($o) => [
@@ -34,7 +34,7 @@ class ActivityService
             'title' => 'Pesanan Baru',
             'description' => "Pesanan #{$o->id} senilai Rp " . number_format($o->total_harga, 0, ',', '.'),
             'time' => $o->created_at->diffForHumans(),
-            'timestamp' => $o->created_at->toDateTimeString(),
+            'timestamp' => $o->created_at->toIso8601String(),
         ]);
 
         return $users->concat($products)->concat($orders)
@@ -62,7 +62,7 @@ class ActivityService
                 'title' => 'Penawaran Baru',
                 'description' => "Penawaran Rp " . number_format($o->harga_tawar, 0, ',', '.') . " untuk {$o->product->nama_barang}",
                 'time' => $o->created_at->diffForHumans(),
-                'timestamp' => $o->created_at->toDateTimeString(),
+                'timestamp' => $o->created_at->toIso8601String(),
             ]);
 
         $orders = Order::whereIn('product_id', $productIds)
@@ -75,7 +75,7 @@ class ActivityService
                 'title' => 'Pesanan Baru',
                 'description' => "Pesanan #{$o->id} untuk {$o->product->nama_barang}",
                 'time' => $o->created_at->diffForHumans(),
-                'timestamp' => $o->created_at->toDateTimeString(),
+                'timestamp' => $o->created_at->toIso8601String(),
             ]);
 
         return $offers->concat($orders)

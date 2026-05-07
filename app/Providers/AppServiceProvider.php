@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\PaymentGatewayInterface;
 use App\Services\MidtransPaymentService;
+use App\Services\RajaOngkirService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider

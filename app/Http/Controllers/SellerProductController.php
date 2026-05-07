@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use App\Traits\ApiResponse;
 
 class SellerProductController extends Controller
 {
+    use ApiResponse;
+
     /**
      * Seller: Kelola Produk (List Produk Sendiri).
      */
@@ -33,9 +35,7 @@ class SellerProductController extends Controller
                 'active_orders' => $p->orders->count(),
             ]);
 
-        return Inertia::render('Seller/Products', [
-            'products' => $products,
-        ]);
+        return $this->successResponse($products, 'Products retrieved successfully');
     }
 
     /**
@@ -44,7 +44,7 @@ class SellerProductController extends Controller
     public function toggleArchive(Request $request, Product $product)
     {
         if ($product->user_id !== $request->user()->id) {
-            abort(403);
+            return $this->errorResponse('Unauthorized access', 403);
         }
 
         $product->update([
@@ -52,7 +52,7 @@ class SellerProductController extends Controller
         ]);
 
         $statusStr = $product->is_archived ? 'diarsipkan' : 'dikembalikan ke etalase';
-        return back()->with('success', "Produk berhasil {$statusStr}.");
+        return $this->successResponse(null, "Produk berhasil {$statusStr}.");
     }
 
     /**
@@ -61,12 +61,12 @@ class SellerProductController extends Controller
     public function destroy(Request $request, Product $product)
     {
         if ($product->user_id !== $request->user()->id) {
-            abort(403);
+            return $this->errorResponse('Unauthorized access', 403);
         }
 
         $product->delete();
 
-        return back()->with('success', 'Produk berhasil dipindahkan ke Tong Sampah.');
+        return $this->successResponse(null, 'Produk berhasil dipindahkan ke Tong Sampah.');
     }
 
     /**
@@ -74,11 +74,15 @@ class SellerProductController extends Controller
      */
     public function restore(Request $request, $id)
     {
-        $product = Product::onlyTrashed()->where('user_id', $request->user()->id)->findOrFail($id);
+        $product = Product::onlyTrashed()->where('user_id', $request->user()->id)->find($id);
+
+        if (!$product) {
+            return $this->errorResponse('Product not found', 404);
+        }
 
         $product->restore();
 
-        return back()->with('success', 'Produk berhasil dipulihkan.');
+        return $this->successResponse(null, 'Produk berhasil dipulihkan.');
     }
 
     /**
@@ -86,15 +90,19 @@ class SellerProductController extends Controller
      */
     public function forceDestroy(Request $request, $id)
     {
-        $product = Product::onlyTrashed()->where('user_id', $request->user()->id)->findOrFail($id);
+        $product = Product::onlyTrashed()->where('user_id', $request->user()->id)->find($id);
+
+        if (!$product) {
+            return $this->errorResponse('Product not found', 404);
+        }
 
         // Cek apakah produk punya relasi ke tabel orders
         if ($product->orders()->exists()) {
-            return back()->withErrors(['error' => 'Tidak dapat dihapus permanen karena memiliki riwayat transaksi']);
+            return $this->errorResponse('Tidak dapat dihapus permanen karena memiliki riwayat transaksi', 422);
         }
 
         $product->forceDelete();
 
-        return back()->with('success', 'Produk berhasil dihapus permanen.');
+        return $this->successResponse(null, 'Produk berhasil dihapus permanen.');
     }
 }

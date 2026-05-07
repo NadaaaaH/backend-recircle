@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ProductApiController extends Controller
 {
@@ -66,6 +67,149 @@ class ProductApiController extends Controller
             return $this->errorResponse('Product not found', 404);
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to retrieve product', 500);
+        }
+    }
+
+    /**
+     * Store a newly created product in storage.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'categoryId'     => 'required|exists:categories,id',
+                'name'           => 'required|string|max:255',
+                'description'    => 'required|string',
+                'price'          => 'required|numeric|min:0',
+                'stock'          => 'required|integer|min:0',
+                'condition'      => 'required|string|in:baru,bekas',
+                'campusLocation' => 'required|string|max:255',
+                'images.*'       => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->errorResponse('Validation Error', 422, $validator->errors());
+            }
+
+            $validated = $validator->validated();
+            
+            $data = [
+                'category_id'   => $validated['categoryId'],
+                'nama_barang'   => $validated['name'],
+                'deskripsi'     => $validated['description'],
+                'harga'         => $validated['price'],
+                'stok'          => $validated['stock'],
+                'kondisi'       => $validated['condition'],
+                'lokasi_kampus' => $validated['campusLocation'],
+                'status'        => 'active',
+            ];
+
+            // Handle image uploads
+            if ($request->hasFile('images')) {
+                $imagePaths = [];
+                foreach ($request->file('images') as $image) {
+                    $imagePaths[] = $image->store('products', 'public');
+                }
+                $data['image'] = json_encode($imagePaths);
+            }
+
+            $product = $request->user()->products()->create($data);
+
+            return $this->successResponse(
+                new ProductResource($product->load(['user', 'category'])),
+                'Product created successfully',
+                201
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to create product: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Update the specified product in storage.
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        try {
+            $product = Product::findOrFail($id);
+
+            if ($product->user_id !== $request->user()->id) {
+                return $this->errorResponse('Unauthorized to update this product', 403);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'categoryId'     => 'sometimes|exists:categories,id',
+                'name'           => 'sometimes|string|max:255',
+                'description'    => 'sometimes|string',
+                'price'          => 'sometimes|numeric|min:0',
+                'stock'          => 'sometimes|integer|min:0',
+                'condition'      => 'sometimes|string|in:baru,bekas',
+                'campusLocation' => 'sometimes|string|max:255',
+                'images.*'       => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->errorResponse('Validation Error', 422, $validator->errors());
+            }
+
+            $validated = $validator->validated();
+            $data = [];
+            
+            if (isset($validated['categoryId'])) $data['category_id'] = $validated['categoryId'];
+            if (isset($validated['name'])) $data['nama_barang'] = $validated['name'];
+            if (isset($validated['description'])) $data['deskripsi'] = $validated['description'];
+            if (isset($validated['price'])) $data['harga'] = $validated['price'];
+            if (isset($validated['stock'])) $data['stok'] = $validated['stock'];
+            if (isset($validated['condition'])) $data['kondisi'] = $validated['condition'];
+            if (isset($validated['campusLocation'])) $data['lokasi_kampus'] = $validated['campusLocation'];
+
+            // Handle image uploads
+            if ($request->hasFile('images')) {
+                // Delete old images if needed or keep them? 
+                // For now, let's just replace if new ones are uploaded
+                $imagePaths = [];
+                foreach ($request->file('images') as $image) {
+                    $imagePaths[] = $image->store('products', 'public');
+                }
+                $data['image'] = json_encode($imagePaths);
+            }
+
+            $product->update($data);
+
+            return $this->successResponse(
+                new ProductResource($product->load(['user', 'category'])),
+                'Product updated successfully'
+            );
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse('Product not found', 404);
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to update product: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Remove the specified product from storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        try {
+            $product = Product::findOrFail($id);
+
+            if ($product->user_id !== $request->user()->id) {
+                return $this->errorResponse('Unauthorized to delete this product', 403);
+            }
+
+            $product->delete();
+
+            return $this->successResponse(null, 'Product deleted successfully');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse('Product not found', 404);
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to delete product: ' . $e->getMessage(), 500);
         }
     }
 }

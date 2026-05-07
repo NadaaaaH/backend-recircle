@@ -15,14 +15,14 @@ class CartItemResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'               => $this->id,
-            'product_id'       => $this->product_id,
-            'product_name'     => $this->product->nama_barang,
-            'product_image'    => $this->product->foto_barang_url,
-            'normal_price'     => (int) $this->product->harga,
-            'negotiated_price' => $this->offer ? (int) $this->offer->harga_deal : null,
-            'expires_at'       => $this->offer ? $this->offer->deal_expired_at : null,
-            'added_at'         => $this->created_at?->format('Y-m-d H:i:s'),
+            'id'              => $this->id,
+            'productId'       => $this->product_id,
+            'productName'     => $this->product->nama_barang,
+            'productImage'    => $this->product->foto_barang_url,
+            'normalPrice'     => (int) $this->product->harga,
+            'negotiatedPrice' => $this->offer ? (int) $this->offer->harga_deal : null,
+            'expiresAt'       => $this->offer ? $this->offer->deal_expired_at : null,
+            'addedAt'         => $this->created_at?->format('Y-m-d H:i:s'),
         ];
     }
 }

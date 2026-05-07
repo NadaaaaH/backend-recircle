@@ -17,11 +17,8 @@ class UserResource extends JsonResource
         return [
             'id'             => $this->id,
             'name'           => $this->name,
-            // Sembunyikan email dan whatsapp untuk privasi di public endpoint,
-            // tetapi bisa ditampilkan jika user sedang mengakses profilnya sendiri,
-            // namun karena ini lebih sering dipakai oleh public product list, kita sembunyikan.
-            'profile_picture'=> $this->profile_picture ? asset('storage/' . $this->profile_picture) : null,
-            'joined_at'      => $this->created_at?->format('Y-m-d H:i:s'),
+            'profilePicture' => $this->profile_picture ? asset('storage/' . $this->profile_picture) : null,
+            'joinedAt'       => $this->created_at?->format('Y-m-d H:i:s'),
         ];
     }
 }

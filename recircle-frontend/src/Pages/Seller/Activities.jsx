@@ -1,5 +1,5 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import SellerLayout from '@/Layouts/SellerLayout';
 import {
     MessageSquare,
@@ -9,19 +9,54 @@ import {
     ArrowLeft,
     Filter
 } from 'lucide-react';
+import api from '@/lib/axios';
 
-export default function Activities({ activities }) {
+export default function Activities() {
+    const [activities, setActivities] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        document.title = "Aktivitas Toko | ReCircle";
+        api.get('/seller/activities')
+            .then((res) => {
+                const raw = res.data?.data;
+                const list = Array.isArray(raw) ? raw : [];
+                setActivities(list);
+            })
+            .catch(() => {
+                setActivities([]);
+            })
+            .finally(() => setIsLoading(false));
+    }, []);
+
+    const typeIcon = (type) => {
+        if (type === 'offer') return <MessageSquare className="w-5 h-5" />;
+        return <ShoppingCart className="w-5 h-5" />;
+    };
+
+    const typeColor = (type) => {
+        if (type === 'offer') return 'bg-blue-50 text-blue-600 border-blue-100/50';
+        return 'bg-emerald-50 text-emerald-600 border-emerald-100/50';
+    };
+
+    if (isLoading) {
+        return (
+            <SellerLayout>
+                <div className="flex min-h-[60vh] items-center justify-center">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500/20 border-t-emerald-600"></div>
+                </div>
+            </SellerLayout>
+        );
+    }
+
     return (
+        <SellerLayout>
         <div className="pb-12 max-w-[1000px] mx-auto">
-            <Head>
-                <title>Aktivitas Toko | ReCircle</title>
-                <meta name="robots" content="noindex, nofollow" />
-            </Head>
 
             {/* Header Section */}
             <div className="flex items-center gap-4 mb-6 lg:mb-8">
                 <Link
-                    href="/seller/dashboard"
+                    to="/seller/dashboard"
                     className="p-3 bg-white border border-slate-200/70 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
                 >
                     <ArrowLeft className="w-5 h-5" />
@@ -49,10 +84,8 @@ export default function Activities({ activities }) {
                     {activities.length > 0 ? (
                         activities.map((activity, idx) => (
                             <div key={idx} className="p-5 md:p-6 flex gap-4 hover:bg-slate-50/50 transition-colors group">
-                                <div className={`w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center border
-                                    ${activity.type === 'offer' ? 'bg-blue-50 text-blue-600 border-blue-100/50' : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'}`}
-                                >
-                                    {activity.type === 'offer' ? <MessageSquare className="w-5 h-5" /> : <ShoppingCart className="w-5 h-5" />}
+                                <div className={`w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center border ${typeColor(activity.type)}`}>
+                                    {typeIcon(activity.type)}
                                 </div>
                                 <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
                                     <div>
@@ -78,7 +111,6 @@ export default function Activities({ activities }) {
                 </div>
             </div>
         </div>
+        </SellerLayout>
     );
 }
-
-Activities.layout = page => <SellerLayout>{page}</SellerLayout>;

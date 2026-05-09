@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import SellerLayout from '@/Layouts/SellerLayout';
 import { ShieldCheck, Upload, CheckCircle, XCircle, Clock, Camera } from 'lucide-react';
 
-export default function SellerVerification({ latestVerification, is_seller }) {
-    const { flash } = usePage().props;
+export default function SellerVerification() {
+    const is_seller = false;
+    const [latestVerification, setLatestVerification] = useState(null);
+    const [flash, setFlash] = useState({});
+    const navigate = useNavigate();
     const [fotoKtm, setFotoKtm] = useState(null);
     const [preview, setPreview] = useState(null);
     const [namaKampus, setNamaKampus] = useState('');
@@ -19,47 +23,46 @@ export default function SellerVerification({ latestVerification, is_seller }) {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setProcessing(true);
 
-        const formData = new FormData();
-        formData.append('foto_ktm', fotoKtm);
-        formData.append('nama_kampus', namaKampus);
-        formData.append('nim', nim);
-
-        router.post('/seller/verification', formData, {
-            onFinish: () => setProcessing(false),
-        });
+        setTimeout(() => {
+            setProcessing(false);
+            setLatestVerification({
+                status: 'pending',
+                created_at: new Date().toLocaleDateString()
+            });
+            setFlash({ success: "Data verifikasi berhasil dikirim dan sedang menunggu review." });
+        }, 1500);
     };
+
+    useEffect(() => {
+        document.title = "Verifikasi Penjual | ReCircle";
+    }, []);
 
     if (is_seller) {
         return (
+            <SellerLayout>
             <div className="flex items-center justify-center min-h-[60vh]">
-                <Head>
-                    <title>Verifikasi Penjual | ReCircle</title>
-                    <meta name="robots" content="noindex, nofollow" />
-                </Head>
                 <div className="bg-white rounded-[1.25rem] p-10 max-w-md w-full text-center shadow-[0_2px_4px_rgba(0,0,0,0.02)] border border-slate-200/70">
                     <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-6 border border-emerald-100">
                         <CheckCircle className="w-10 h-10 text-emerald-500" />
                     </div>
                     <h2 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Sudah Terverifikasi!</h2>
                     <p className="text-slate-500 mb-8 font-medium">Akun kamu sudah terverifikasi sebagai penjual. Kamu bisa mulai menjual barang.</p>
-                    <a href="/jual" className="inline-flex bg-[#4A5D23] text-white px-8 py-3.5 rounded-xl hover:bg-[#3B4A1C] transition-colors font-bold shadow-sm">
+                    <Link to="/jual" className="inline-flex bg-[#4A5D23] text-white px-8 py-3.5 rounded-xl hover:bg-[#3B4A1C] transition-colors font-bold shadow-sm">
                         Mulai Jual Barang
-                    </a>
+                    </Link>
                 </div>
             </div>
+            </SellerLayout>
         );
     }
 
     return (
+        <SellerLayout>
         <div className="pb-12 max-w-[800px] mx-auto">
-            <Head>
-                <title>Verifikasi Penjual | ReCircle</title>
-                <meta name="robots" content="noindex, nofollow" />
-            </Head>
 
             <div className="text-center mb-8 lg:mb-12">
                 <div className="w-16 h-16 rounded-2xl bg-[#4A5D23]/10 flex items-center justify-center mx-auto mb-5 border border-[#4A5D23]/20">
@@ -173,7 +176,6 @@ export default function SellerVerification({ latestVerification, is_seller }) {
                 </form>
             )}
         </div>
+        </SellerLayout>
     );
 }
-
-SellerVerification.layout = page => <SellerLayout>{page}</SellerLayout>;

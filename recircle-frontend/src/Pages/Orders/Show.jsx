@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Link, useParams } from 'react-router-dom';
 import MainLayout from '@/Layouts/MainLayout';
 import {
     ArrowLeft,
@@ -14,7 +14,12 @@ import {
     ShieldCheck
 } from 'lucide-react';
 
-export default function Show({ order, product, snap_token, midtrans_client_key }) {
+export default function Show() {
+    const { id } = useParams();
+    const order = { id: id, kode_pesanan: 'ORD-001', created_at: '10 Okt 2023', total_harga: 12000000, metode_pengiriman: 'kirim_paket', metode_pembayaran: 'bank_transfer', status: 'dikirim', alamat_pengiriman: 'Jl. Raya Dramaga', catatan: 'Tolong packing kayu', is_pending: false };
+    const product = { name: 'MacBook Pro M1', seller_name: 'Apple Store', seller_kampus: 'IPB', img: null };
+    const snap_token = null;
+    const midtrans_client_key = null;
     const [isPaying, setIsPaying] = useState(false);
 
     // Initialize Midtrans Snap Script
@@ -38,11 +43,11 @@ export default function Show({ order, product, snap_token, midtrans_client_key }
             window.snap.pay(snap_token, {
                 onSuccess: function (result) {
                     setIsPaying(false);
-                    router.reload({ only: ['order'] });
+                    alert("Pembayaran Berhasil");
                 },
                 onPending: function (result) {
                     setIsPaying(false);
-                    router.reload({ only: ['order'] });
+                    alert("Pembayaran Pending");
                 },
                 onError: function (result) {
                     setIsPaying(false);
@@ -120,9 +125,12 @@ export default function Show({ order, product, snap_token, midtrans_client_key }
         }
     ];
 
+    useEffect(() => {
+        document.title = `Pesanan ${order.kode_pesanan} | ReCircle`;
+    }, [order.kode_pesanan]);
+
     return (
         <MainLayout>
-            <Head title={`Pesanan ${order.kode_pesanan}`} />
             
             <div className="min-h-screen bg-[#f7f9f7] py-12">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -130,7 +138,7 @@ export default function Show({ order, product, snap_token, midtrans_client_key }
                     {/* Header */}
                     <div className="flex items-center gap-4 mb-8">
                         <Link 
-                            href="/orders"
+                            to="/orders"
                             className="p-3 bg-white rounded-full shadow-sm hover:shadow-md transition-shadow text-gray-400 hover:text-primary border border-gray-100"
                         >
                             <ArrowLeft className="w-5 h-5" />

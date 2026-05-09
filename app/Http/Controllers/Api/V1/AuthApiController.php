@@ -96,7 +96,7 @@ class AuthApiController extends Controller
             if (!$user) {
                 return $this->successResponse(null, 'User is not logged in');
             }
-            return $this->successResponse($user, 'Authenticated user retrieved successfully');
+            return $this->successResponse(new \App\Http\Resources\Api\V1\UserResource($user), 'Authenticated user retrieved successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to retrieve user: ' . $e->getMessage(), 500);
         }

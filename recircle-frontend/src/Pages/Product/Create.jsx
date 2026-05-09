@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
-import { Head, useForm, Link, usePage } from '@inertiajs/react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { Upload, X, Image as ImageIcon, ArrowLeft, Eye, Tag, MapPin, FileText, Layers } from 'lucide-react';
 
-export default function Create({ categories = [] }) {
-    const { errors: serverErrors } = usePage().props;
+export default function Create() {
+    const dummyCategories = [
+        { id: 1, name: "Elektronik" },
+        { id: 2, name: "Buku" },
+        { id: 3, name: "Furniture" }
+    ];
+    const categories = dummyCategories;
+    const navigate = useNavigate();
 
-    const { data, setData, post, processing, errors } = useForm({
+    const [data, setDataState] = useState({
         nama_barang: '',
         harga: '',
         category_id: '',
@@ -15,6 +22,17 @@ export default function Create({ categories = [] }) {
         lokasi_kampus: 'IPB University',
         images: [],
     });
+
+    const setData = (key, value) => {
+        setDataState(prev => ({ ...prev, [key]: value }));
+    };
+
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState({});
+
+    useEffect(() => {
+        document.title = "Jual Barang | ReCircle";
+    }, []);
 
     const [previewUrls, setPreviewUrls] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
@@ -76,11 +94,14 @@ export default function Create({ categories = [] }) {
     };
 
     // ── Submit with forceFormData ──
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
-        post(route('product.store'), {
-            forceFormData: true,
-        });
+        setProcessing(true);
+        // Simulate API call for SPA phase
+        setTimeout(() => {
+            setProcessing(false);
+            navigate('/seller/products');
+        }, 1500);
     };
 
     // ── Inline Error Component ──
@@ -99,7 +120,6 @@ export default function Create({ categories = [] }) {
                 { label: 'Tambah Produk' },
             ]}
         >
-            <Head title="Jual Barang" />
 
             <form onSubmit={submit} className="flex flex-col xl:flex-row gap-8 max-w-5xl">
                 {/* ── LEFT COLUMN: Form Fields ── */}
@@ -262,7 +282,7 @@ export default function Create({ categories = [] }) {
                     {/* Actions */}
                     <div className="flex items-center justify-end gap-3">
                         <Link
-                            href="/seller/dashboard"
+                            to="/seller/dashboard"
                             className="px-5 py-3 bg-white border border-gray-200 text-gray-600 font-medium rounded-xl text-sm hover:bg-gray-50 transition-colors"
                         >
                             Batal

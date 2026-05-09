@@ -4,45 +4,45 @@ import InputLabel from '@/Components/InputLabel';
 import Modal from '@/Components/Modal';
 import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
-import { useForm } from '@inertiajs/react';
 import { useRef, useState } from 'react';
+import api from '@/lib/axios';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function DeleteUserForm({ className = '' }) {
     const [confirmingUserDeletion, setConfirmingUserDeletion] = useState(false);
     const passwordInput = useRef();
 
-    const {
-        data,
-        setData,
-        delete: destroy,
-        processing,
-        reset,
-        errors,
-        clearErrors,
-    } = useForm({
-        password: '',
-    });
+    const { logout } = useAuth();
+    const [password, setPassword] = useState('');
+    const [errors, setErrors] = useState({});
+    const [processing, setProcessing] = useState(false);
 
     const confirmUserDeletion = () => {
         setConfirmingUserDeletion(true);
     };
 
-    const deleteUser = (e) => {
+    const deleteUser = async (e) => {
         e.preventDefault();
+        setProcessing(true);
+        setErrors({});
 
-        destroy(route('profile.destroy'), {
-            preserveScroll: true,
-            onSuccess: () => closeModal(),
-            onError: () => passwordInput.current.focus(),
-            onFinish: () => reset(),
-        });
+        try {
+            await api.delete('/profile', { data: { password } });
+            closeModal();
+            await logout();
+        } catch (err) {
+            setErrors(err.response?.data?.errors || {});
+            passwordInput.current?.focus();
+        } finally {
+            setProcessing(false);
+            setPassword('');
+        }
     };
 
     const closeModal = () => {
         setConfirmingUserDeletion(false);
-
-        clearErrors();
-        reset();
+        setErrors({});
+        setPassword('');
     };
 
     return (
@@ -89,9 +89,9 @@ export default function DeleteUserForm({ className = '' }) {
                             type="password"
                             name="password"
                             ref={passwordInput}
-                            value={data.password}
+                            value={password}
                             onChange={(e) =>
-                                setData('password', e.target.value)
+                                setPassword(e.target.value)
                             }
                             className="mt-1 block w-3/4"
                             isFocused

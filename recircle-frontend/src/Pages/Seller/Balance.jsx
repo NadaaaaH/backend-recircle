@@ -1,9 +1,28 @@
-import React from 'react';
-import { Head } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
 import SellerLayout from '@/Layouts/SellerLayout';
 import { Wallet, TrendingUp, Clock, CheckCircle } from 'lucide-react';
+import api from '@/lib/axios';
 
-export default function SellerBalance({ balances, total_dilepas }) {
+export default function SellerBalance() {
+    const [balances, setBalances] = useState([]);
+    const [totalDilepas, setTotalDilepas] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        document.title = "Saldo Penjualan | ReCircle";
+        api.get('/seller/balance')
+            .then((res) => {
+                const data = res.data?.data;
+                setTotalDilepas(data?.total_dilepas ?? 0);
+                // history is paginated: { data: [...], ... }
+                setBalances(data?.history?.data ?? []);
+            })
+            .catch(() => {
+                setBalances([]);
+            })
+            .finally(() => setIsLoading(false));
+    }, []);
+
     const formatPrice = (price) => 'Rp ' + Number(price).toLocaleString('id-ID');
 
     const statusIcons = {
@@ -18,12 +37,19 @@ export default function SellerBalance({ balances, total_dilepas }) {
         ditarik: 'Dicairkan',
     };
 
+    if (isLoading) {
+        return (
+            <SellerLayout>
+                <div className="flex min-h-[60vh] items-center justify-center">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500/20 border-t-emerald-600"></div>
+                </div>
+            </SellerLayout>
+        );
+    }
+
     return (
+        <SellerLayout>
         <div className="pb-12 max-w-[1000px] mx-auto">
-            <Head>
-                <title>Saldo Penjualan | ReCircle</title>
-                <meta name="robots" content="noindex, nofollow" />
-            </Head>
 
             <div className="mb-6 lg:mb-8">
                 <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Saldo Penjualan</h1>
@@ -36,7 +62,7 @@ export default function SellerBalance({ balances, total_dilepas }) {
                 </div>
                 <div>
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Total Dana Dilepas</p>
-                    <p className="text-3xl font-black text-slate-900 tracking-tight">{formatPrice(total_dilepas)}</p>
+                    <p className="text-3xl font-black text-slate-900 tracking-tight">{formatPrice(totalDilepas)}</p>
                 </div>
             </div>
 
@@ -59,21 +85,21 @@ export default function SellerBalance({ balances, total_dilepas }) {
                                         b.status === 'dilepas' ? 'bg-emerald-50 border-emerald-100' :
                                         'bg-blue-50 border-blue-100'
                                     }`}>
-                                        {statusIcons[b.status]}
+                                        {statusIcons[b.status] ?? <Wallet className="w-4 h-4 text-slate-400" />}
                                     </div>
                                     <div>
-                                        <p className="font-bold text-slate-900 text-base">{b.product_name}</p>
-                                        <p className="text-xs text-slate-500 mt-0.5 font-medium">{b.kode_pesanan} &bull; {b.created_at}</p>
+                                        <p className="font-bold text-slate-900 text-base">{b.productName}</p>
+                                        <p className="text-xs text-slate-500 mt-0.5 font-medium">{b.orderCode} &bull; {b.createdAt}</p>
                                     </div>
                                 </div>
                                 <div className="text-right flex flex-col items-end">
-                                    <p className="font-black text-slate-900 text-lg tracking-tight">{formatPrice(b.jumlah)}</p>
+                                    <p className="font-black text-slate-900 text-lg tracking-tight">{formatPrice(b.amount)}</p>
                                     <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded border mt-1 ${
                                         b.status === 'ditahan' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                                         b.status === 'dilepas' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                                         'bg-blue-50 text-blue-700 border-blue-100'
                                     }`}>
-                                        {statusLabels[b.status]}
+                                        {statusLabels[b.status] || b.status}
                                     </span>
                                 </div>
                             </div>
@@ -82,7 +108,6 @@ export default function SellerBalance({ balances, total_dilepas }) {
                 </div>
             )}
         </div>
+        </SellerLayout>
     );
 }
-
-SellerBalance.layout = page => <SellerLayout>{page}</SellerLayout>;

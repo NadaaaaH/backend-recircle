@@ -1,11 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Link, useNavigate, useParams, Navigate } from 'react-router-dom';
 import MainLayout from '@/Layouts/MainLayout';
 import { ShieldCheck, MapPin, Package, MessageCircle, ArrowLeft, CheckCircle, CreditCard, Loader2, Box } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
 
-export default function Checkout({ product, offer, final_price, midtrans_client_key }) {
-    const { flash } = usePage().props;
+export default function Checkout() {
+    const navigate = useNavigate();
+    const { id } = useParams();
+    const { user: currentUser } = useAuth();
+
+    if (!currentUser) {
+        return <Navigate to="/login" replace />;
+    }
+
+    // Mock data for initial SPA phase
+    const product = {
+        id: id || 1,
+        name: "MacBook Pro M1 2020",
+        price: 12000000,
+        img: "https://placehold.co/400x400?text=MacBook",
+        seller_area_id: "34260"
+    };
+    const offer = null;
+    const final_price = product.price;
+    const midtrans_client_key = import.meta.env.VITE_MIDTRANS_CLIENT_KEY || 'SB-Mid-client-XXXXX';
+
     const [metodePengiriman, setMetodePengiriman] = useState('cod');
     
     // Alamat state
@@ -183,6 +203,13 @@ export default function Checkout({ product, offer, final_price, midtrans_client_
         setProcessing(true);
 
         try {
+            // Mocking API call for SPA phase
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Simulasikan sukses langsung untuk mempermudah navigasi SPA sementara
+            setPaymentSuccess(true);
+
+            /* === KODE ASLI UNTUK INTEGRASI MIDTRANS & BACKEND ===
             const fullShippingAddress = (metodePengiriman === 'kirim_paket' && selectedDestDetails) 
                 ? `${alamat}, ${selectedDestDetails.label} ${selectedDestDetails.zip_code}`
                 : alamat;
@@ -203,30 +230,39 @@ export default function Checkout({ product, offer, final_price, midtrans_client_
                     window.snap.pay(response.data.snap_token, {
                         onSuccess: () => setPaymentSuccess(true),
                         onPending: () => {
-                            router.visit(response.data.redirect_url);
+                            navigate(response.data.redirect_url);
                         },
                         onError: () => alert('Pembayaran gagal. Silakan coba lagi.'),
                         onClose: () => {
-                            router.visit(response.data.redirect_url);
+                            navigate(response.data.redirect_url);
                         },
                     });
                 } else {
-                    router.visit(response.data.redirect_url);
+                    navigate(response.data.redirect_url);
                 }
             }
+            */
         } catch (error) {
             console.error('Checkout error:', error);
             alert(error.response?.data?.message || 'Terjadi kesalahan saat checkout.');
+        } finally {
             setProcessing(false);
         }
     };
 
     const formatPrice = (price) => 'Rp ' + Number(price).toLocaleString('id-ID');
 
+    useEffect(() => {
+        if (paymentSuccess) {
+            document.title = "Pembayaran Berhasil | ReCircle";
+        } else {
+            document.title = "Checkout | ReCircle";
+        }
+    }, [paymentSuccess]);
+
     if (paymentSuccess) {
         return (
             <MainLayout>
-                <Head title="Pembayaran Berhasil" />
                 <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
                     <div className="bg-white rounded-3xl p-10 max-w-md w-full text-center shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
                         <div className="w-20 h-20 rounded-full bg-[#43552c]/10 flex items-center justify-center mx-auto mb-6">
@@ -234,9 +270,9 @@ export default function Checkout({ product, offer, final_price, midtrans_client_
                         </div>
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">Pembayaran Berhasil</h2>
                         <p className="text-gray-500 mb-6">Pesanan Anda telah kami terima dan akan segera diproses oleh penjual.</p>
-                        <a href="/orders" className="inline-block bg-[#43552c] text-white px-8 py-4 rounded-full hover:bg-[#364423] transition-colors font-medium active:scale-[0.98]">
+                        <Link to="/orders" className="inline-block bg-[#43552c] text-white px-8 py-4 rounded-full hover:bg-[#364423] transition-colors font-medium active:scale-[0.98]">
                             Lihat Pesanan Saya
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </MainLayout>
@@ -245,11 +281,10 @@ export default function Checkout({ product, offer, final_price, midtrans_client_
 
     return (
         <MainLayout>
-            <Head title="Checkout" />
             <div className="min-h-screen bg-gray-50 pt-28 pb-16">
                 <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
                     {/* Header */}
-                    <button onClick={() => window.history.back()} className="flex items-center gap-2 text-gray-500 hover:text-[#43552c] mb-8 transition-colors group">
+                    <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-[#43552c] mb-8 transition-colors group">
                         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                         <span className="text-sm font-semibold">Kembali</span>
                     </button>

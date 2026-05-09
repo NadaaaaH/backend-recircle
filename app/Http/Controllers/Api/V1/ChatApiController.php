@@ -20,6 +20,11 @@ class ChatApiController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
+            // Cek apakah MongoDB sudah dikonfigurasi. Jika belum, jangan eksekusi query agar tidak hang.
+            if (str_contains(config('database.connections.mongodb.dsn'), '<cluster-url>')) {
+                return $this->successResponse([], 'Chat disabled: MongoDB not configured.');
+            }
+
             $user = $request->user();
             
             // Get latest messages per room
@@ -69,6 +74,10 @@ class ChatApiController extends Controller
     public function show(int $otherUserId, Request $request): JsonResponse
     {
         try {
+            if (str_contains(config('database.connections.mongodb.dsn'), '<cluster-url>')) {
+                return $this->successResponse([], 'Chat disabled: MongoDB not configured.');
+            }
+
             $userId = $request->user()->id;
 
             // Mark as read
@@ -95,6 +104,10 @@ class ChatApiController extends Controller
     public function store(Request $request): JsonResponse
     {
         try {
+            if (str_contains(config('database.connections.mongodb.dsn'), '<cluster-url>')) {
+                return $this->errorResponse('Failed to send message: MongoDB not configured.', 500);
+            }
+
             $validated = $request->validate([
                 'receiver_id' => 'required|exists:users,id',
                 'product_id' => 'nullable|exists:products,id',

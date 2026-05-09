@@ -1,8 +1,8 @@
 import React, { Suspense, useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import SellerLayout from '@/Layouts/SellerLayout';
-import { BellRing, ArrowRight, PackageSearch, MessageSquareText } from 'lucide-react';
-import axios from '@/lib/axios';
+import { BellRing, MessageSquareText } from 'lucide-react';
+import api from '@/lib/axios';
 
 // Dynamic Import for Recharts to optimize FCP
 const AreaChart = React.lazy(() => import('recharts').then(m => ({ default: m.AreaChart })));
@@ -40,23 +40,27 @@ const ActivityItem = ({ avatar, name, action, time }) => (
 );
 
 export default function Dashboard() {
-    const [dashboardData, setDashboardData] = useState(null);
+    const [stats, setStats] = useState(null);
+    const [chartData, setChartData] = useState([]);
+    const [recentOrders, setRecentOrders] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         document.title = 'Seller Dashboard | ReCircle';
         setIsLoading(true);
-        axios.get('/dashboard')
-            .then(response => {
-                // Extract API payload from response.data.data per guidelines
-                setDashboardData(response.data.data);
-                setIsLoading(false);
+
+        api.get('/seller/dashboard')
+            .then((res) => {
+                const data = res.data?.data;
+                setStats(data?.stats ?? null);
+                setChartData(data?.chartData ?? []);
+                setRecentOrders(data?.recent_orders ?? []);
             })
-            .catch(err => {
-                setError(err.response?.data?.message || err.message || 'Gagal memuat data dashboard.');
-                setIsLoading(false);
-            });
+            .catch((err) => {
+                setError(err.response?.data?.message || 'Gagal memuat data dashboard.');
+            })
+            .finally(() => setIsLoading(false));
     }, []);
 
     const formatRp = (value) => {
@@ -67,18 +71,13 @@ export default function Dashboard() {
         }).format(value || 0);
     };
 
-    const stats = dashboardData?.stats;
-    const chartData = dashboardData?.chartData;
-    const recent_orders = dashboardData?.recent_orders || dashboardData?.recentOrders;
-    const auth = dashboardData?.auth || { user: dashboardData?.user };
-
-    // Strict No-Dummy rule: If chartData is empty, we derive a simple realistic trend from total_revenue 
+    // If no chartData from API, show a single point with total_revenue
     const activeChartData = useMemo(() => {
         if (chartData && chartData.length > 0) return chartData;
         return [{ name: 'Saat Ini', total: stats?.total_revenue || 0 }];
     }, [chartData, stats?.total_revenue]);
 
-    // Beautiful emerald pulse loader matching ReCircle's modern aesthetic
+    // Beautiful emerald pulse loader
     if (isLoading) {
         return (
             <SellerLayout>
@@ -106,8 +105,8 @@ export default function Dashboard() {
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 mb-2">Gagal Memuat Data</h3>
                         <p className="text-sm text-slate-500 mb-6">{error}</p>
-                        <button 
-                            onClick={() => window.location.reload()} 
+                        <button
+                            onClick={() => window.location.reload()}
                             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-xl transition-colors text-sm"
                         >
                             Coba Lagi
@@ -122,20 +121,20 @@ export default function Dashboard() {
         <SellerLayout>
             <div className="min-h-screen bg-[#F4F5F7] pb-10">
                 <div className="max-w-[1200px] mx-auto space-y-6">
-                    
+
                     {/* Header Welcome */}
                     <div className="flex items-center justify-between mb-2">
                         <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                            Hello, {auth?.user?.name || 'Seller'}!
+                            Selamat Datang di Dashboard Toko!
                         </h1>
                     </div>
 
                     {/* Asymmetric Grid Layout 70/30 */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        
+
                         {/* A. KOLOM KIRI (span 8) */}
                         <div className="lg:col-span-8 space-y-6">
-                            
+
                             {/* Banner Info */}
                             <div className="bg-white border border-slate-200/70 rounded-xl p-3 flex justify-between items-center shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
                                 <div className="flex items-center gap-3">
@@ -154,26 +153,26 @@ export default function Dashboard() {
                                 <div className="flex items-center justify-between mb-4">
                                     <h2 className="text-lg font-semibold text-slate-900">Performa Toko</h2>
                                 </div>
-                                
+
                                 <div className="bg-white border border-slate-200/70 rounded-[1.25rem] shadow-[0_2px_4px_rgba(0,0,0,0.02)] overflow-hidden">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 border-b border-slate-100">
-                                        <OverviewCard 
-                                            title="Saldo Aktif" 
-                                            value={formatRp(stats?.total_revenue)} 
+                                        <OverviewCard
+                                            title="Saldo Aktif (Dilepas)"
+                                            value={formatRp(stats?.total_revenue)}
                                         />
-                                        <OverviewCard 
-                                            title="Dana Ditahan (Escrow)" 
-                                            value={formatRp(stats?.pending_balance)} 
+                                        <OverviewCard
+                                            title="Dana Ditahan (Escrow)"
+                                            value={formatRp(stats?.pending_balance)}
                                         />
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
-                                        <OverviewCard 
-                                            title="Total Produk" 
-                                            value={stats?.total_products || 0} 
+                                        <OverviewCard
+                                            title="Total Produk"
+                                            value={stats?.total_products || 0}
                                         />
-                                        <OverviewCard 
-                                            title="Pesanan Aktif" 
-                                            value={stats?.active_orders || 0} 
+                                        <OverviewCard
+                                            title="Pesanan Aktif"
+                                            value={stats?.active_orders || 0}
                                         />
                                     </div>
                                 </div>
@@ -182,7 +181,7 @@ export default function Dashboard() {
                             {/* Revenue Graphic */}
                             <section>
                                 <div className="flex items-center justify-between mb-4">
-                                    <h2 className="text-lg font-semibold text-slate-900">Grafik Pendapatan</h2>
+                                    <h2 className="text-lg font-semibold text-slate-900">Grafik Pendapatan (7 Hari)</h2>
                                 </div>
 
                                 <div className="bg-white border border-slate-200/70 rounded-[1.25rem] p-6 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
@@ -190,7 +189,7 @@ export default function Dashboard() {
                                     <h3 className="text-3xl font-bold text-slate-900 tracking-tight mb-8">
                                         {formatRp(stats?.total_revenue)}
                                     </h3>
-                                    
+
                                     <div className="h-64 w-full relative">
                                         <Suspense fallback={<div className="w-full h-full bg-slate-50 animate-pulse rounded-[1.25rem]"></div>}>
                                             <ResponsiveContainer width="100%" height="100%">
@@ -201,24 +200,24 @@ export default function Dashboard() {
                                                             <stop offset="95%" stopColor="#4A5D23" stopOpacity={0}/>
                                                         </linearGradient>
                                                     </defs>
-                                                    <XAxis 
-                                                        dataKey="name" 
-                                                        axisLine={false} 
-                                                        tickLine={false} 
+                                                    <XAxis
+                                                        dataKey="name"
+                                                        axisLine={false}
+                                                        tickLine={false}
                                                         tick={{ fontSize: 11, fill: '#64748b' }}
                                                         dy={10}
                                                     />
-                                                    <Tooltip 
+                                                    <Tooltip
                                                         contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}
                                                         formatter={(value) => [formatRp(value), 'Pendapatan']}
                                                     />
-                                                    <Area 
-                                                        type="monotone" 
-                                                        dataKey="total" 
-                                                        stroke="#4A5D23" 
+                                                    <Area
+                                                        type="monotone"
+                                                        dataKey="total"
+                                                        stroke="#4A5D23"
                                                         strokeWidth={2}
-                                                        fillOpacity={1} 
-                                                        fill="url(#colorRevenue)" 
+                                                        fillOpacity={1}
+                                                        fill="url(#colorRevenue)"
                                                         activeDot={{ r: 6, fill: '#fff', stroke: '#4A5D23', strokeWidth: 2 }}
                                                     />
                                                 </AreaChart>
@@ -231,12 +230,11 @@ export default function Dashboard() {
 
                         {/* B. KOLOM KANAN (span 4) */}
                         <div className="lg:col-span-4 flex flex-col gap-6">
-                            
+
                             {/* Shop Advisor */}
                             <div className="bg-white border border-slate-200/70 rounded-[1.25rem] p-6 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
                                 <div className="flex items-center justify-between mb-4">
                                     <h2 className="text-lg font-semibold text-slate-900">Shop Advisor</h2>
-                                    <Link to="#" className="text-sm text-slate-900 hover:underline">Lihat Semua &rarr;</Link>
                                 </div>
                                 <div className="flex gap-4 items-start">
                                     <div className="p-2 bg-slate-50 rounded-full text-slate-600 mt-1 flex-shrink-0">
@@ -244,7 +242,7 @@ export default function Dashboard() {
                                     </div>
                                     <div>
                                         <h3 className="text-sm font-semibold text-slate-900 mb-1">
-                                            {stats?.needs_shipping > 0 
+                                            {stats?.needs_shipping > 0
                                                 ? `Kamu memiliki ${stats.needs_shipping} pesanan yang harus dikirim hari ini.`
                                                 : 'Semua pesananmu sudah terkirim, toko dalam kondisi prima!'}
                                         </h3>
@@ -279,13 +277,13 @@ export default function Dashboard() {
                                     <h2 className="text-lg font-semibold text-slate-900">Aktivitas Terbaru</h2>
                                     <Link to="/seller/orders" className="text-sm text-slate-900 hover:underline">Lihat Semua &rarr;</Link>
                                 </div>
-                                
-                                {!recent_orders || recent_orders.length === 0 ? (
+
+                                {!recentOrders || recentOrders.length === 0 ? (
                                     <p className="text-sm text-slate-400">Belum ada aktivitas.</p>
                                 ) : (
                                     <div className="flex flex-col gap-5">
-                                        {recent_orders.map((activity, index) => (
-                                            <ActivityItem 
+                                        {recentOrders.map((activity, index) => (
+                                            <ActivityItem
                                                 key={activity.id || index}
                                                 avatar={null}
                                                 name={activity.buyer_name}

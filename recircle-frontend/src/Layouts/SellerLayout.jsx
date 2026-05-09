@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import axios from '@/lib/axios';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
     LayoutDashboard, 
     PackageSearch, 
@@ -18,22 +18,11 @@ import {
 } from 'lucide-react';
 
 export default function SellerLayout({ children }) {
-    const [auth, setAuth] = useState({ user: null });
+    const { user, logout } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     
     const location = useLocation();
     const navigate = useNavigate();
-
-    useEffect(() => {
-        // Fetch current authenticated user info
-        axios.get('/user')
-            .then(res => {
-                setAuth({ user: res.data.data });
-            })
-            .catch(() => {
-                setAuth({ user: null });
-            });
-    }, []);
 
     const isActive = (path) => {
         const currentUrl = location.pathname || '';
@@ -45,14 +34,7 @@ export default function SellerLayout({ children }) {
 
     const handleLogout = async (e) => {
         e.preventDefault();
-        try {
-            await axios.post('/logout');
-        } catch (err) {
-            console.error('Logout error:', err);
-        } finally {
-            setAuth({ user: null });
-            window.location.href = '/login';
-        }
+        await logout();
     };
 
     const navigation = [
@@ -146,15 +128,15 @@ export default function SellerLayout({ children }) {
                     <div className="bg-white border border-slate-200/70 rounded-xl p-3 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
                         <button className="flex items-center gap-3 w-full text-left mb-3 group">
                             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
-                                {auth?.user?.avatar ? (
-                                    <img src={auth.user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                {user?.avatar ? (
+                                    <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
-                                    <span className="text-sm font-bold text-slate-600">{auth?.user?.name?.charAt(0)}</span>
+                                    <span className="text-sm font-bold text-slate-600">{user?.name?.charAt(0)}</span>
                                 )}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-slate-900 truncate">{auth?.user?.name || 'Seller'}</p>
-                                <p className="text-xs text-slate-500 truncate">{auth?.user?.email}</p>
+                                <p className="text-sm font-semibold text-slate-900 truncate">{user?.name || 'Seller'}</p>
+                                <p className="text-xs text-slate-500 truncate">{user?.email}</p>
                             </div>
                             <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
                         </button>

@@ -15,10 +15,17 @@ class UserResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'             => $this->id,
-            'name'           => $this->name,
-            'profilePicture' => $this->profile_picture ? asset('storage/' . $this->profile_picture) : null,
-            'joinedAt'       => $this->created_at?->format('Y-m-d H:i:s'),
+            'id'         => $this->id,
+            'name'       => $this->name,
+            'email'      => $this->email,
+            'role'       => $this->role,
+            'is_seller'  => (bool) $this->is_seller,
+            'kampus'     => $this->kampus,
+            'bio'        => $this->bio,
+            'nomor_wa'   => $this->nomor_wa,
+            'avatar_url' => $this->avatar_url,
+            'wishlist_ids'=> $this->wishlists()->pluck('product_id')->toArray(),
+            'joinedAt'   => $this->created_at?->format('Y-m-d H:i:s'),
         ];
     }
 }

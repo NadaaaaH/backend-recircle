@@ -1,40 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import axios from '@/lib/axios';
+import { useAuth } from '@/contexts/AuthContext';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 
 export default function AuthenticatedLayout({ header, children }) {
-    const [auth, setAuth] = useState({ user: null });
+    const { user, logout } = useAuth();
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
     
     const location = useLocation();
 
-    useEffect(() => {
-        // Fetch current authenticated user info
-        axios.get('/user')
-            .then(res => {
-                setAuth({ user: res.data.data });
-            })
-            .catch(() => {
-                setAuth({ user: null });
-            });
-    }, []);
-
-    const user = auth.user || { name: 'Memuat...', email: '' };
+    const displayUser = user || { name: 'Memuat...', email: '' };
 
     const handleLogout = async (e) => {
         e.preventDefault();
-        try {
-            await axios.post('/logout');
-        } catch (err) {
-            console.error('Logout error:', err);
-        } finally {
-            setAuth({ user: null });
-            window.location.href = '/login';
-        }
+        await logout();
     };
 
     return (
@@ -68,7 +50,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                                 type="button"
                                                 className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none dark:bg-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
                                             >
-                                                {user.name}
+                                                {displayUser.name}
 
                                                 <svg
                                                     className="-me-0.5 ms-2 h-4 w-4"
@@ -164,10 +146,10 @@ export default function AuthenticatedLayout({ header, children }) {
                     <div className="border-t border-gray-200 pb-1 pt-4 dark:border-gray-600">
                         <div className="px-4">
                             <div className="text-base font-medium text-gray-800 dark:text-gray-200">
-                                {user.name}
+                                {displayUser.name}
                             </div>
                             <div className="text-sm font-medium text-gray-500">
-                                {user.email}
+                                {displayUser.email}
                             </div>
                         </div>
 

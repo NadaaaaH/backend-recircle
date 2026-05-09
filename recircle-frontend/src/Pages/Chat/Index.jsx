@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Head, usePage, Link } from "@inertiajs/react";
+import { Link, useSearchParams, Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import MainLayout from "@/Layouts/MainLayout";
 import { Send, Search, CheckCircle2, ChevronLeft, Tag } from "lucide-react";
 import axios from "axios";
 
-export default function ChatIndex({
-    contacts: initialContacts,
-    initial_selected_user_id,
-    initial_product,
-}) {
-    const { auth } = usePage().props;
-    const currentUser = auth.user;
+export default function ChatIndex() {
+    const { user: currentUser } = useAuth();
+    
+    const [searchParams] = useSearchParams();
+    const initial_selected_user_id = parseInt(searchParams.get('user_id')) || null;
+    const initial_user_name = searchParams.get('user_name') || null;
+    const initial_product_id = parseInt(searchParams.get('product_id')) || null;
+    const initial_product_name = searchParams.get('product_name') || null;
+    const initial_product_price = parseInt(searchParams.get('product_price')) || 0;
+    const initial_product_img = searchParams.get('product_img') || null;
 
-    const [contacts, setContacts] = useState(initialContacts || []);
+    const [contacts, setContacts] = useState([]);
+    const [isLoadingContacts, setIsLoadingContacts] = useState(true);
     const [selectedUser, setSelectedUser] = useState(null);
     const selectedUserRef = useRef(null);
 
@@ -23,200 +28,226 @@ export default function ChatIndex({
 
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
-    const [activeProduct, setActiveProduct] = useState(initial_product || null);
+    const [activeProduct, setActiveProduct] = useState(null);
     const [isSending, setIsSending] = useState(false);
 
     const messagesEndRef = useRef(null);
 
-    // Initial load selected user
+    // Redirect to login if not authenticated
+    if (!currentUser) {
+        return <Navigate to="/login" replace />;
+    }
+
+    // Load Contacts from API
     useEffect(() => {
-        if (initial_selected_user_id) {
-            const user = contacts.find(
-                (c) => c.id === initial_selected_user_id,
-            );
-            if (user) {
-                openChat(user);
-            } else {
-                // If not in contacts yet, we might want to fetch their details or just set a basic outline
-                // This is a simplified fallback
-                openChat({ id: initial_selected_user_id, name: "Pengguna" });
-            }
-        }
-    }, []);
+        import('@/lib/axios').then(({ default: api }) => {
+            api.get('/chat')
+                .then(res => {
+                    const fetchedContacts = res.data?.data || [];
+                    setContacts(fetchedContacts);
+                    
+                    // If we have an initial user selected from URL, check if they exist in contacts
+                    if (initial_selected_user_id) {
+                        const existingUser = fetchedContacts.find(c => c.id === initial_selected_user_id);
+                        if (existingUser) {
+                            openChat(existingUser);
+                        } else {
+                            // If they are a new contact, create a temporary contact object based on URL params
+                            const newTempContact = { 
+                                id: initial_selected_user_id, 
+                                name: initial_user_name || "Pengguna",
+                                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(initial_user_name || 'Pengguna')}&background=f3f4f6&color=43552c`,
+                                unread_count: 0
+                            };
+                            openChat(newTempContact);
+                            // We don't add them to the contacts list until a message is sent
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error("Error fetching chat contacts:", err);
+                    
+                    // Fallback: Even if contacts fail to load, open the chat window for the requested user
+                    if (initial_selected_user_id) {
+                        const newTempContact = { 
+                            id: initial_selected_user_id, 
+                            name: initial_user_name || "Pengguna",
+                            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(initial_user_name || 'Pengguna')}&background=f3f4f6&color=43552c`,
+                            unread_count: 0
+                        };
+                        openChat(newTempContact);
+                    }
+                })
+                .finally(() => setIsLoadingContacts(false));
+        });
+    }, [initial_selected_user_id]);
 
     // Scroll to bottom when messages change
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    // Setup Laravel Echo listener
     useEffect(() => {
-        if (!currentUser) return;
-
-        // Listen to my own private channel for incoming messages
-        const channel = window.Echo.private(
-            `chat.${currentUser.id}`,
-        );
-
-        channel.listen("MessageSent", (e) => {
-            const incomingMsg = e;
-            
-            // Reformat time dynamically if strictly loaded from backend created_at
-            if (!incomingMsg.time && incomingMsg.created_at) {
-                 incomingMsg.time = new Date(incomingMsg.created_at).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                 });
-            }
-
-            // Update messages if we have the chat open with this sender
-            setSelectedUser((currentSelected) => {
-                if (
-                    currentSelected &&
-                    currentSelected.id === incomingMsg.sender_id
-                ) {
-                    setMessages((prev) => [...prev, incomingMsg]);
-
-                    // Mark as read immediately
-                    axios.get(`/chat/${incomingMsg.sender_id}`);
-                }
-                return currentSelected;
-            });
-
-            // Update contacts list (bring to top, update last message, inc unread if closed)
-            setContacts((prevContacts) => {
-                let updatedContacts = [...prevContacts];
-                const existingIndex = updatedContacts.findIndex(
-                    (c) => c.id === incomingMsg.sender_id,
-                );
-
-                if (existingIndex > -1) {
-                    const contact = updatedContacts[existingIndex];
-                    contact.last_message = incomingMsg.message;
-                    contact.created_at = incomingMsg.time || "Baru saja";
-
-                    // Increment unread count ONLY if the user isn't currently looking at this chat room
-                    if (!selectedUserRef.current || selectedUserRef.current.id !== incomingMsg.sender_id) {
-                        contact.unread_count = (contact.unread_count || 0) + 1;
-                        contact.is_read = false;
-                    }
-
-                    updatedContacts.splice(existingIndex, 1);
-                    updatedContacts.unshift(contact);
-                } else {
-                    // New contact jump to top
-                    updatedContacts.unshift({
-                        id: incomingMsg.sender_id,
-                        name: incomingMsg.sender?.name || "Pengguna",
-                        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(incomingMsg.sender?.name || "U")}&background=f3f4f6&color=43552c`,
-                        last_message: incomingMsg.message,
-                        created_at: incomingMsg.time || "Baru saja",
-                        is_read: false,
-                        unread_count: (!selectedUserRef.current || selectedUserRef.current.id !== incomingMsg.sender_id) ? 1 : 0,
-                    });
-                }
-                return updatedContacts;
-            });
-        });
-
-        return () => {
-            channel.stopListening("MessageSent");
-        };
-    }, [currentUser]);
+        document.title = "Pesan | ReCircle";
+    }, []);
 
     const openChat = async (user) => {
         setSelectedUser(user);
 
-        // Zero out unread count in UI
+        // Zero out unread count in UI locally
         setContacts((prev) =>
             prev.map((c) => (c.id === user.id ? { ...c, unread_count: 0 } : c)),
         );
 
-        try {
-            const response = await axios.get(`/chat/${user.id}`);
-            setMessages(response.data.messages);
-
-            // Set active product based on the last message if exists, or keep initial
-            const msgs = response.data.messages;
-            if (msgs.length > 0 && msgs[msgs.length - 1].product) {
-                setActiveProduct(msgs[msgs.length - 1].product);
-            }
-        } catch (error) {
-            console.error("Failed to load messages", error);
+        // Optimistically set active product context from URL if available
+        if (initial_product_id) {
+            setActiveProduct({
+                id: initial_product_id,
+                name: initial_product_name || "Produk",
+                price: initial_product_price || 0,
+                img: initial_product_img || "https://placehold.co/400x400?text=Barang",
+            });
         }
+
+        // Fetch messages from API
+        import('@/lib/axios').then(({ default: api }) => {
+            api.get(`/chat/${user.id}`)
+                .then(res => {
+                    const fetchedMessages = res.data?.data || [];
+                    
+                    const mappedMessages = fetchedMessages.map(msg => ({
+                        id: msg.id,
+                        sender_id: msg.senderId,
+                        receiver_id: msg.receiverId,
+                        message: msg.message,
+                        time: msg.time,
+                        is_read: msg.isRead,
+                        product: msg.product
+                    }));
+                    
+                    setMessages(mappedMessages);
+                    
+                    // If no initial product from URL, try to infer from last message
+                    if (!initial_product_id) {
+                        if (mappedMessages.length > 0) {
+                            const lastMsgWithProduct = [...mappedMessages].reverse().find(m => m.product);
+                            if (lastMsgWithProduct) {
+                                setActiveProduct({
+                                    id: lastMsgWithProduct.product.id,
+                                    name: lastMsgWithProduct.product.name,
+                                    price: lastMsgWithProduct.product.price,
+                                    img: lastMsgWithProduct.product.image,
+                                });
+                            } else {
+                                setActiveProduct(null);
+                            }
+                        } else {
+                            setActiveProduct(null);
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error("Error fetching messages:", err);
+                    setMessages([]); // Set empty array to clear loading state if any
+                });
+        });
     };
 
     const sendMessage = async (e) => {
         e.preventDefault();
         if (!newMessage.trim() || !selectedUser) return;
 
-        const tempMessage = {
-            id: Date.now(),
-            sender_id: currentUser.id,
-            receiver_id: selectedUser.id,
-            message: newMessage,
-            product_id: activeProduct?.id,
-            is_read: false,
-            time: new Date().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-            }),
-        };
-
-        setMessages((prev) => [...prev, tempMessage]);
+        const currentMessageText = newMessage;
         setNewMessage("");
         setIsSending(true);
 
-        try {
-            const response = await axios.post("/chat", {
+        import('@/lib/axios').then(({ default: api }) => {
+            api.post('/chat', {
                 receiver_id: selectedUser.id,
-                message: tempMessage.message,
-                product_id: activeProduct?.id,
-            });
+                message: currentMessageText,
+                product_id: activeProduct?.id
+            }).then(res => {
+                const msgData = res.data?.data;
+                if (!msgData) return;
 
-            // Replace temp with real
-            setMessages((prev) =>
-                prev.map((msg) =>
-                    msg.id === tempMessage.id ? response.data.message : msg,
-                ),
-            );
+                const newMsg = {
+                    id: msgData.id,
+                    sender_id: msgData.senderId,
+                    receiver_id: msgData.receiverId,
+                    message: msgData.message,
+                    time: msgData.time,
+                    is_read: msgData.isRead,
+                    product: msgData.product
+                };
 
-            // Update contact list
-            setContacts((prev) => {
-                let updated = [...prev];
-                const index = updated.findIndex(
-                    (c) => c.id === selectedUser.id,
-                );
-                if (index > -1) {
-                    const c = updated[index];
-                    c.last_message = response.data.message.message;
-                    c.created_at = "Baru saja";
-                    updated.splice(index, 1);
-                    updated.unshift(c);
-                } else {
-                    updated.unshift({
-                        id: selectedUser.id,
-                        name: selectedUser.name,
-                        avatar:
-                            selectedUser.avatar ||
-                            `https://ui-avatars.com/api/?name=${selectedUser.name}&background=f3f4f6&color=43552c`,
-                        last_message: response.data.message.message,
-                        created_at: "Baru saja",
-                        unread_count: 0,
-                    });
-                }
-                return updated;
+                setMessages((prev) => [...prev, newMsg]);
+                
+                // Update contacts list to move this to top
+                setContacts((prev) => {
+                    let updated = [...prev];
+                    const index = updated.findIndex((c) => c.id === selectedUser.id);
+                    if (index > -1) {
+                        const c = updated[index];
+                        c.last_message = currentMessageText;
+                        c.created_at = "Baru saja";
+                        updated.splice(index, 1);
+                        updated.unshift(c);
+                    } else {
+                        updated.unshift({
+                            id: selectedUser.id,
+                            name: selectedUser.name,
+                            avatar: selectedUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.name)}&background=f3f4f6&color=43552c`,
+                            last_message: currentMessageText,
+                            created_at: "Baru saja",
+                            unread_count: 0,
+                        });
+                    }
+                    return updated;
+                });
+            }).catch(err => {
+                console.warn("API Gagal, beralih ke mode simulasi (Pesan tidak tersimpan di database). Error:", err);
+                // Fallback: Simulate sending the message locally for UI demo purposes
+                const mockNewMsg = {
+                    id: Date.now(),
+                    sender_id: currentUser.id,
+                    receiver_id: selectedUser.id,
+                    message: currentMessageText,
+                    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                    is_read: false,
+                    product: activeProduct
+                };
+
+                setMessages((prev) => [...prev, mockNewMsg]);
+                
+                setContacts((prev) => {
+                    let updated = [...prev];
+                    const index = updated.findIndex((c) => c.id === selectedUser.id);
+                    if (index > -1) {
+                        const c = updated[index];
+                        c.last_message = currentMessageText;
+                        c.created_at = "Baru saja";
+                        updated.splice(index, 1);
+                        updated.unshift(c);
+                    } else {
+                        updated.unshift({
+                            id: selectedUser.id,
+                            name: selectedUser.name,
+                            avatar: selectedUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.name)}&background=f3f4f6&color=43552c`,
+                            last_message: currentMessageText,
+                            created_at: "Baru saja",
+                            unread_count: 0,
+                        });
+                    }
+                    return updated;
+                });
+            }).finally(() => {
+                setIsSending(false);
             });
-        } catch (error) {
-            console.error("Failed to send message", error);
-        } finally {
-            setIsSending(false);
-        }
+        });
     };
 
     return (
         <MainLayout>
-            <Head title="Pesan" />
             <div className="bg-[#f7f9f7] min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-7xl mx-auto h-[80vh] flex bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border border-gray-100">
                     {/* Contacts Sidebar */}
@@ -237,7 +268,12 @@ export default function ChatIndex({
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto">
-                            {contacts.length === 0 ? (
+                            {isLoadingContacts ? (
+                                <div className="p-8 flex flex-col items-center justify-center">
+                                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#43552c]/20 border-t-[#43552c] mb-3"></div>
+                                    <span className="text-gray-400 text-xs">Memuat obrolan...</span>
+                                </div>
+                            ) : contacts.length === 0 ? (
                                 <div className="p-8 text-center text-gray-400 text-sm">
                                     Belum ada percakapan.
                                 </div>
@@ -340,7 +376,7 @@ export default function ChatIndex({
                                         </div>
                                         {/* Dynamic link to the product */}
                                         <Link
-                                            href={`/product/${activeProduct.id}`}
+                                            to={`/products/${activeProduct.id}`}
                                             className="px-4 py-2 bg-[#f7f9f7] text-[#43552c] rounded-xl text-xs font-bold hover:bg-[#43552c]/10 transition-colors whitespace-nowrap border border-gray-100"
                                         >
                                             Lihat

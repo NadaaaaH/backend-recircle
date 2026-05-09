@@ -87,6 +87,9 @@ Route::prefix('v1')->group(function () {
             Route::get('/activities', [\App\Http\Controllers\Api\V1\SellerActivityApiController::class, 'index']);
             
             // Seller Product Management
+            Route::get('/settings', [\App\Http\Controllers\Api\V1\SellerSettingsApiController::class, 'show']);
+            Route::patch('/settings', [\App\Http\Controllers\Api\V1\SellerSettingsApiController::class, 'update']);
+
             Route::get('/products', [\App\Http\Controllers\Api\V1\SellerProductApiController::class, 'index']);
             Route::post('/products', [ProductApiController::class, 'store']); // Use common Product store
             Route::patch('/products/{id}', [ProductApiController::class, 'update']); // Use common Product update

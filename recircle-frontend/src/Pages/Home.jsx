@@ -244,7 +244,7 @@ export default function Home() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
                         {recommendations.map((product) => (
                             <Link
-                                to={`/product/${product.id}`}
+                                to={`/products/${product.id}`}
                                 key={product.id}
                                 className="group cursor-pointer block"
                             >

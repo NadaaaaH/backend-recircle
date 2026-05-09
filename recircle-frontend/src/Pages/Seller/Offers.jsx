@@ -1,18 +1,55 @@
-import React, { useState } from 'react';
-import { Head, usePage, router } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
 import SellerLayout from '@/Layouts/SellerLayout';
 import { PackageOpen, CheckCircle2, XCircle } from 'lucide-react';
+import api from '@/lib/axios';
 
 export default function Offers() {
-    const { offers } = usePage().props;
+    const [offersList, setOffersList] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('pending');
+    const [processingId, setProcessingId] = useState(null);
+
+    useEffect(() => {
+        document.title = "Penawaran Masuk | ReCircle";
+        fetchOffers();
+    }, []);
+
+    const fetchOffers = () => {
+        setIsLoading(true);
+        api.get('/seller/offers')
+            .then((res) => {
+                const raw = res.data?.data;
+                const list = Array.isArray(raw) ? raw : [];
+                setOffersList(list);
+            })
+            .catch(() => {
+                setOffersList([]);
+            })
+            .finally(() => setIsLoading(false));
+    };
 
     const handleAccept = (id) => {
-        router.post(route('seller.offers.accept', id));
+        setProcessingId(id);
+        api.post(`/offers/${id}/accept`)
+            .then(() => {
+                setOffersList(prev => prev.map(o => o.id === id ? { ...o, status: 'accepted' } : o));
+            })
+            .catch((err) => {
+                alert(err.response?.data?.message || 'Gagal menerima penawaran.');
+            })
+            .finally(() => setProcessingId(null));
     };
 
     const handleReject = (id) => {
-        router.post(route('seller.offers.reject', id));
+        setProcessingId(id);
+        api.post(`/offers/${id}/reject`)
+            .then(() => {
+                setOffersList(prev => prev.map(o => o.id === id ? { ...o, status: 'rejected' } : o));
+            })
+            .catch((err) => {
+                alert(err.response?.data?.message || 'Gagal menolak penawaran.');
+            })
+            .finally(() => setProcessingId(null));
     };
 
     const formatRp = (value) => {
@@ -23,11 +60,14 @@ export default function Offers() {
         }).format(value || 0);
     };
 
-    // Fallback jika array kosong dari backend
-    const offersList = offers || [];
-    
-    // Filter offers berdasarkan status activeTab
-    const filteredOffers = offersList.filter(offer => offer.status === activeTab);
+    // API returns camelCase from OfferResource
+    // status: 'pending' | 'accepted' | 'rejected'
+    const filteredOffers = offersList.filter(offer => {
+        if (activeTab === 'pending') return offer.status === 'pending';
+        if (activeTab === 'accepted') return offer.status === 'accepted';
+        if (activeTab === 'rejected') return offer.status === 'rejected';
+        return true;
+    });
 
     const tabs = [
         { id: 'pending', label: 'Menunggu' },
@@ -35,15 +75,25 @@ export default function Offers() {
         { id: 'rejected', label: 'Ditolak' },
     ];
 
+    if (isLoading) {
+        return (
+            <SellerLayout>
+                <div className="flex min-h-[60vh] items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500/20 border-t-emerald-600"></div>
+                        <p className="text-sm font-semibold text-emerald-600 animate-pulse">Memuat Penawaran...</p>
+                    </div>
+                </div>
+            </SellerLayout>
+        );
+    }
+
     return (
+        <SellerLayout>
         <div className="min-h-screen bg-[#F4F5F7] pb-10">
-            <Head>
-                <title>Penawaran Masuk | ReCircle</title>
-                <meta name="robots" content="noindex, nofollow" />
-            </Head>
 
             <div className="max-w-[1000px] mx-auto space-y-2">
-                
+
                 {/* Header */}
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-6">
                     Penawaran Masuk
@@ -57,8 +107,8 @@ export default function Offers() {
                             onClick={() => setActiveTab(tab.id)}
                             className={`
                                 rounded-lg px-6 py-2 font-medium transition-all text-sm
-                                ${activeTab === tab.id 
-                                    ? 'bg-white shadow-sm text-slate-900' 
+                                ${activeTab === tab.id
+                                    ? 'bg-white shadow-sm text-slate-900'
                                     : 'text-slate-500 hover:text-slate-700'
                                 }
                             `}
@@ -80,7 +130,7 @@ export default function Offers() {
                         /* Cards */
                         filteredOffers.map((offer) => (
                             <div key={offer.id} className="bg-white border border-slate-200/70 rounded-[1.25rem] p-5 flex flex-col md:flex-row justify-between items-center gap-6 shadow-[0_2px_4px_rgba(0,0,0,0.02)] transition-all hover:border-slate-300">
-                                
+
                                 {/* Kiri: Info Produk & Pembeli */}
                                 <div className="flex items-center gap-4 w-full md:w-auto">
                                     <div className="w-16 h-16 rounded-xl object-cover border border-slate-100 overflow-hidden bg-slate-50 flex-shrink-0 flex items-center justify-center">
@@ -101,7 +151,7 @@ export default function Offers() {
                                                 )}
                                             </div>
                                             <p className="text-sm text-slate-500 truncate max-w-[200px]">
-                                                {offer.buyer?.name || 'Pembeli'} <span className="opacity-50">•</span> {offer.buyer?.campus || 'Kampus'}
+                                                {offer.buyer?.name || 'Pembeli'}
                                             </p>
                                         </div>
                                     </div>
@@ -112,7 +162,7 @@ export default function Offers() {
                                     <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Penawaran:</p>
                                     <div className="flex items-center md:items-baseline gap-2 mt-0.5">
                                         <p className="text-2xl font-bold text-slate-900 tracking-tight">
-                                            {formatRp(offer.negotiated_price)}
+                                            {formatRp(offer.offeredPrice)}
                                         </p>
                                         <p className="text-sm text-slate-400 line-through font-medium hidden sm:inline-block">
                                             {formatRp(offer.product?.price)}
@@ -124,17 +174,19 @@ export default function Offers() {
                                 <div className="w-full md:w-auto flex gap-3 md:justify-end">
                                     {activeTab === 'pending' ? (
                                         <>
-                                            <button 
+                                            <button
                                                 onClick={() => handleReject(offer.id)}
-                                                className="flex-1 md:flex-none bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl px-6 py-2.5 font-medium transition-all text-sm whitespace-nowrap"
+                                                disabled={processingId === offer.id}
+                                                className="flex-1 md:flex-none bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl px-6 py-2.5 font-medium transition-all text-sm whitespace-nowrap disabled:opacity-60"
                                             >
                                                 Tolak
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleAccept(offer.id)}
-                                                className="flex-1 md:flex-none bg-[#4A5D23] hover:bg-[#3B4A1C] text-white rounded-xl px-6 py-2.5 font-medium transition-all text-sm whitespace-nowrap"
+                                                disabled={processingId === offer.id}
+                                                className="flex-1 md:flex-none bg-[#4A5D23] hover:bg-[#3B4A1C] text-white rounded-xl px-6 py-2.5 font-medium transition-all text-sm whitespace-nowrap disabled:opacity-60"
                                             >
-                                                Terima
+                                                {processingId === offer.id ? '...' : 'Terima'}
                                             </button>
                                         </>
                                     ) : activeTab === 'accepted' ? (
@@ -154,7 +206,6 @@ export default function Offers() {
                 </div>
             </div>
         </div>
+        </SellerLayout>
     );
 }
-
-Offers.layout = page => <SellerLayout>{page}</SellerLayout>;

@@ -3,27 +3,52 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import api from '@/lib/axios';
 
-export default function ResetPassword({ token, email }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+export default function ResetPassword() {
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const token = searchParams.get('token') || '';
+    const emailParam = searchParams.get('email') || '';
+
+    const [data, setData] = useState({
         token: token,
-        email: email,
+        email: emailParam,
         password: '',
         password_confirmation: '',
     });
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState({});
 
-    const submit = (e) => {
+    useEffect(() => {
+        document.title = "Reset Password | ReCircle";
+    }, []);
+
+    const handleChange = (field, value) => {
+        setData((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const submit = async (e) => {
         e.preventDefault();
+        setProcessing(true);
+        setErrors({});
 
-        post(route('password.store'), {
-            onFinish: () => reset('password', 'password_confirmation'),
-        });
+        try {
+            await api.post('http://localhost:8000/reset-password', data);
+            navigate('/login', { state: { status: 'Password has been reset successfully. Please login.' } });
+        } catch (err) {
+            setErrors(err.response?.data?.errors || { email: 'Failed to reset password.' });
+            setData(prev => ({ ...prev, password: '', password_confirmation: '' }));
+        } finally {
+            setProcessing(false);
+        }
     };
 
     return (
         <GuestLayout>
-            <Head title="Reset Password" />
+
 
             <form onSubmit={submit}>
                 <div>
@@ -36,7 +61,7 @@ export default function ResetPassword({ token, email }) {
                         value={data.email}
                         className="mt-1 block w-full"
                         autoComplete="username"
-                        onChange={(e) => setData('email', e.target.value)}
+                        onChange={(e) => handleChange('email', e.target.value)}
                     />
 
                     <InputError message={errors.email} className="mt-2" />
@@ -53,7 +78,7 @@ export default function ResetPassword({ token, email }) {
                         className="mt-1 block w-full"
                         autoComplete="new-password"
                         isFocused={true}
-                        onChange={(e) => setData('password', e.target.value)}
+                        onChange={(e) => handleChange('password', e.target.value)}
                     />
 
                     <InputError message={errors.password} className="mt-2" />
@@ -73,7 +98,7 @@ export default function ResetPassword({ token, email }) {
                         className="mt-1 block w-full"
                         autoComplete="new-password"
                         onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
+                            handleChange('password_confirmation', e.target.value)
                         }
                     />
 

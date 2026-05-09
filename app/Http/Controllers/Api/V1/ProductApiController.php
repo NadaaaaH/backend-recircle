@@ -35,7 +35,23 @@ class ProductApiController extends Controller
                 });
             }
 
-            $products = $query->latest()->paginate(10)->appends($request->query());
+            if ($request->has('kampus') && $request->kampus != '') {
+                $query->where('lokasi_kampus', $request->kampus);
+            }
+
+            if ($request->has('sort')) {
+                if ($request->sort === 'price_asc') {
+                    $query->orderBy('harga', 'asc');
+                } elseif ($request->sort === 'price_desc') {
+                    $query->orderBy('harga', 'desc');
+                } else {
+                    $query->latest();
+                }
+            } else {
+                $query->latest();
+            }
+
+            $products = $query->paginate(10)->appends($request->query());
 
             $resource = ProductResource::collection($products);
 

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import axios from '@/lib/axios';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
     LayoutDashboard, 
     PackageSearch, 
@@ -17,23 +17,12 @@ import {
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
-    const [auth, setAuth] = useState({ user: null });
+    const { user, logout } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
     
     const location = useLocation();
     const navigate = useNavigate();
-
-    useEffect(() => {
-        // Fetch current authenticated user info
-        axios.get('/user')
-            .then(res => {
-                setAuth({ user: res.data.data });
-            })
-            .catch(() => {
-                setAuth({ user: null });
-            });
-    }, []);
 
     // Helper to determine if a route is active
     const isActive = (path) => {
@@ -46,14 +35,7 @@ export default function DashboardLayout({ children }) {
 
     const handleLogout = async (e) => {
         e.preventDefault();
-        try {
-            await axios.post('/logout');
-        } catch (err) {
-            console.error('Logout error:', err);
-        } finally {
-            setAuth({ user: null });
-            window.location.href = '/login';
-        }
+        await logout();
     };
 
     const navigation = [
@@ -172,11 +154,11 @@ export default function DashboardLayout({ children }) {
                                 className="flex items-center gap-3 hover:bg-slate-50 p-1.5 rounded-xl transition-colors"
                             >
                                 <div className="text-right hidden sm:block">
-                                    <p className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-1">{auth?.user?.name}</p>
+                                    <p className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-1">{user?.name}</p>
                                     <p className="text-xs text-slate-500 font-medium">Toko Terverifikasi</p>
                                 </div>
                                 <div className="w-9 h-9 rounded-full bg-[#4A5D23]/10 text-[#4A5D23] flex items-center justify-center border border-[#4A5D23]/20">
-                                    {auth?.user?.name?.charAt(0) || <User className="w-4 h-4" />}
+                                    {user?.name?.charAt(0) || <User className="w-4 h-4" />}
                                 </div>
                                 <ChevronDown className="w-4 h-4 text-slate-400 hidden sm:block" />
                             </button>

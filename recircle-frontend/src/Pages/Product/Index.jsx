@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Head, Link } from "@inertiajs/react";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import MainLayout from "@/Layouts/MainLayout";
 import {
     MapPin,
@@ -10,13 +10,63 @@ import {
     Search,
     Check,
 } from "lucide-react";
+import api from "@/lib/axios";
 
-export default function Index({ initialProducts }) {
+export default function Index() {
+    // Baca URL params (dari Navbar search atau kategori di Homepage)
+    const [searchParams, setSearchParams] = useSearchParams();
+    const urlSearch   = searchParams.get('search')   || '';
+    const urlCategory = searchParams.get('category') || '';
+
     // --- STATE UTAMA ---
-    const [products, setProducts] = useState(initialProducts);
-    const [selectedUni, setSelectedUni] = useState("");
-    const [selectedCategory, setSelectedCategory] = useState("Semua");
-    const [sortBy, setSortBy] = useState("newest");
+    const [products, setProducts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Filter state — diinisialisasi dari URL params
+    const [searchQuery, setSearchQuery]       = useState(urlSearch);
+    const [selectedCategory, setSelectedCategory] = useState(urlCategory || 'Semua');
+    const [selectedUni, setSelectedUni]       = useState('');
+    const [sortBy, setSortBy]                 = useState('newest');
+
+    useEffect(() => {
+        document.title = "Explore Harta Karun | ReCircle";
+    }, []);
+
+    // Fetch produk dari API setiap kali filter berubah
+    useEffect(() => {
+        setIsLoading(true);
+        const params = {};
+        if (searchQuery)                          params.search   = searchQuery;
+        if (selectedCategory && selectedCategory !== 'Semua') params.category = selectedCategory;
+        if (selectedUni)                          params.kampus   = selectedUni;
+        if (sortBy === 'price_low')               params.sort     = 'price_asc';
+        else if (sortBy === 'price_high')         params.sort     = 'price_desc';
+        else                                      params.sort     = 'newest';
+
+        api.get('/products', { params })
+            .then(res => {
+                const raw = res.data?.data;
+                const list = Array.isArray(raw) ? raw : (raw?.data ?? []);
+                setProducts(list);
+            })
+            .catch(() => setProducts([]))
+            .finally(() => setIsLoading(false));
+    }, [searchQuery, selectedCategory, selectedUni, sortBy]);
+
+    // Sinkronkan URL params saat filter berubah dari UI
+    useEffect(() => {
+        const params = {};
+        if (searchQuery)                          params.search   = searchQuery;
+        if (selectedCategory && selectedCategory !== 'Semua') params.category = selectedCategory;
+        setSearchParams(params, { replace: true });
+    }, [searchQuery, selectedCategory]);
+
+    // Saat URL params berubah dari luar (misal klik kategori di Homepage)
+    useEffect(() => {
+        if (urlSearch)   setSearchQuery(urlSearch);
+        if (urlCategory) setSelectedCategory(urlCategory);
+    }, [urlSearch, urlCategory]);
+
 
     // --- STATE KHUSUS DROPDOWN KAMPUS ---
     const [universities, setUniversities] = useState([]);
@@ -69,21 +119,8 @@ export default function Index({ initialProducts }) {
         uni.toLowerCase().includes(uniSearch.toLowerCase()),
     );
 
-    // --- LOGIC FILTER PRODUK ---
-    const filteredProducts = useMemo(() => {
-        let result = [...products];
-        if (selectedCategory !== "Semua")
-            result = result.filter((p) => p.category === selectedCategory);
-        if (selectedUni !== "")
-            result = result.filter((p) => p.location_uni === selectedUni); // Exact match karena dipilih dari list
-
-        if (sortBy === "price_low") result.sort((a, b) => a.price - b.price);
-        else if (sortBy === "price_high")
-            result.sort((a, b) => b.price - a.price);
-        else result.sort((a, b) => b.id - a.id);
-
-        return result;
-    }, [products, selectedCategory, selectedUni, sortBy]);
+    // Filter sudah dilakukan di server via API — products langsung dipakai
+    const filteredProducts = products;
 
     const categories = [
         "Semua",
@@ -97,7 +134,6 @@ export default function Index({ initialProducts }) {
 
     return (
         <MainLayout>
-            <Head title="Explore Harta Karun" />
 
             {/* --- HEADER --- */}
             <div className="pt-10 pb-6 bg-secondary">
@@ -299,10 +335,16 @@ export default function Index({ initialProducts }) {
                         <span className="text-sm font-bold text-gray-400 uppercase tracking-wide">
                             Barang
                         </span>
+                        {searchQuery && (
+                            <span className="ml-2 text-sm text-gray-500 font-medium hidden sm:inline">
+                                hasil pencarian <span className="text-gray-900 font-bold">"{searchQuery}"</span>
+                            </span>
+                        )}
                     </div>
-                    {(selectedUni || selectedCategory !== "Semua") && (
+                    {(searchQuery || selectedUni || selectedCategory !== "Semua") && (
                         <button
                             onClick={() => {
+                                setSearchQuery("");
                                 setSelectedUni("");
                                 setSelectedCategory("Semua");
                             }}
@@ -313,68 +355,67 @@ export default function Index({ initialProducts }) {
                     )}
                 </div>
 
-                {filteredProducts.length > 0 ? (
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-24">
+                        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary mb-4"></div>
+                        <p className="text-sm text-gray-400 font-medium animate-pulse">Memuat produk...</p>
+                    </div>
+                ) : filteredProducts.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
-                        {filteredProducts.map((product) => (
+                        {filteredProducts.map((product) => {
+                            // Support both API resource fields & legacy dummy fields
+                            const name      = product.nama_barang   || product.name;
+                            const price     = product.harga          || product.price || 0;
+                            const img       = product.gambar_url     || product.img || '';
+                            const uni       = product.kampus_seller  || product.location_uni || '';
+                            const seller    = product.seller_name    || '';
+                            const avatar    = product.seller_avatar  || '';
+                            const postedAt  = product.posted_at      || '';
+                            return (
                             <Link
-                                href={route("product.show", product.id)}
+                                to={`/products/${product.id}`}
                                 key={product.id}
                                 className="group block"
                             >
-                                {/* 1. IMAGE AREA (Square 1:1) */}
+                                {/* IMAGE */}
                                 <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-3 border border-gray-100 shadow-sm transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-gray-200/50 group-hover:-translate-y-2">
-                                    <img
-                                        src={product.img}
-                                        alt={product.name}
-                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                    />
-
-                                    {/* University Tag */}
-                                    <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm border border-white/50">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
-                                        <span className="text-[10px] font-bold text-gray-800 uppercase tracking-wide truncate max-w-[120px]">
-                                            {product.location_uni}
-                                        </span>
-                                    </div>
+                                    {img ? (
+                                        <img src={img} alt={name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center"><Sparkles className="w-8 h-8 text-gray-300" /></div>
+                                    )}
+                                    {uni && (
+                                        <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm border border-white/50">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
+                                            <span className="text-[10px] font-bold text-gray-800 uppercase tracking-wide truncate max-w-[120px]">{uni}</span>
+                                        </div>
+                                    )}
                                 </div>
-
-                                {/* 2. INFO AREA */}
+                                {/* INFO */}
                                 <div className="px-1">
                                     <div className="flex items-end justify-between mb-1.5">
-                                        <span className="text-lg font-black text-primary leading-none">
-                                            Rp{" "}
-                                            {product.price.toLocaleString(
-                                                "id-ID",
-                                            )}
-                                        </span>
-                                        {product.price < 500000 && (
-                                            <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded border border-green-100">
-                                                Best Deal
-                                            </span>
-                                        )}
+                                        <span className="text-lg font-black text-primary leading-none">Rp {price.toLocaleString('id-ID')}</span>
+                                        {price < 500000 && <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded border border-green-100">Best Deal</span>}
                                     </div>
                                     <div className="flex justify-between items-start mb-2">
-                                        <h3 className="text-gray-900 text-sm font-bold leading-snug line-clamp-2 group-hover:text-primary transition-colors pr-2">
-                                            {product.name}
-                                        </h3>
+                                        <h3 className="text-gray-900 text-sm font-bold leading-snug line-clamp-2 group-hover:text-primary transition-colors pr-2">{name}</h3>
                                         <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0" />
                                     </div>
-                                    <div className="flex items-center gap-2 border-t border-dashed border-gray-100 pt-2">
-                                        <img
-                                            src={product.seller_avatar}
-                                            alt="Avatar"
-                                            className="w-5 h-5 rounded-full bg-gray-200 object-cover"
-                                        />
-                                        <span className="text-xs text-gray-500 font-medium truncate flex-1">
-                                            {product.seller_name}
-                                        </span>
-                                        <span className="text-[10px] text-gray-400">
-                                            {product.posted_at}
-                                        </span>
-                                    </div>
+                                    {seller && (
+                                        <div className="flex items-center gap-2 border-t border-dashed border-gray-100 pt-2">
+                                            {avatar ? (
+                                                <img src={avatar} alt="Avatar" className="w-5 h-5 rounded-full bg-gray-200 object-cover" />
+                                            ) : (
+                                                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold">{seller.charAt(0)}</div>
+                                            )}
+                                            <span className="text-xs text-gray-500 font-medium truncate flex-1">{seller}</span>
+                                            {postedAt && <span className="text-[10px] text-gray-400">{postedAt}</span>}
+                                        </div>
+                                    )}
                                 </div>
                             </Link>
-                        ))}
+                        );
+                        })}
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-gray-100 rounded-[3rem] bg-gray-50/50">
@@ -389,6 +430,7 @@ export default function Index({ initialProducts }) {
                         </p>
                         <button
                             onClick={() => {
+                                setSearchQuery("");
                                 setSelectedUni("");
                                 setSelectedCategory("Semua");
                             }}

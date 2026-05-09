@@ -1,27 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import axios from '@/lib/axios';
+import api from '@/lib/axios';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LikeButton({ productId, className = "" }) {
     const navigate = useNavigate();
-    const [isGuest, setIsGuest] = useState(true);
+    const { user } = useAuth();
+    
+    const isGuest = !user;
     const [isLiked, setIsLiked] = useState(false);
 
     useEffect(() => {
-        // Fetch current authenticated user to see if they liked this product
-        axios.get('/user')
-            .then(response => {
-                const user = response.data.data;
-                setIsGuest(false);
-                const wishlistIds = user?.wishlist_ids || response.data.wishlist_ids || [];
-                setIsLiked(wishlistIds.includes(productId));
-            })
-            .catch(() => {
-                setIsGuest(true);
-                setIsLiked(false);
-            });
-    }, [productId]);
+        if (user && user.wishlist_ids) {
+            setIsLiked(user.wishlist_ids.includes(productId));
+        } else {
+            setIsLiked(false);
+        }
+    }, [user, productId]);
 
     const handleToggle = async (e) => {
         e.preventDefault(); // Prevent Link navigation if wrapped inside Link
@@ -37,7 +33,10 @@ export default function LikeButton({ productId, className = "" }) {
         setIsLiked(!isLiked);
 
         try {
-            await axios.post(`/wishlist/${productId}/toggle`);
+            await api.post(`/wishlists/${productId}/toggle`);
+            
+            // Optional: You could update AuthContext user here if needed, 
+            // but relying on the optimistic UI is fine for immediate feedback.
         } catch (err) {
             console.error('Toggle wishlist error:', err);
             // Revert on error

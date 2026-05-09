@@ -1,14 +1,32 @@
 import React, { useState } from 'react';
-import { Head, useForm, Link, usePage } from '@inertiajs/react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useEffect } from 'react';
 import SellerLayout from '@/Layouts/SellerLayout';
 import { Upload, X, Image as ImageIcon, ArrowLeft, Tag, FileText, Layers, CheckCircle } from 'lucide-react';
 
-export default function EditProduct({ product, categories = [] }) {
-    const { flash } = usePage().props;
+export default function EditProduct() {
+    const { id } = useParams();
+    const navigate = useNavigate();
+
+    // Mock data for SPA phase
+    const product = {
+        id: id || 1,
+        nama_barang: "MacBook Pro M1 2020",
+        harga: 12000000,
+        category_id: 1,
+        kondisi: "Bekas - Layak Pakai",
+        deskripsi: "Kondisi mulus, garansi resmi.",
+        status: "active",
+        image: "https://placehold.co/400x400?text=MacBook"
+    };
+    const categories = [
+        { id: 1, name: "Elektronik" },
+        { id: 2, name: "Buku" },
+        { id: 3, name: "Furniture" }
+    ];
 
     // ── 1. STATE INITIALIZATION ──
-    const { data, setData, post, processing, errors } = useForm({
-        _method: 'put',
+    const [data, setDataState] = useState({
         nama_barang: product?.nama_barang || '',
         harga: product?.harga || '',
         category_id: product?.category_id || '',
@@ -17,6 +35,15 @@ export default function EditProduct({ product, categories = [] }) {
         status: product?.status || 'active',
         image: null,
     });
+    const setData = (key, value) => setDataState(prev => ({ ...prev, [key]: value }));
+
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [flash, setFlash] = useState({});
+
+    useEffect(() => {
+        document.title = `Edit ${product?.nama_barang || 'Produk'} | ReCircle`;
+    }, [product]);
 
     // ── 2. IMAGE PREVIEW LOGIC ──
     const [previewUrl, setPreviewUrl] = useState(product?.image || null);
@@ -71,12 +98,15 @@ export default function EditProduct({ product, categories = [] }) {
     };
 
     // ── 3. FORM SUBMISSION ──
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
-        post(route('seller.products.update', product.id), {
-            forceFormData: true,
-            preserveScroll: true,
-        });
+        setProcessing(true);
+        // Simulate API update
+        setTimeout(() => {
+            setProcessing(false);
+            setFlash({ success: "Produk berhasil diperbarui!" });
+            setTimeout(() => navigate('/seller/products'), 1500);
+        }, 1500);
     };
 
     // ── 4. VALIDATION UI COMPONENT ──
@@ -86,16 +116,13 @@ export default function EditProduct({ product, categories = [] }) {
     };
 
     return (
+        <SellerLayout>
         <div className="pb-12 max-w-[1000px] mx-auto">
-            <Head>
-                <title>Edit {product?.nama_barang || 'Produk'} | ReCircle</title>
-                <meta name="robots" content="noindex, nofollow" />
-            </Head>
 
             {/* Header Section */}
             <div className="flex items-center gap-4 mb-6 lg:mb-8">
                 <Link
-                    href="/seller/products"
+                    to="/seller/products"
                     className="p-3 bg-white border border-slate-200/70 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
                 >
                     <ArrowLeft className="w-5 h-5" />
@@ -309,7 +336,7 @@ export default function EditProduct({ product, categories = [] }) {
                 {/* ── ACTION BUTTONS ── */}
                 <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4">
                     <Link
-                        href="/seller/products"
+                        to="/seller/products"
                         className="w-full sm:w-auto px-8 py-3.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-50 transition-all text-center shadow-sm"
                     >
                         Batal
@@ -331,7 +358,6 @@ export default function EditProduct({ product, categories = [] }) {
                 </div>
             </form>
         </div>
+        </SellerLayout>
     );
 }
-
-EditProduct.layout = page => <SellerLayout>{page}</SellerLayout>;

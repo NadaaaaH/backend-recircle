@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/Components/Navbar';
 
 // Helper Format Rupiah
@@ -42,9 +43,32 @@ const CountdownTimer = ({ expiresAt }) => {
     return <span className="text-gray-500 text-xs mt-1 block">{timeLeft}</span>;
 };
 
-export default function CartIndex({ groupedCarts, auth }) {
+export default function CartIndex() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+
+    // Mock data for initial SPA phase
+    const dummyCarts = [
+        {
+            seller: { id: 1, name: "Budi Santoso", universitas: "IPB University" },
+            items: [
+                {
+                    id: 1,
+                    product: { id: 1, name: "MacBook Pro M1 2020", price: 12000000, image: "https://placehold.co/400x400?text=MacBook" },
+                    offer: { harga_deal: 11500000, expires_at: new Date(Date.now() + 86400000).toISOString() }
+                }
+            ]
+        }
+    ];
+
+    const [groupedCarts, setGroupedCarts] = useState(dummyCarts);
+
     // State untuk menyimpan ID item keranjang yang dipilih
     const [selectedItems, setSelectedItems] = useState([]);
+
+    useEffect(() => {
+        document.title = "Keranjang Pembelian - ReCircle";
+    }, []);
 
     // Toggle 1 item
     const handleSelectItem = (cartItemId) => {
@@ -94,16 +118,11 @@ export default function CartIndex({ groupedCarts, auth }) {
 
     return (
         <div className="min-h-screen bg-gray-50 p-28">
-            <Head>
-                <title>Keranjang Pembelian - ReCircle</title>
-                <meta name="robots" content="noindex, nofollow" />
-            </Head>
-
-            <Navbar user={auth?.user} />
+            <Navbar user={user} />
 
             <div className="max-w-3xl mx-auto pt-6 px-4 sm:px-6 lg:px-8">
                 <div className="mb-6 flex items-center space-x-2">
-                    <Link href="/" className="text-gray-500 hover:text-gray-700">
+                    <Link to="/" className="text-gray-500 hover:text-gray-700">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                         </svg>
@@ -114,7 +133,7 @@ export default function CartIndex({ groupedCarts, auth }) {
                 {groupedCarts.length === 0 ? (
                     <div className="text-center py-12 bg-white rounded-xl shadow-sm">
                         <p className="text-gray-500">Keranjangmu masih kosong.</p>
-                        <Link href="/explore" className="mt-4 inline-block text-[#118B50] font-semibold">
+                        <Link to="/products" className="mt-4 inline-block text-[#118B50] font-semibold">
                             Cari Barang Sekarang
                         </Link>
                     </div>
@@ -218,6 +237,7 @@ export default function CartIndex({ groupedCarts, auth }) {
                             )}
                         </div>
                         <button
+                            onClick={() => navigate('/checkout')}
                             className={`px-8 py-3 rounded-xl font-bold shadow-sm transition-all ${
                                 selectedItems.length > 0
                                     ? 'bg-[#118B50] text-white hover:bg-[#0a6639]'

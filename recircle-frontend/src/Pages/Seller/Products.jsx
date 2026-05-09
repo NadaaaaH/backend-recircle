@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 import SellerLayout from '@/Layouts/SellerLayout';
 import { Package, Plus, Edit, Trash2, Search, ArrowRight, LayoutGrid, List, CheckCircle, Archive, ArchiveRestore, RefreshCw, Trash } from 'lucide-react';
 import ConfirmModal from '@/Components/ConfirmModal';
 
-export default function SellerProducts({ products }) {
-    const { flash, errors } = usePage().props;
+export default function SellerProducts() {
+    // Mock data for SPA phase
+    const dummyProducts = [
+        { id: 1, name: "MacBook Pro M1 2020", price: 12000000, category: "Elektronik", status: "active", is_archived: false, deleted_at: null, active_orders: 1, created_at: "2023-10-01" },
+        { id: 2, name: "Buku Kalkulus", price: 150000, category: "Buku", status: "active", is_archived: true, deleted_at: null, active_orders: 0, created_at: "2023-10-05" },
+        { id: 3, name: "Meja Belajar", price: 300000, category: "Furniture", status: "sold", is_archived: false, deleted_at: "2023-10-10", active_orders: 0, created_at: "2023-10-08" },
+    ];
+    const [products, setProducts] = useState(dummyProducts);
+    const [flash, setFlash] = useState({});
+    const [errors, setErrors] = useState({});
     const [search, setSearch] = useState('');
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
     const [activeTab, setActiveTab] = useState('active'); // 'active' | 'archived' | 'trash'
@@ -40,25 +49,30 @@ export default function SellerProducts({ products }) {
     const confirmDelete = () => {
         if (!productToDelete) return;
         setIsProcessing(true);
-        const url = deleteType === 'force' 
-            ? `/seller/products/${productToDelete}/force` 
-            : `/seller/products/${productToDelete}`;
-        
-        router.delete(url, {
-            onFinish: () => {
-                setIsProcessing(false);
-                setIsConfirmOpen(false);
-                setProductToDelete(null);
+        setTimeout(() => {
+            if (deleteType === 'force') {
+                setProducts(prev => prev.filter(p => p.id !== productToDelete));
+            } else {
+                setProducts(prev => prev.map(p => p.id === productToDelete ? { ...p, deleted_at: new Date().toISOString() } : p));
             }
-        });
+            setIsProcessing(false);
+            setIsConfirmOpen(false);
+            setProductToDelete(null);
+            setFlash({ success: deleteType === 'force' ? "Produk dihapus permanen" : "Produk dipindah ke tong sampah" });
+            setTimeout(() => setFlash({}), 3000);
+        }, 1000);
     };
 
     const handleToggleArchive = (id) => {
-        router.post(`/seller/products/${id}/toggle-archive`, {}, { preserveScroll: true });
+        setProducts(prev => prev.map(p => p.id === id ? { ...p, is_archived: !p.is_archived } : p));
+        setFlash({ success: "Status arsip produk diperbarui" });
+        setTimeout(() => setFlash({}), 3000);
     };
 
     const handleRestore = (id) => {
-        router.post(`/seller/products/${id}/restore`, {}, { preserveScroll: true });
+        setProducts(prev => prev.map(p => p.id === id ? { ...p, deleted_at: null } : p));
+        setFlash({ success: "Produk dipulihkan" });
+        setTimeout(() => setFlash({}), 3000);
     };
 
     const getDaysLeft = (deletedAtStr) => {
@@ -94,11 +108,13 @@ export default function SellerProducts({ products }) {
         trash: products.filter(p => !!p.deleted_at).length,
     };
 
+    useEffect(() => {
+        document.title = "Kelola Produk | ReCircle";
+    }, []);
+
     return (
+        <SellerLayout>
         <div className="pb-10 max-w-[1200px] mx-auto">
-            <Head title="Kelola Produk | ReCircle">
-                <meta name="robots" content="noindex, nofollow" />
-            </Head>
 
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-6">
                 Kelola Produk
@@ -135,7 +151,7 @@ export default function SellerProducts({ products }) {
                         </button>
                     </div>
                     <Link
-                        href="/jual"
+                        to="/jual"
                         className="flex items-center gap-2 bg-[#4A5D23] text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-[#3B4A1C] transition-all"
                     >
                         <Plus className="w-4 h-4" /> Tambah
@@ -179,7 +195,7 @@ export default function SellerProducts({ products }) {
                     </p>
                     {activeTab === 'active' && (
                         <Link
-                            href="/jual"
+                            to="/jual"
                             className="inline-flex items-center gap-2 bg-white border border-[#4A5D23] text-[#4A5D23] px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#4A5D23]/5 transition-all group"
                         >
                             Mulai Jualan <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -226,7 +242,7 @@ export default function SellerProducts({ products }) {
                                     {activeTab === 'active' && (
                                         <>
                                             <Link
-                                                href={`/seller/products/${p.id}/edit`}
+                                                to={`/seller/products/${p.id}/edit`}
                                                 className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors"
                                             >
                                                 <Edit className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Edit</span>
@@ -330,7 +346,7 @@ export default function SellerProducts({ products }) {
                                                 {activeTab === 'active' && (
                                                     <>
                                                         <Link
-                                                            href={`/seller/products/${p.id}/edit`}
+                                                            to={`/seller/products/${p.id}/edit`}
                                                             className="p-2 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 hover:text-slate-900 transition-colors border border-slate-200/50"
                                                             title="Edit"
                                                         >
@@ -412,7 +428,6 @@ export default function SellerProducts({ products }) {
                 isLoading={isProcessing}
             />
         </div>
+        </SellerLayout>
     );
 }
-
-SellerProducts.layout = page => <SellerLayout>{page}</SellerLayout>;

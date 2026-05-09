@@ -1,10 +1,16 @@
 import React from 'react';
-import { Head, router, usePage, Link } from '@inertiajs/react';
+import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import MainLayout from '@/Layouts/MainLayout';
 import { ShoppingBag, ArrowLeft, Package, CheckCircle2 } from 'lucide-react';
 
-export default function BuyerOrders({ orders }) {
-    const { flash } = usePage().props;
+export default function BuyerOrders() {
+    const dummyOrders = [
+        { id: 1, kode_pesanan: 'ORD-001', created_at: '10 Okt 2023', total_harga: 12000000, metode_pengiriman: 'kirim_paket', status: 'dikirim', product: { name: 'MacBook Pro M1', seller_name: 'Apple Store', img: null } },
+        { id: 2, kode_pesanan: 'ORD-002', created_at: '11 Okt 2023', total_harga: 150000, metode_pengiriman: 'cod', status: 'pending', product: { name: 'Buku Kalkulus', seller_name: 'Toko Buku', img: null } }
+    ];
+    const [orders, setOrders] = useState(dummyOrders);
+    const [flash, setFlash] = useState({});
     const formatPrice = (price) => 'Rp ' + Number(price).toLocaleString('id-ID');
 
     const statusColors = {
@@ -25,13 +31,18 @@ export default function BuyerOrders({ orders }) {
 
     const handleConfirm = (orderId) => {
         if (confirm('Konfirmasi barang sudah diterima? Dana akan dilepas ke penjual.')) {
-            router.post(`/orders/${orderId}/confirm`);
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'selesai' } : o));
+            setFlash({ success: "Pesanan berhasil diselesaikan. Dana diteruskan ke penjual." });
+            setTimeout(() => setFlash({}), 3000);
         }
     };
 
+    useEffect(() => {
+        document.title = "Pesanan Saya | ReCircle";
+    }, []);
+
     return (
         <MainLayout>
-            <Head title="Pesanan Saya" />
             <div className="min-h-screen bg-secondary">
                 <div className="max-w-4xl mx-auto px-4 py-8 pt-28">
                     <h1 className="text-3xl font-bold text-gray-900 mb-8">Pesanan Saya</h1>
@@ -44,7 +55,7 @@ export default function BuyerOrders({ orders }) {
                         <div className="bg-white rounded-[2rem] p-10 text-center shadow-sm">
                             <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                             <p className="text-gray-500">Belum ada pesanan</p>
-                            <a href="/explore" className="inline-block mt-4 text-primary font-medium hover:underline">Mulai Belanja</a>
+                            <Link to="/explore" className="inline-block mt-4 text-primary font-medium hover:underline">Mulai Belanja</Link>
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -54,7 +65,7 @@ export default function BuyerOrders({ orders }) {
                                         <img src={order.product.img} alt={order.product.name} className="w-16 h-16 rounded-xl object-cover" />
                                         <div className="flex-1">
                                             <div className="flex items-start justify-between mb-2">
-                                                <Link href={`/orders/${order.id}`} className="hover:text-primary transition-colors block">
+                                                <Link to={`/orders/${order.id}`} className="hover:text-primary transition-colors block">
                                                     <p className="font-bold text-gray-900 text-lg">{order.product.name}</p>
                                                     <p className="text-sm font-medium text-gray-500 mb-1">{order.product.seller_name}</p>
                                                     <p className="text-xs text-gray-400 font-medium">{order.kode_pesanan} &bull; {order.created_at}</p>
@@ -72,7 +83,7 @@ export default function BuyerOrders({ orders }) {
                                                 </div>
                                                 <div className="flex items-center gap-3">
                                                     <Link 
-                                                        href={`/orders/${order.id}`}
+                                                        to={`/orders/${order.id}`}
                                                         className="px-4 py-2 rounded-xl text-sm font-bold text-primary border border-primary/20 hover:bg-primary/5 transition-colors"
                                                     >
                                                         Lihat Detail

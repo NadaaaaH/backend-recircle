@@ -4,32 +4,77 @@ import InputError from "@/Components/InputError";
 import InputLabel from "@/Components/InputLabel";
 import PrimaryButton from "@/Components/PrimaryButton";
 import TextInput from "@/Components/TextInput";
-import { Head, Link, useForm } from "@inertiajs/react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import api from "@/lib/axios";
+import { useAuth } from "@/contexts/AuthContext";
 import { ArrowRight } from "lucide-react";
 
 export default function Register() {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const [data, setData] = useState({
         name: "",
         email: "",
-        whatsapp_number: "", // Field tambahan sesuai database
+        whatsapp_number: "",
         password: "",
         password_confirmation: "",
     });
+    const [errors, setErrors] = useState({});
+    const [processing, setProcessing] = useState(false);
+    
+    const navigate = useNavigate();
+    const { loginSuccess } = useAuth();
 
     useEffect(() => {
+        document.title = "Daftar Akun | ReCircle";
         return () => {
-            reset("password", "password_confirmation");
+            setData((prev) => ({ ...prev, password: "", password_confirmation: "" }));
         };
     }, []);
 
-    const submit = (e) => {
+    const handleChange = (field, value) => {
+        setData((prev) => ({ ...prev, [field]: value }));
+    };
+
+    const submit = async (e) => {
         e.preventDefault();
-        post(route("register"));
+        setProcessing(true);
+        setErrors({});
+
+        try {
+            const response = await api.post('/register', data);
+            
+            const responseData = response.data?.data;
+            const user = responseData?.user;
+            const token = responseData?.token;
+
+            if (token && user) {
+                loginSuccess(token, user);
+
+                // Fetch profil lengkap agar role/is_seller terisi
+                try {
+                    const profileRes = await api.get('/profile');
+                    const fullUser = profileRes.data?.data;
+                    if (fullUser) loginSuccess(token, fullUser);
+                } catch {
+                    // Biarkan saja jika gagal
+                }
+
+                navigate('/');
+            } else {
+                throw new Error("Invalid response format from server");
+            }
+        } catch (err) {
+            console.error('Registration error:', err);
+            setErrors(err.response?.data?.errors || {
+                email: err.response?.data?.message || err.message || 'Terjadi kesalahan saat pendaftaran.'
+            });
+        } finally {
+            setProcessing(false);
+        }
     };
 
     return (
         <GuestLayout>
-            <Head title="Daftar Akun" />
 
             <div className="mb-10">
                 <h1 className="text-3xl font-black text-gray-900 mb-2">
@@ -55,7 +100,7 @@ export default function Register() {
                         className="w-full px-5 py-3.5 bg-gray-50 border-transparent focus:border-primary focus:bg-white focus:ring-0 rounded-2xl text-gray-900 font-medium"
                         autoComplete="name"
                         isFocused={true}
-                        onChange={(e) => setData("name", e.target.value)}
+                        onChange={(e) => handleChange("name", e.target.value)}
                         placeholder="Contoh: Budi Santoso"
                     />
                     <InputError message={errors.name} className="mt-2" />
@@ -75,7 +120,7 @@ export default function Register() {
                         value={data.email}
                         className="w-full px-5 py-3.5 bg-gray-50 border-transparent focus:border-primary focus:bg-white focus:ring-0 rounded-2xl text-gray-900 font-medium"
                         autoComplete="username"
-                        onChange={(e) => setData("email", e.target.value)}
+                        onChange={(e) => handleChange("email", e.target.value)}
                         placeholder="nama@email.com"
                     />
                     <InputError message={errors.email} className="mt-2" />
@@ -97,7 +142,7 @@ export default function Register() {
                         onChange={(e) => {
                             // Auto replace 0 di depan dengan 62 jika perlu, atau biarkan user input angka saja
                             const val = e.target.value.replace(/[^0-9]/g, "");
-                            setData("whatsapp_number", val);
+                            handleChange("whatsapp_number", val);
                         }}
                         placeholder="0812xxxxxxxx"
                     />
@@ -126,7 +171,7 @@ export default function Register() {
                             className="w-full px-5 py-3.5 bg-gray-50 border-transparent focus:border-primary focus:bg-white focus:ring-0 rounded-2xl text-gray-900 font-medium"
                             autoComplete="new-password"
                             onChange={(e) =>
-                                setData("password", e.target.value)
+                                handleChange("password", e.target.value)
                             }
                             placeholder="Minimal 8 karakter"
                         />
@@ -150,7 +195,7 @@ export default function Register() {
                             className="w-full px-5 py-3.5 bg-gray-50 border-transparent focus:border-primary focus:bg-white focus:ring-0 rounded-2xl text-gray-900 font-medium"
                             autoComplete="new-password"
                             onChange={(e) =>
-                                setData("password_confirmation", e.target.value)
+                                handleChange("password_confirmation", e.target.value)
                             }
                             placeholder="Konfirmasi sandi"
                         />
@@ -172,7 +217,7 @@ export default function Register() {
                     <p className="text-sm text-gray-500">
                         Sudah punya akun?{" "}
                         <Link
-                            href={route("login")}
+                            to="/login"
                             className="font-bold text-primary hover:text-primary-hover hover:underline transition-all"
                         >
                             Masuk di sini

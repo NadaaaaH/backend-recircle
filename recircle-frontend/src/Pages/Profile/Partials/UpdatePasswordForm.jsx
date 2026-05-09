@@ -3,45 +3,51 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Transition } from '@headlessui/react';
-import { useForm } from '@inertiajs/react';
-import { useRef } from 'react';
+import { useState, useRef } from 'react';
+import api from '@/lib/axios';
 
 export default function UpdatePasswordForm({ className = '' }) {
     const passwordInput = useRef();
     const currentPasswordInput = useRef();
 
-    const {
-        data,
-        setData,
-        errors,
-        put,
-        reset,
-        processing,
-        recentlySuccessful,
-    } = useForm({
+    const [data, setData] = useState({
         current_password: '',
         password: '',
         password_confirmation: '',
     });
+    const [errors, setErrors] = useState({});
+    const [processing, setProcessing] = useState(false);
+    const [recentlySuccessful, setRecentlySuccessful] = useState(false);
 
-    const updatePassword = (e) => {
+    const updatePassword = async (e) => {
         e.preventDefault();
+        setProcessing(true);
+        setErrors({});
+        setRecentlySuccessful(false);
 
-        put(route('password.update'), {
-            preserveScroll: true,
-            onSuccess: () => reset(),
-            onError: (errors) => {
-                if (errors.password) {
-                    reset('password', 'password_confirmation');
-                    passwordInput.current.focus();
-                }
-
-                if (errors.current_password) {
-                    reset('current_password');
-                    currentPasswordInput.current.focus();
-                }
-            },
-        });
+        try {
+            await api.put('/password', data);
+            setRecentlySuccessful(true);
+            setData({
+                current_password: '',
+                password: '',
+                password_confirmation: '',
+            });
+            setTimeout(() => setRecentlySuccessful(false), 2000);
+        } catch (err) {
+            const errData = err.response?.data?.errors || {};
+            setErrors(errData);
+            
+            if (errData.password) {
+                setData(prev => ({ ...prev, password: '', password_confirmation: '' }));
+                passwordInput.current?.focus();
+            } else if (errData.current_password) {
+                setData(prev => ({ ...prev, current_password: '' }));
+                currentPasswordInput.current?.focus();
+            }
+        } finally {
+            setProcessing(false);
+        }
     };
 
     return (
@@ -69,7 +75,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                         ref={currentPasswordInput}
                         value={data.current_password}
                         onChange={(e) =>
-                            setData('current_password', e.target.value)
+                            setData(prev => ({ ...prev, current_password: e.target.value }))
                         }
                         type="password"
                         className="mt-1 block w-full"
@@ -89,7 +95,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                         id="password"
                         ref={passwordInput}
                         value={data.password}
-                        onChange={(e) => setData('password', e.target.value)}
+                        onChange={(e) => setData(prev => ({ ...prev, password: e.target.value }))}
                         type="password"
                         className="mt-1 block w-full"
                         autoComplete="new-password"
@@ -108,7 +114,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                         id="password_confirmation"
                         value={data.password_confirmation}
                         onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
+                            setData(prev => ({ ...prev, password_confirmation: e.target.value }))
                         }
                         type="password"
                         className="mt-1 block w-full"

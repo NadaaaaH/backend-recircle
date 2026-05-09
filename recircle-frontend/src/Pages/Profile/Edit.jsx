@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head, Link, usePage } from "@inertiajs/react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import {
     User,
     Settings,
@@ -16,8 +17,18 @@ import {
     CheckCircle,
 } from "lucide-react";
 
-export default function Edit({ auth, mustVerifyEmail, status, orders, stats }) {
+export default function Edit() {
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("orders");
+
+    // Mock data for initial SPA phase
+    const stats = { verified: false, rating: 5.0, reviews_count: 0 };
+    const orders = { ongoing: [], history: [] };
+
+    useEffect(() => {
+        document.title = "Profil & Pengaturan | ReCircle";
+    }, []);
 
     const StatusBadge = ({ status }) => {
         const colors = {
@@ -36,14 +47,12 @@ export default function Edit({ auth, mustVerifyEmail, status, orders, stats }) {
 
     return (
         <AuthenticatedLayout
-            user={auth.user}
             header={
                 <h2 className="font-bold text-xl text-gray-800 leading-tight">
                     Profil Saya
                 </h2>
             }
         >
-            <Head title="Profil & Pengaturan" />
 
             <div className="py-8 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* --- 1. PROFILE CARD HERO --- */}
@@ -54,11 +63,11 @@ export default function Edit({ auth, mustVerifyEmail, status, orders, stats }) {
                             <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-secondary border-4 border-white shadow-lg overflow-hidden">
                                 <img
                                     src={
-                                        auth.user.avatar
-                                            ? `/storage/${auth.user.avatar}`
-                                            : `https://ui-avatars.com/api/?name=${auth.user.name}&background=43552c&color=fff`
+                                        user?.avatar
+                                            ? `/storage/${user.avatar}`
+                                            : `https://ui-avatars.com/api/?name=${user?.name}&background=43552c&color=fff`
                                     }
-                                    alt={auth.user.name}
+                                    alt={user?.name}
                                     className="w-full h-full object-cover"
                                 />
                             </div>
@@ -73,11 +82,11 @@ export default function Edit({ auth, mustVerifyEmail, status, orders, stats }) {
                         {/* Info */}
                         <div className="text-center md:text-left flex-1">
                             <h3 className="text-2xl font-black text-gray-900 mb-1">
-                                {auth.user.name}
+                                {user?.name}
                             </h3>
                             <p className="text-gray-500 font-medium text-xs mb-2">
                                 Mahasiswa •{" "}
-                                {auth.user.kampus || "Kampus Belum Diatur"}
+                                {user?.kampus || "Kampus Belum Diatur"}
                             </p>
                             {/* Stats Row */}
                             <div className="flex items-center justify-center md:justify-start gap-6">
@@ -315,14 +324,12 @@ export default function Edit({ auth, mustVerifyEmail, status, orders, stats }) {
 
                         {/* Logout Button (Full Width) */}
                         <div className="md:col-span-2 mt-4">
-                            <Link
-                                href={route("logout")}
-                                method="post"
-                                as="button"
+                            <button
+                                onClick={logout}
                                 className="w-full flex items-center justify-center gap-2 bg-red-50 text-red-600 font-bold py-4 rounded-2xl hover:bg-red-100 transition-colors"
                             >
                                 <LogOut className="w-5 h-5" /> Keluar Akun
-                            </Link>
+                            </button>
                         </div>
                     </div>
                 )}

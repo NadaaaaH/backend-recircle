@@ -7,7 +7,8 @@ import InputLabel from "@/Components/InputLabel";
 import PrimaryButton from "@/Components/PrimaryButton";
 import TextInput from "@/Components/TextInput";
 import { ArrowRight } from "lucide-react";
-import axios from "@/lib/axios";
+import { useAuth } from "@/contexts/AuthContext";
+import api from "@/lib/axios";
 
 export default function Login({ status: propStatus, canResetPassword = true }) {
     const [email, setEmail] = useState("");
@@ -18,6 +19,7 @@ export default function Login({ status: propStatus, canResetPassword = true }) {
     const [status, setStatus] = useState(propStatus || "");
 
     const navigate = useNavigate();
+    const { loginSuccess } = useAuth();
 
     useEffect(() => {
         document.title = "Masuk | ReCircle";
@@ -29,20 +31,47 @@ export default function Login({ status: propStatus, canResetPassword = true }) {
         setErrors({});
 
         try {
-            // PENTING: Jalankan await axios.get('/sanctum/csrf-cookie') terlebih dahulu
-            await axios.get('http://localhost:8000/sanctum/csrf-cookie', { withCredentials: true });
-
             // Post to login endpoint
-            const response = await axios.post('/login', { email, password, remember });
+            const response = await api.post('/login', { email, password, remember });
 
-            // Redirect user based on role or is_seller status to reload state
-            const user = response.data?.data?.user || response.data?.data;
-            if (user?.role === 'admin') {
-                navigate('/admin/dashboard');
-            } else if (user?.is_seller) {
-                navigate('/seller/dashboard');
+            // Extract user and token from ApiResponse structure
+            const responseData = response.data?.data;
+            const user = responseData?.user;
+            const token = responseData?.token;
+
+            if (token && user) {
+                // Simpan dulu dengan data minimal dari login response
+                loginSuccess(token, user);
+
+                // Langsung fetch profil lengkap (dengan role, is_seller, dsb)
+                try {
+                    const profileRes = await api.get('/profile');
+                    const fullUser = profileRes.data?.data;
+                    if (fullUser) {
+                        loginSuccess(token, fullUser);
+                        // Redirect berdasarkan role dari data lengkap
+                        if (fullUser.role === 'admin') {
+                            navigate('/admin/dashboard');
+                        } else if (fullUser.is_seller) {
+                            navigate('/seller/dashboard');
+                        } else {
+                            navigate('/');
+                        }
+                    } else {
+                        navigate('/');
+                    }
+                } catch {
+                    // Fallback ke data minimal dari login jika fetch profil gagal
+                    if (user?.role === 'admin') {
+                        navigate('/admin/dashboard');
+                    } else if (user?.is_seller) {
+                        navigate('/seller/dashboard');
+                    } else {
+                        navigate('/');
+                    }
+                }
             } else {
-                navigate('/');
+                throw new Error("Invalid response format from server");
             }
         } catch (err) {
             console.error('Login error:', err);

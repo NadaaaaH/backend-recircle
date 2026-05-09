@@ -18,9 +18,9 @@ class SellerOrderResource extends JsonResource
             'shippingAddress'=> $this->alamat_pengiriman,
             'createdAt'      => $this->created_at?->toIso8601String(),
             'buyer' => [
-                'id'    => $this->whenLoaded('buyer', fn() => $this->buyer->id),
-                'name'  => $this->whenLoaded('buyer', fn() => $this->buyer->name),
-                'phone' => $this->whenLoaded('buyer', fn() => $this->buyer->phone),
+                'id'    => $this->whenLoaded('user', fn() => $this->user->id),
+                'name'  => $this->whenLoaded('user', fn() => $this->user->name),
+                'phone' => $this->whenLoaded('user', fn() => $this->user->nomor_wa),
             ],
             'product' => [
                 'id'       => $this->whenLoaded('product', fn() => $this->product->id),

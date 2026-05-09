@@ -1,5 +1,6 @@
 import React from "react";
-import { Head, Link, useForm } from "@inertiajs/react";
+import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import MainLayout from "@/Layouts/MainLayout";
 import {
     Store,
@@ -13,7 +14,8 @@ import {
 } from "lucide-react";
 
 export default function RegisterSeller() {
-    const { data, setData, post, processing, errors } = useForm({
+    const navigate = useNavigate();
+    const [data, setDataState] = useState({
         store_name: "",
         email: "",
         phone: "",
@@ -21,20 +23,31 @@ export default function RegisterSeller() {
         description: "",
         document: null,
     });
+    const setData = (key, value) => setDataState(prev => ({ ...prev, [key]: value }));
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState({});
 
-    const handleSubmit = (e) => {
+    useEffect(() => {
+        document.title = "Daftar sebagai Penjual - ReCircle";
+    }, []);
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        post(route("seller.register")); // sesuaikan dengan route backend
+        setProcessing(true);
+        // Simulate API call
+        setTimeout(() => {
+            setProcessing(false);
+            navigate("/seller/verification");
+        }, 1500);
     };
 
     return (
         <MainLayout>
-            <Head title="Daftar sebagai Penjual - ReCircle" />
 
             {/* Header Kembali */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
                 <Link
-                    href="/"
+                    to="/"
                     className="inline-flex items-center text-sm text-gray-500 hover:text-primary transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4 mr-2" />
@@ -259,7 +272,7 @@ export default function RegisterSeller() {
                             <p className="text-center text-xs text-gray-400 mt-4">
                                 Dengan mendaftar, kamu setuju dengan{" "}
                                 <Link
-                                    href="/syarat-ketentuan"
+                                    to="/syarat-ketentuan"
                                     className="text-primary underline"
                                 >
                                     Syarat & Ketentuan

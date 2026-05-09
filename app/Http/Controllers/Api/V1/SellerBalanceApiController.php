@@ -26,7 +26,7 @@ class SellerBalanceApiController extends Controller
 
             return $this->successResponse([
                 'total_dilepas' => $totalDilepas,
-                'history'       => SellerBalanceResource::collection($balances)->response()->getData(true)
+                'history' => SellerBalanceResource::collection($balances)->response()->getData(true)
             ], 'Balance history retrieved successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to retrieve balance history', 500);

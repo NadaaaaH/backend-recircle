@@ -78,7 +78,7 @@ function App() {
         <Route path="/" element={<Home />} />
         {/* <Route path="/home" element={<Home />} /> */}
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/checkout/:id" element={<Checkout />} />
         <Route path="/cart" element={<CartIndex />} />
         <Route path="/chat" element={<ChatIndex />} />
         <Route path="/wishlist" element={<WishlistIndex />} />
@@ -94,6 +94,7 @@ function App() {
 
         {/* Products Routes */}
         <Route path="/products" element={<ProductIndex />} />
+        <Route path="/explore" element={<ProductIndex />} /> {/* alias explore → products */}
         <Route path="/products/create" element={<ProductCreate />} />
         <Route path="/products/:id" element={<ProductShow />} />
 

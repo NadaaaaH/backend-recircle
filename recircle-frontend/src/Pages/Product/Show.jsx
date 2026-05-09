@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Head, Link } from "@inertiajs/react";
+import React, { useState, useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
 import MainLayout from "@/Layouts/MainLayout";
 import {
     MapPin,
@@ -16,23 +16,84 @@ import {
 } from "lucide-react";
 import NegoModal from "@/Components/NegoModal";
 import LikeButton from "@/Components/LikeButton";
+import api from "@/lib/axios";
 
-export default function Show({ product }) {
+export default function Show() {
+    const { id } = useParams();
 
-    // State for Image Gallery Interaction: Default to first URL from backend array
-    const [activeImage, setActiveImage] = useState(
-        product.images?.length > 0 ? product.images[0] : product.img
-    );
+    const [product, setProduct] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [activeImage, setActiveImage] = useState("");
     const [isNegoOpen, setIsNegoOpen] = useState(false);
+
+    useEffect(() => {
+        setIsLoading(true);
+        api.get(`/products/${id}`)
+            .then((res) => {
+                const data = res.data.data;
+                const formattedProduct = {
+                    id: data.id,
+                    name: data.name,
+                    category: data.category?.name || "Lainnya",
+                    price: data.price,
+                    original_price: null,
+                    loc: data.campusLocation,
+                    img: data.images?.length > 0 ? data.images[0] : 'https://placehold.co/800x600/eeeeee/999999?text=Image+Not+Found',
+                    images: data.images || [],
+                    desc: data.description,
+                    condition: data.condition,
+                    posted_at: new Date(data.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+                    seller: {
+                        id: data.seller?.id,
+                        name: data.seller?.name || 'Unknown',
+                        avatar: data.seller?.avatar_url || `https://ui-avatars.com/api/?name=${data.seller?.name || 'User'}`,
+                        kampus: data.seller?.kampus || data.campusLocation,
+                        is_verified: data.seller?.is_seller || false
+                    }
+                };
+                setProduct(formattedProduct);
+                setActiveImage(formattedProduct.img);
+                document.title = `${formattedProduct.name} - ReCircle`;
+            })
+            .catch((err) => {
+                console.error("Gagal mengambil data produk", err);
+            })
+            .finally(() => {
+                setIsLoading(false);
+            });
+    }, [id]);
+
+    if (isLoading) {
+        return (
+            <MainLayout>
+                <div className="flex flex-col items-center justify-center min-h-[60vh]">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary mb-4"></div>
+                    <p className="text-gray-400 font-medium animate-pulse">Memuat detail produk...</p>
+                </div>
+            </MainLayout>
+        );
+    }
+
+    if (!product) {
+        return (
+            <MainLayout>
+                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+                    <AlertCircle className="w-16 h-16 text-gray-300 mb-4" />
+                    <h2 className="text-2xl font-black text-gray-900 mb-2">Produk Tidak Ditemukan</h2>
+                    <p className="text-gray-500 mb-6">Produk ini mungkin telah dihapus atau tidak tersedia.</p>
+                    <Link to="/products" className="px-6 py-3 bg-primary text-white rounded-full font-bold">Kembali ke Eksplorasi</Link>
+                </div>
+            </MainLayout>
+        );
+    }
 
     return (
         <MainLayout>
-            <Head title={`${product.name} - ReCircle`} />
 
             {/* --- BREADCRUMB & BACK BUTTON --- */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4">
                 <Link
-                    href="/"
+                    to="/products"
                     className="inline-flex items-center text-gray-400 hover:text-primary transition-colors text-sm font-medium gap-1"
                 >
                     <ArrowLeft className="w-4 h-4" /> Kembali
@@ -146,7 +207,10 @@ export default function Show({ product }) {
                                         </p>
                                     </div>
                                 </div>
-                                <button className="text-xs font-bold text-primary border border-primary/20 px-3 py-1.5 rounded-full hover:bg-primary hover:text-white transition-colors">
+                                <button 
+                                    onClick={() => alert('Fitur profil publik penjual sedang dalam pengembangan.')}
+                                    className="text-xs font-bold text-primary border border-primary/20 px-3 py-1.5 rounded-full hover:bg-primary hover:text-white transition-colors"
+                                >
                                     Lihat Profil
                                 </button>
                             </div>
@@ -199,7 +263,7 @@ export default function Show({ product }) {
                             {/* Desktop Actions */}
                             <div className="hidden lg:flex flex-col gap-3 pt-4">
                                 <Link 
-                                    href={`/checkout/${product.id}`}
+                                    to={`/checkout/${product.id}`}
                                     className="w-full bg-[#43552c] text-white font-bold py-4 rounded-full shadow-lg shadow-[#43552c]/20 hover:shadow-xl hover:-translate-y-1 hover:scale-[0.98] active:scale-95 transition-all flex items-center justify-center gap-2"
                                 >
                                     <ShoppingBag className="w-5 h-5" /> Beli Langsung
@@ -212,7 +276,7 @@ export default function Show({ product }) {
                                         <Tags className="w-5 h-5" /> Nego Harga
                                     </button>
                                     <Link 
-                                        href={`/chat?user_id=${product.seller.id}&product_id=${product.id}`}
+                                        to={`/chat?user_id=${product.seller.id}&user_name=${encodeURIComponent(product.seller.name)}&product_id=${product.id}&product_name=${encodeURIComponent(product.name)}&product_price=${product.price}&product_img=${encodeURIComponent(product.images[0])}`}
                                         className="w-full bg-transparent border-2 border-[#43552c] text-[#43552c] font-bold py-3.5 rounded-full hover:bg-[#43552c]/5 hover:scale-[0.98] active:scale-95 transition-all flex items-center justify-center gap-2 shadow-sm"
                                     >
                                         <MessageSquare className="w-5 h-5" /> Chat Penjual
@@ -228,7 +292,7 @@ export default function Show({ product }) {
             <div className="lg:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-4 z-40 safe-area-pb shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                 <div className="flex flex-col gap-3 max-w-7xl mx-auto">
                     <Link 
-                        href={`/checkout/${product.id}`}
+                        to={`/checkout/${product.id}`}
                         className="w-full bg-[#43552c] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#43552c]/20 hover:scale-[0.98] active:scale-95 transition-all flex items-center justify-center gap-2 text-sm"
                     >
                         <ShoppingBag className="w-5 h-5" /> Beli Langsung
@@ -240,7 +304,7 @@ export default function Show({ product }) {
                         <Tags className="w-5 h-5" /> Nego Harga
                     </button>
                     <Link 
-                        href={`/chat?user_id=${product.seller.id}&product_id=${product.id}`}
+                        to={`/chat?user_id=${product.seller.id}&user_name=${encodeURIComponent(product.seller.name)}&product_id=${product.id}&product_name=${encodeURIComponent(product.name)}&product_price=${product.price}&product_img=${encodeURIComponent(product.images[0])}`}
                         className="w-full bg-transparent border-2 border-[#43552c] text-[#43552c] font-bold py-3.5 rounded-xl hover:bg-[#43552c]/5 hover:scale-[0.98] active:scale-95 transition-all text-sm flex items-center justify-center gap-2"
                     >
                         <MessageSquare className="w-5 h-5" /> Chat Penjual

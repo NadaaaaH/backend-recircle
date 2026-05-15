@@ -70,10 +70,18 @@ class ProductApiController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         try {
-            $product = Product::with(['user', 'category'])->active()->findOrFail($id);
+            $product = Product::with(['user', 'category'])->findOrFail($id);
+
+            // If product is not active, ONLY the seller (owner) can view it
+            if (!$product->isActive()) {
+                $currentUser = \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
+                if (!$currentUser || $product->user_id !== $currentUser->id) {
+                    return $this->errorResponse('Product not found or unavailable', 404);
+                }
+            }
 
             return $this->successResponse(
                 new ProductResource($product),
@@ -98,7 +106,7 @@ class ProductApiController extends Controller
                 'description'    => 'required|string',
                 'price'          => 'required|numeric|min:0',
                 'stock'          => 'required|integer|min:0',
-                'condition'      => 'required|string|in:baru,bekas',
+                'condition'      => 'required|string',
                 'campusLocation' => 'required|string|max:255',
                 'images.*'       => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
@@ -118,6 +126,7 @@ class ProductApiController extends Controller
                 'kondisi'       => $validated['condition'],
                 'lokasi_kampus' => $validated['campusLocation'],
                 'status'        => 'active',
+                'image'         => json_encode([]), // Ensure default value to avoid 1364 SQL error
             ];
 
             // Handle image uploads
@@ -159,8 +168,9 @@ class ProductApiController extends Controller
                 'description'    => 'sometimes|string',
                 'price'          => 'sometimes|numeric|min:0',
                 'stock'          => 'sometimes|integer|min:0',
-                'condition'      => 'sometimes|string|in:baru,bekas',
+                'condition'      => 'sometimes|string',
                 'campusLocation' => 'sometimes|string|max:255',
+                'status'         => 'sometimes|string|in:active,archived,sold',
                 'images.*'       => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
 
@@ -178,11 +188,13 @@ class ProductApiController extends Controller
             if (isset($validated['stock'])) $data['stok'] = $validated['stock'];
             if (isset($validated['condition'])) $data['kondisi'] = $validated['condition'];
             if (isset($validated['campusLocation'])) $data['lokasi_kampus'] = $validated['campusLocation'];
+            if (isset($validated['status'])) $data['status'] = $validated['status'];
 
             // Handle image uploads
-            if ($request->hasFile('images')) {
-                // Delete old images if needed or keep them? 
-                // For now, let's just replace if new ones are uploaded
+            if ($request->hasFile('image')) {
+                 $path = $request->file('image')->store('products', 'public');
+                 $data['image'] = $path;
+            } elseif ($request->hasFile('images')) {
                 $imagePaths = [];
                 foreach ($request->file('images') as $image) {
                     $imagePaths[] = $image->store('products', 'public');

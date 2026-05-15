@@ -3,7 +3,7 @@ import { Link, useSearchParams, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import MainLayout from "@/Layouts/MainLayout";
 import { Send, Search, CheckCircle2, ChevronLeft, Tag } from "lucide-react";
-import axios from "axios";
+import api from "@/lib/axios";
 
 export default function ChatIndex() {
     const { user: currentUser } = useAuth();
@@ -21,7 +21,7 @@ export default function ChatIndex() {
     const [selectedUser, setSelectedUser] = useState(null);
     const selectedUserRef = useRef(null);
 
-    // Keep ref updated for non-reactive closure use
+    // Keep ref updated for non-reactive closure use in Echo listeners
     useEffect(() => {
         selectedUserRef.current = selectedUser;
     }, [selectedUser]);
@@ -33,42 +33,94 @@ export default function ChatIndex() {
 
     const messagesEndRef = useRef(null);
 
-    // Redirect to login if not authenticated
-    if (!currentUser) {
-        return <Navigate to="/login" replace />;
-    }
-
-    // Load Contacts from API
+    // Real-time listener Setup via Echo
     useEffect(() => {
-        import('@/lib/axios').then(({ default: api }) => {
-            api.get('/chat')
-                .then(res => {
-                    const fetchedContacts = res.data?.data || [];
-                    setContacts(fetchedContacts);
+        if (!currentUser || !window.Echo) return;
+
+        const channelName = `chat.${currentUser.id}`;
+        const channel = window.Echo.private(channelName);
+
+        channel.listen("MessageSent", (event) => {
+            const incomingMsgRaw = event.message;
+            
+            // Map the API data structure to match our frontend state
+            const incomingMsg = {
+                id: incomingMsgRaw.id,
+                sender_id: incomingMsgRaw.sender_id || incomingMsgRaw.senderId,
+                receiver_id: incomingMsgRaw.receiver_id || incomingMsgRaw.receiverId,
+                message: incomingMsgRaw.message,
+                time: new Date(incomingMsgRaw.created_at).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                }),
+                is_read: incomingMsgRaw.is_read || false,
+                product: incomingMsgRaw.product
+            };
+
+            // 1. Update current chat messages IF the incoming message belongs to current chat room
+            if (selectedUserRef.current && selectedUserRef.current.id === incomingMsg.sender_id) {
+                setMessages((prev) => [...prev, incomingMsg]);
+                // Auto-read the message via API since we are viewing it
+                api.get(`/chat/${incomingMsg.sender_id}`).catch(() => {});
+            }
+
+            // 2. Update global contact sidebar list (bring user to top & update last message / unread)
+            setContacts((prevContacts) => {
+                let updatedContacts = [...prevContacts];
+                const existingIndex = updatedContacts.findIndex(
+                    (c) => c.id === incomingMsg.sender_id
+                );
+
+                const isCurrentlyOpen = selectedUserRef.current && selectedUserRef.current.id === incomingMsg.sender_id;
+
+                if (existingIndex > -1) {
+                    const contact = { ...updatedContacts[existingIndex] };
+                    contact.last_message = incomingMsg.message;
+                    contact.created_at = "Baru saja";
                     
-                    // If we have an initial user selected from URL, check if they exist in contacts
-                    if (initial_selected_user_id) {
-                        const existingUser = fetchedContacts.find(c => c.id === initial_selected_user_id);
-                        if (existingUser) {
-                            openChat(existingUser);
-                        } else {
-                            // If they are a new contact, create a temporary contact object based on URL params
-                            const newTempContact = { 
-                                id: initial_selected_user_id, 
-                                name: initial_user_name || "Pengguna",
-                                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(initial_user_name || 'Pengguna')}&background=f3f4f6&color=43552c`,
-                                unread_count: 0
-                            };
-                            openChat(newTempContact);
-                            // We don't add them to the contacts list until a message is sent
-                        }
+                    if (!isCurrentlyOpen) {
+                        contact.unread_count = (contact.unread_count || 0) + 1;
                     }
-                })
-                .catch(err => {
-                    console.error("Error fetching chat contacts:", err);
                     
-                    // Fallback: Even if contacts fail to load, open the chat window for the requested user
-                    if (initial_selected_user_id) {
+                    updatedContacts.splice(existingIndex, 1);
+                    updatedContacts.unshift(contact);
+                } else {
+                    // Brand new conversation starter
+                    const senderName = incomingMsgRaw.sender?.name || "Pengguna";
+                    updatedContacts.unshift({
+                        id: incomingMsg.sender_id,
+                        name: senderName,
+                        avatar: incomingMsgRaw.sender?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=f3f4f6&color=43552c`,
+                        last_message: incomingMsg.message,
+                        created_at: "Baru saja",
+                        unread_count: isCurrentlyOpen ? 0 : 1,
+                    });
+                }
+                return updatedContacts;
+            });
+        });
+
+        return () => {
+            channel.stopListening("MessageSent");
+        };
+    }, [currentUser]);
+
+    // Initial Load Logic
+    useEffect(() => {
+        document.title = "Pesan | ReCircle";
+        
+        // Load contacts list
+        api.get('/chat')
+            .then(res => {
+                const fetchedContacts = res.data?.data || [];
+                setContacts(fetchedContacts);
+                
+                if (initial_selected_user_id) {
+                    const existingUser = fetchedContacts.find(c => c.id === initial_selected_user_id);
+                    if (existingUser) {
+                        openChat(existingUser);
+                    } else {
+                        // Handshake via URL parameter
                         const newTempContact = { 
                             id: initial_selected_user_id, 
                             name: initial_user_name || "Pengguna",
@@ -77,29 +129,37 @@ export default function ChatIndex() {
                         };
                         openChat(newTempContact);
                     }
-                })
-                .finally(() => setIsLoadingContacts(false));
-        });
+                }
+            })
+            .catch(err => {
+                console.error("Error loading chat contacts:", err);
+                // Fallback initialization
+                if (initial_selected_user_id) {
+                    openChat({ 
+                        id: initial_selected_user_id, 
+                        name: initial_user_name || "Pengguna",
+                        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(initial_user_name || 'Pengguna')}&background=f3f4f6&color=43552c`,
+                        unread_count: 0
+                    });
+                }
+            })
+            .finally(() => setIsLoadingContacts(false));
     }, [initial_selected_user_id]);
 
-    // Scroll to bottom when messages change
+    // Auto-scroll behavior
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    useEffect(() => {
-        document.title = "Pesan | ReCircle";
-    }, []);
+    const openChat = async (targetUser) => {
+        setSelectedUser(targetUser);
 
-    const openChat = async (user) => {
-        setSelectedUser(user);
-
-        // Zero out unread count in UI locally
+        // Instantly clear unread counts locally for aesthetic reasons
         setContacts((prev) =>
-            prev.map((c) => (c.id === user.id ? { ...c, unread_count: 0 } : c)),
+            prev.map((c) => (c.id === targetUser.id ? { ...c, unread_count: 0 } : c))
         );
 
-        // Optimistically set active product context from URL if available
+        // Inject context from URL metadata
         if (initial_product_id) {
             setActiveProduct({
                 id: initial_product_id,
@@ -109,148 +169,109 @@ export default function ChatIndex() {
             });
         }
 
-        // Fetch messages from API
-        import('@/lib/axios').then(({ default: api }) => {
-            api.get(`/chat/${user.id}`)
-                .then(res => {
-                    const fetchedMessages = res.data?.data || [];
-                    
-                    const mappedMessages = fetchedMessages.map(msg => ({
-                        id: msg.id,
-                        sender_id: msg.senderId,
-                        receiver_id: msg.receiverId,
-                        message: msg.message,
-                        time: msg.time,
-                        is_read: msg.isRead,
-                        product: msg.product
-                    }));
-                    
-                    setMessages(mappedMessages);
-                    
-                    // If no initial product from URL, try to infer from last message
-                    if (!initial_product_id) {
-                        if (mappedMessages.length > 0) {
-                            const lastMsgWithProduct = [...mappedMessages].reverse().find(m => m.product);
-                            if (lastMsgWithProduct) {
-                                setActiveProduct({
-                                    id: lastMsgWithProduct.product.id,
-                                    name: lastMsgWithProduct.product.name,
-                                    price: lastMsgWithProduct.product.price,
-                                    img: lastMsgWithProduct.product.image,
-                                });
-                            } else {
-                                setActiveProduct(null);
-                            }
-                        } else {
-                            setActiveProduct(null);
-                        }
+        // Fetch messages from Database (MongoDB managed via Laravel API)
+        api.get(`/chat/${targetUser.id}`)
+            .then(res => {
+                const rawMessages = res.data?.data || [];
+                const formattedMessages = rawMessages.map(msg => ({
+                    id: msg.id,
+                    sender_id: msg.senderId, // camelCase matching Laravel Resource
+                    receiver_id: msg.receiverId,
+                    message: msg.message,
+                    time: msg.time,
+                    is_read: msg.isRead,
+                    product: msg.product
+                }));
+                
+                setMessages(formattedMessages);
+                
+                // If user context was missing product details, peek last message's product reference
+                if (!initial_product_id && formattedMessages.length > 0) {
+                    const lastProductRef = [...formattedMessages].reverse().find(m => m.product);
+                    if (lastProductRef) {
+                        setActiveProduct({
+                            id: lastProductRef.product.id,
+                            name: lastProductRef.product.name,
+                            price: lastProductRef.product.price,
+                            img: lastProductRef.product.image,
+                        });
+                    } else {
+                        setActiveProduct(null);
                     }
-                })
-                .catch(err => {
-                    console.error("Error fetching messages:", err);
-                    setMessages([]); // Set empty array to clear loading state if any
-                });
-        });
+                }
+            })
+            .catch(err => {
+                console.error("Chat retrieval failed:", err);
+                setMessages([]);
+            });
     };
 
     const sendMessage = async (e) => {
         e.preventDefault();
         if (!newMessage.trim() || !selectedUser) return;
 
-        const currentMessageText = newMessage;
+        const payloadMsg = newMessage;
         setNewMessage("");
         setIsSending(true);
 
-        import('@/lib/axios').then(({ default: api }) => {
-            api.post('/chat', {
-                receiver_id: selectedUser.id,
-                message: currentMessageText,
-                product_id: activeProduct?.id
-            }).then(res => {
-                const msgData = res.data?.data;
-                if (!msgData) return;
+        api.post('/chat', {
+            receiver_id: selectedUser.id,
+            message: payloadMsg,
+            product_id: activeProduct?.id
+        }).then(res => {
+            const msgData = res.data?.data;
+            if (!msgData) return;
 
-                const newMsg = {
-                    id: msgData.id,
-                    sender_id: msgData.senderId,
-                    receiver_id: msgData.receiverId,
-                    message: msgData.message,
-                    time: msgData.time,
-                    is_read: msgData.isRead,
-                    product: msgData.product
-                };
+            const outgoingMsg = {
+                id: msgData.id,
+                sender_id: msgData.senderId,
+                receiver_id: msgData.receiverId,
+                message: msgData.message,
+                time: msgData.time,
+                is_read: msgData.isRead,
+                product: msgData.product
+            };
 
-                setMessages((prev) => [...prev, newMsg]);
-                
-                // Update contacts list to move this to top
-                setContacts((prev) => {
-                    let updated = [...prev];
-                    const index = updated.findIndex((c) => c.id === selectedUser.id);
-                    if (index > -1) {
-                        const c = updated[index];
-                        c.last_message = currentMessageText;
-                        c.created_at = "Baru saja";
-                        updated.splice(index, 1);
-                        updated.unshift(c);
-                    } else {
-                        updated.unshift({
-                            id: selectedUser.id,
-                            name: selectedUser.name,
-                            avatar: selectedUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.name)}&background=f3f4f6&color=43552c`,
-                            last_message: currentMessageText,
-                            created_at: "Baru saja",
-                            unread_count: 0,
-                        });
-                    }
-                    return updated;
-                });
-            }).catch(err => {
-                console.warn("API Gagal, beralih ke mode simulasi (Pesan tidak tersimpan di database). Error:", err);
-                // Fallback: Simulate sending the message locally for UI demo purposes
-                const mockNewMsg = {
-                    id: Date.now(),
-                    sender_id: currentUser.id,
-                    receiver_id: selectedUser.id,
-                    message: currentMessageText,
-                    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                    is_read: false,
-                    product: activeProduct
-                };
-
-                setMessages((prev) => [...prev, mockNewMsg]);
-                
-                setContacts((prev) => {
-                    let updated = [...prev];
-                    const index = updated.findIndex((c) => c.id === selectedUser.id);
-                    if (index > -1) {
-                        const c = updated[index];
-                        c.last_message = currentMessageText;
-                        c.created_at = "Baru saja";
-                        updated.splice(index, 1);
-                        updated.unshift(c);
-                    } else {
-                        updated.unshift({
-                            id: selectedUser.id,
-                            name: selectedUser.name,
-                            avatar: selectedUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.name)}&background=f3f4f6&color=43552c`,
-                            last_message: currentMessageText,
-                            created_at: "Baru saja",
-                            unread_count: 0,
-                        });
-                    }
-                    return updated;
-                });
-            }).finally(() => {
-                setIsSending(false);
+            setMessages((prev) => [...prev, outgoingMsg]);
+            
+            // Push my new message context to the very top of contact list
+            setContacts((prev) => {
+                let updated = [...prev];
+                const index = updated.findIndex((c) => c.id === selectedUser.id);
+                if (index > -1) {
+                    const c = { ...updated[index] };
+                    c.last_message = payloadMsg;
+                    c.created_at = "Baru saja";
+                    updated.splice(index, 1);
+                    updated.unshift(c);
+                } else {
+                    updated.unshift({
+                        id: selectedUser.id,
+                        name: selectedUser.name,
+                        avatar: selectedUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.name)}&background=f3f4f6&color=43552c`,
+                        last_message: payloadMsg,
+                        created_at: "Baru saja",
+                        unread_count: 0,
+                    });
+                }
+                return updated;
             });
+        }).catch(err => {
+            console.error("API request failed:", err);
+        }).finally(() => {
+            setIsSending(false);
         });
     };
+
+    if (!currentUser) {
+        return <Navigate to="/login" replace />;
+    }
 
     return (
         <MainLayout>
             <div className="bg-[#f7f9f7] min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-7xl mx-auto h-[80vh] flex bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border border-gray-100">
-                    {/* Contacts Sidebar */}
+                    {/* Sidebar Kontak */}
                     <div
                         className={`w-full md:w-1/3 flex-shrink-0 border-r border-gray-100 flex flex-col ${selectedUser ? "hidden md:flex" : "flex"}`}
                     >
@@ -284,11 +305,11 @@ export default function ChatIndex() {
                                         onClick={() => openChat(contact)}
                                         className={`w-full text-left p-4 flex items-start gap-4 hover:bg-gray-50 transition-colors border-b border-gray-50 ${selectedUser?.id === contact.id ? "bg-[#43552c]/5" : ""}`}
                                     >
-                                        <div className="relative">
+                                        <div className="relative flex-shrink-0">
                                             <img
                                                 src={contact.avatar}
                                                 alt=""
-                                                className="w-12 h-12 rounded-full object-cover"
+                                                className="w-12 h-12 rounded-full object-cover border border-gray-100"
                                             />
                                             {contact.unread_count > 0 && (
                                                 <span className="absolute -top-1 -right-1 bg-[#d4a373] text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
@@ -323,23 +344,18 @@ export default function ChatIndex() {
                     >
                         {selectedUser ? (
                             <>
-                                {/* Chat Header */}
+                                {/* Header Chat */}
                                 <div className="h-20 px-6 border-b border-gray-100 bg-white flex items-center justify-between shadow-sm z-10">
                                     <div className="flex items-center gap-4">
                                         <button
                                             className="md:hidden text-gray-400 hover:text-gray-900"
-                                            onClick={() =>
-                                                setSelectedUser(null)
-                                            }
+                                            onClick={() => setSelectedUser(null)}
                                         >
                                             <ChevronLeft className="w-6 h-6" />
                                         </button>
                                         <div className="flex items-center gap-3">
                                             <img
-                                                src={
-                                                    selectedUser.avatar ||
-                                                    `https://ui-avatars.com/api/?name=${selectedUser.name}&background=f3f4f6&color=43552c`
-                                                }
+                                                src={selectedUser.avatar || `https://ui-avatars.com/api/?name=${selectedUser.name}&background=f3f4f6&color=43552c`}
                                                 alt=""
                                                 className="w-10 h-10 rounded-full object-cover"
                                             />
@@ -352,13 +368,13 @@ export default function ChatIndex() {
                                     </div>
                                 </div>
 
-                                {/* Active Product Context Widget */}
+                                {/* Product Context Panel */}
                                 {activeProduct && (
                                     <div className="bg-white mx-6 mt-6 p-3 rounded-2xl shadow-[0_2px_10px_rgb(0,0,0,0.03)] flex items-center gap-4 border border-gray-100">
                                         <img
                                             src={activeProduct.img}
                                             alt=""
-                                            className="w-12 h-12 rounded-xl object-cover"
+                                            className="w-12 h-12 rounded-xl object-cover bg-gray-50"
                                         />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">
@@ -368,13 +384,9 @@ export default function ChatIndex() {
                                                 {activeProduct.name}
                                             </h4>
                                             <p className="text-xs font-bold text-[#43552c]">
-                                                Rp{" "}
-                                                {parseInt(
-                                                    activeProduct.price,
-                                                ).toLocaleString("id-ID")}
+                                                Rp {parseInt(activeProduct.price || 0).toLocaleString("id-ID")}
                                             </p>
                                         </div>
-                                        {/* Dynamic link to the product */}
                                         <Link
                                             to={`/products/${activeProduct.id}`}
                                             className="px-4 py-2 bg-[#f7f9f7] text-[#43552c] rounded-xl text-xs font-bold hover:bg-[#43552c]/10 transition-colors whitespace-nowrap border border-gray-100"
@@ -384,14 +396,13 @@ export default function ChatIndex() {
                                     </div>
                                 )}
 
-                                {/* Messages History */}
+                                {/* Message Logs */}
                                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                                     {messages.map((msg, idx) => {
-                                        const isMine =
-                                            msg.sender_id === currentUser.id;
+                                        const isMine = msg.sender_id === currentUser.id;
                                         return (
                                             <div
-                                                key={idx}
+                                                key={msg.id || idx}
                                                 className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}
                                             >
                                                 <div
@@ -419,7 +430,7 @@ export default function ChatIndex() {
                                     <div ref={messagesEndRef} />
                                 </div>
 
-                                {/* Chat Input Box */}
+                                {/* Footer Input */}
                                 <div className="p-6 bg-white border-t border-gray-100">
                                     <form
                                         onSubmit={sendMessage}
@@ -429,16 +440,9 @@ export default function ChatIndex() {
                                             <textarea
                                                 rows="1"
                                                 value={newMessage}
-                                                onChange={(e) =>
-                                                    setNewMessage(
-                                                        e.target.value,
-                                                    )
-                                                }
+                                                onChange={(e) => setNewMessage(e.target.value)}
                                                 onKeyDown={(e) => {
-                                                    if (
-                                                        e.key === "Enter" &&
-                                                        !e.shiftKey
-                                                    ) {
+                                                    if (e.key === "Enter" && !e.shiftKey) {
                                                         e.preventDefault();
                                                         sendMessage(e);
                                                     }
@@ -449,9 +453,7 @@ export default function ChatIndex() {
                                         </div>
                                         <button
                                             type="submit"
-                                            disabled={
-                                                !newMessage.trim() || isSending
-                                            }
+                                            disabled={!newMessage.trim() || isSending}
                                             className="w-12 h-12 flex-shrink-0 bg-[#43552c] text-white rounded-full flex items-center justify-center hover:bg-[#364423] shadow-md shadow-[#43552c]/20 transition-all disabled:opacity-50"
                                         >
                                             <Send className="w-5 h-5 ml-1" />
@@ -469,7 +471,7 @@ export default function ChatIndex() {
                                 </h3>
                                 <p className="text-gray-500 max-w-sm">
                                     Diskusi soal produk lebih mudah melalui
-                                    fitur obrolan WhatsApp-style ini.
+                                    fitur obrolan real-time ini.
                                 </p>
                             </div>
                         )}

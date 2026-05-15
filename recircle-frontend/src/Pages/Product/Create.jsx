@@ -1,18 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
-import DashboardLayout from '@/Layouts/DashboardLayout';
-import { Upload, X, Image as ImageIcon, ArrowLeft, Eye, Tag, MapPin, FileText, Layers } from 'lucide-react';
+import SellerLayout from '@/Layouts/SellerLayout';
+import { Upload, X, Image as ImageIcon, ArrowLeft, Eye, Tag, MapPin, FileText, Layers, CheckCircle } from 'lucide-react';
+import api from '@/lib/axios';
 
 export default function Create() {
-    const dummyCategories = [
-        { id: 1, name: "Elektronik" },
-        { id: 2, name: "Buku" },
-        { id: 3, name: "Furniture" }
-    ];
-    const categories = dummyCategories;
     const navigate = useNavigate();
 
+    const [categories, setCategories] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
     const [data, setDataState] = useState({
         nama_barang: '',
         harga: '',
@@ -29,10 +25,7 @@ export default function Create() {
 
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState({});
-
-    useEffect(() => {
-        document.title = "Jual Barang | ReCircle";
-    }, []);
+    const [flash, setFlash] = useState(null);
 
     const [previewUrls, setPreviewUrls] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
@@ -43,6 +36,22 @@ export default function Create() {
         'Bekas - Layak Pakai',
         'Bekas - Butuh Perbaikan',
     ];
+
+    useEffect(() => {
+        document.title = "Jual Barang | ReCircle";
+        fetchCategories();
+    }, []);
+
+    const fetchCategories = async () => {
+        try {
+            const homeRes = await api.get('/');
+            if (homeRes.data?.data?.categories) {
+                setCategories(homeRes.data.data.categories);
+            }
+        } catch (err) {
+            console.error("Failed to load categories", err);
+        }
+    };
 
     // ── Image Handlers ──
     const handleImageChange = (e) => {
@@ -55,9 +64,7 @@ export default function Create() {
     };
 
     const removeImage = (indexToRemove) => {
-        // Revoke old preview URL to prevent memory leak
         URL.revokeObjectURL(previewUrls[indexToRemove]);
-
         const updatedImages = data.images.filter((_, i) => i !== indexToRemove);
         const updatedPreviews = previewUrls.filter((_, i) => i !== indexToRemove);
 
@@ -83,264 +90,331 @@ export default function Create() {
             if (files.length > 0) {
                 const newImages = [...data.images, ...files].slice(0, 5);
                 setData('images', newImages);
-
-                const newPreviews = newImages.map((file) => {
-                    // if it's already a URL string from backend (in edit mode), wait this is create mode so it's all File objects
-                    return URL.createObjectURL(file);
-                });
+                const newPreviews = newImages.map((file) => URL.createObjectURL(file));
                 setPreviewUrls(newPreviews);
             }
         }
     };
 
-    // ── Submit with forceFormData ──
     const submit = async (e) => {
         e.preventDefault();
         setProcessing(true);
-        // Simulate API call for SPA phase
-        setTimeout(() => {
+        setErrors({});
+        setFlash(null);
+
+        try {
+            const formData = new FormData();
+            // Mapping keys to standard Backend requirement (CamelCase as per current controllers)
+            formData.append('name', data.nama_barang);
+            formData.append('price', data.harga);
+            formData.append('categoryId', data.category_id);
+            formData.append('condition', data.kondisi);
+            formData.append('description', data.deskripsi);
+            formData.append('campusLocation', data.lokasi_kampus);
+            formData.append('stock', 1); // Standard unit item
+
+            // Append image files
+            if (data.images.length > 0) {
+                data.images.forEach((file) => {
+                    formData.append('images[]', file);
+                });
+            }
+
+            await api.post('/products', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            setFlash("Produk berhasil ditayangkan!");
+            setTimeout(() => navigate('/seller/products'), 1500);
+
+        } catch (err) {
+            console.error("Create product error", err);
+            if (err.response?.status === 422) {
+                setErrors(err.response.data.errors || {});
+            } else {
+                setErrors({ general: "Gagal menayangkan produk. Silakan periksa koneksi Anda." });
+            }
+        } finally {
             setProcessing(false);
-            navigate('/seller/products');
-        }, 1500);
+        }
     };
 
-    // ── Inline Error Component ──
-    const InputError = ({ field }) => {
-        const msg = errors[field];
-        if (!msg) return null;
-        return <p className="text-red-500 text-xs mt-1.5 font-medium">{msg}</p>;
+    const InputError = ({ message }) => {
+        if (!message) return null;
+        const msg = Array.isArray(message) ? message[0] : message;
+        return <p className="text-rose-500 text-xs mt-1.5 font-bold tracking-wide">{msg}</p>;
     };
 
     return (
-        <DashboardLayout
-            title="Jual Barang"
-            breadcrumbs={[
-                { label: 'Seller', href: '/seller/dashboard' },
-                { label: 'Produk Saya', href: '/seller/products' },
-                { label: 'Tambah Produk' },
-            ]}
-        >
-
-            <form onSubmit={submit} className="flex flex-col xl:flex-row gap-8 max-w-5xl">
-                {/* ── LEFT COLUMN: Form Fields ── */}
-                <div className="flex-1 space-y-6">
-
-                    {/* 1. Photo Upload */}
-                    <div className="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50">
-                        <div className="flex items-center gap-2 mb-5">
-                            <ImageIcon className="w-5 h-5 text-[#43552c]" />
-                            <h3 className="font-semibold text-gray-800">Foto Produk</h3>
-                            <span className="text-xs text-gray-400 ml-auto">{data.images.length}/5</span>
-                        </div>
-
-                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-                            {previewUrls.map((url, idx) => (
-                                <div
-                                    key={idx}
-                                    className="relative aspect-square rounded-xl overflow-hidden border border-gray-100/50 group"
-                                >
-                                    <img src={url} alt="" className="w-full h-full object-cover" />
-                                    <button
-                                        type="button"
-                                        onClick={() => removeImage(idx)}
-                                        className="absolute top-1.5 right-1.5 p-1 bg-white/90 backdrop-blur rounded-lg text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                    {idx === 0 && (
-                                        <span className="absolute bottom-0 left-0 right-0 bg-[#43552c]/80 text-white text-[10px] text-center py-1 font-medium tracking-wide uppercase">
-                                            Cover
-                                        </span>
-                                    )}
-                                </div>
-                            ))}
-
-                            {data.images.length < 5 && (
-                                <label 
-                                    onDragOver={handleDragOver}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
-                                    className={`aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all ${isDragging ? 'border-[#43552c] bg-[#43552c]/10' : 'border-gray-200 hover:border-[#43552c]/40 hover:bg-[#43552c]/5'}`}
-                                >
-                                    <Upload className={`w-5 h-5 mb-1 ${isDragging ? 'text-[#43552c]' : 'text-gray-300'}`} />
-                                    <span className="text-[11px] text-gray-400 font-medium">Tambah</span>
-                                    <input
-                                        type="file"
-                                        multiple
-                                        accept="image/jpeg,image/png,image/jpg"
-                                        onChange={handleImageChange}
-                                        className="hidden"
-                                    />
-                                </label>
-                            )}
-                        </div>
-                        <InputError field="images" />
-                        {/* Show per-image errors */}
-                        {Object.keys(errors).filter(k => k.startsWith('images.')).map(k => (
-                            <p key={k} className="text-red-500 text-xs mt-1 font-medium">{errors[k]}</p>
-                        ))}
+        <SellerLayout>
+            <div className="pb-12 max-w-6xl mx-auto">
+                {/* Header */}
+                <div className="flex items-center gap-4 mb-8">
+                    <Link
+                        to="/seller/products"
+                        className="p-3 bg-white border border-slate-200/70 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-all"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </Link>
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Tambah Produk</h1>
+                        <p className="text-sm text-slate-500 mt-1 font-medium">Buat iklan baru untuk barang preloved Anda</p>
                     </div>
+                </div>
 
-                    {/* 2. Product Info */}
-                    <div className="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 space-y-5">
-                        <div className="flex items-center gap-2 pb-4 border-b border-gray-100/50">
-                            <FileText className="w-5 h-5 text-[#43552c]" />
-                            <h3 className="font-semibold text-gray-800">Informasi Barang</h3>
+                {flash && (
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl px-5 py-4 mb-8 flex items-center gap-3 text-sm font-bold">
+                        <CheckCircle className="w-5 h-5 text-emerald-500" />
+                        {flash}
+                    </div>
+                )}
+
+                {Object.keys(errors).length > 0 && (
+                    <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl px-6 py-5 mb-8 flex flex-col gap-2 shadow-sm">
+                        <div className="flex items-center gap-2 font-black text-sm uppercase tracking-wider text-rose-800 mb-1">
+                            <X className="w-4 h-4" />
+                            Terjadi Kesalahan Pengisian
+                        </div>
+                        <ul className="list-disc list-inside space-y-1">
+                            {Object.entries(errors).map(([key, messages]) => {
+                                const msg = Array.isArray(messages) ? messages[0] : messages;
+                                // Prettify image indexing keys so users understand
+                                const cleanKey = key.startsWith('images.') ? `Foto ke-${parseInt(key.split('.')[1]) + 1}` : key;
+                                return (
+                                    <li key={key} className="text-sm font-medium leading-relaxed">
+                                        <span className="font-bold opacity-80 capitalize">{cleanKey.replace(/([A-Z])/g, ' $1')}:</span> {msg}
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                )}
+
+                <form onSubmit={submit} className="flex flex-col xl:flex-row gap-8">
+                    {/* ── LEFT COLUMN: Form Fields ── */}
+                    <div className="flex-1 space-y-6">
+
+                        {/* 1. Photo Upload */}
+                        <div className="bg-white rounded-[1.25rem] p-6 md:p-8 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-slate-200/70">
+                            <div className="flex items-center gap-2 mb-5 pb-4 border-b border-slate-100">
+                                <div className="w-9 h-9 rounded-full bg-[#4A5D23]/10 flex items-center justify-center">
+                                    <ImageIcon className="w-4 h-4 text-[#4A5D23]" />
+                                </div>
+                                <h3 className="font-bold text-slate-900 text-lg">Foto Produk</h3>
+                                <span className="text-xs text-slate-400 ml-auto font-bold">{data.images.length}/5</span>
+                            </div>
+
+                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
+                                {previewUrls.map((url, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="relative aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-sm group"
+                                    >
+                                        <img src={url} alt="" className="w-full h-full object-cover" />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeImage(idx)}
+                                            className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur rounded-xl text-slate-500 hover:text-rose-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                        {idx === 0 && (
+                                            <span className="absolute bottom-0 left-0 right-0 bg-[#4A5D23] text-white text-[9px] text-center py-1 font-bold tracking-widest uppercase">
+                                                Sampul
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
+
+                                {data.images.length < 5 && (
+                                    <label 
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                        className={`aspect-square border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all ${isDragging ? 'border-[#4A5D23] bg-[#4A5D23]/5' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300'}`}
+                                    >
+                                        <Upload className={`w-6 h-6 mb-1 ${isDragging ? 'text-[#4A5D23]' : 'text-slate-400'}`} />
+                                        <span className="text-xs text-slate-500 font-bold">Tambah</span>
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept="image/jpeg,image/png,image/jpg"
+                                            onChange={handleImageChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
+                            </div>
+                            <InputError message={errors.images} />
                         </div>
 
-                        {/* Nama Barang */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-600 mb-1.5">Nama Produk</label>
-                            <input
-                                type="text"
-                                value={data.nama_barang}
-                                onChange={(e) => setData('nama_barang', e.target.value)}
-                                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[#43552c]/20 focus:border-[#43552c] transition-shadow"
-                                placeholder="Contoh: Meja Belajar IKEA"
-                            />
-                            <InputError field="nama_barang" />
-                        </div>
+                        {/* 2. Product Info */}
+                        <div className="bg-white rounded-[1.25rem] p-6 md:p-8 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-slate-200/70 space-y-6">
+                            <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
+                                <div className="w-9 h-9 rounded-full bg-[#d4a373]/10 flex items-center justify-center">
+                                    <FileText className="w-4 h-4 text-[#d4a373]" />
+                                </div>
+                                <h3 className="font-bold text-slate-900 text-lg">Informasi Barang</h3>
+                            </div>
 
-                        {/* Harga & Kategori */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            {/* Nama Barang */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                                    <span className="flex items-center gap-1.5"><Tag className="w-3.5 h-3.5" /> Harga (Rp)</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    value={data.harga}
-                                    onChange={(e) => setData('harga', e.target.value)}
-                                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[#43552c]/20 focus:border-[#43552c] transition-shadow"
-                                    placeholder="0"
-                                    min="1000"
-                                />
-                                <InputError field="harga" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                                    <span className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> Kategori</span>
-                                </label>
-                                <select
-                                    value={data.category_id}
-                                    onChange={(e) => setData('category_id', e.target.value)}
-                                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[#43552c]/20 focus:border-[#43552c] transition-shadow"
-                                >
-                                    <option value="" disabled>Pilih Kategori</option>
-                                    {categories.map((c) => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
-                                <InputError field="category_id" />
-                            </div>
-                        </div>
-
-                        {/* Kondisi & Lokasi */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-1.5">Kondisi</label>
-                                <select
-                                    value={data.kondisi}
-                                    onChange={(e) => setData('kondisi', e.target.value)}
-                                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[#43552c]/20 focus:border-[#43552c] transition-shadow"
-                                >
-                                    {conditions.map((c) => (
-                                        <option key={c} value={c}>{c}</option>
-                                    ))}
-                                </select>
-                                <InputError field="kondisi" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                                    <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> Lokasi Kampus</span>
-                                </label>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Nama Produk</label>
                                 <input
                                     type="text"
-                                    value={data.lokasi_kampus}
-                                    onChange={(e) => setData('lokasi_kampus', e.target.value)}
-                                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[#43552c]/20 focus:border-[#43552c] transition-shadow"
-                                    placeholder="IPB University"
+                                    value={data.nama_barang}
+                                    onChange={(e) => setData('nama_barang', e.target.value)}
+                                    className="w-full rounded-xl border border-slate-200 px-5 py-3.5 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#4A5D23]/20 focus:border-[#4A5D23] transition-all font-medium"
+                                    placeholder="Contoh: Keyboard Mechanical Keychron"
                                 />
-                                <InputError field="lokasi_kampus" />
+                                <InputError message={errors.name} />
+                            </div>
+
+                            {/* Harga & Kategori */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                                        <span className="flex items-center gap-1.5"><Tag className="w-4 h-4 text-slate-400" /> Harga (Rp)</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={data.harga}
+                                        onChange={(e) => setData('harga', e.target.value)}
+                                        className="w-full rounded-xl border border-slate-200 px-5 py-3.5 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#4A5D23]/20 focus:border-[#4A5D23] font-bold"
+                                        placeholder="0"
+                                        min="1000"
+                                    />
+                                    <InputError message={errors.price} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                                        <span className="flex items-center gap-1.5"><Layers className="w-4 h-4 text-slate-400" /> Kategori</span>
+                                    </label>
+                                    <select
+                                        value={data.category_id}
+                                        onChange={(e) => setData('category_id', e.target.value)}
+                                        className="w-full rounded-xl border border-slate-200 px-5 py-3.5 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#4A5D23]/20 focus:border-[#4A5D23] font-medium"
+                                    >
+                                        <option value="" disabled>Pilih Kategori</option>
+                                        {categories.map((c) => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                    <InputError message={errors.categoryId} />
+                                </div>
+                            </div>
+
+                            {/* Kondisi & Lokasi */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Kondisi</label>
+                                    <select
+                                        value={data.kondisi}
+                                        onChange={(e) => setData('kondisi', e.target.value)}
+                                        className="w-full rounded-xl border border-slate-200 px-5 py-3.5 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#4A5D23]/20 focus:border-[#4A5D23] font-medium"
+                                    >
+                                        {conditions.map((c) => (
+                                            <option key={c} value={c}>{c}</option>
+                                        ))}
+                                    </select>
+                                    <InputError message={errors.condition} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                                        <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-slate-400" /> Lokasi Kampus</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={data.lokasi_kampus}
+                                        onChange={(e) => setData('lokasi_kampus', e.target.value)}
+                                        className="w-full rounded-xl border border-slate-200 px-5 py-3.5 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#4A5D23]/20 focus:border-[#4A5D23] font-medium"
+                                        placeholder="IPB University"
+                                    />
+                                    <InputError message={errors.campusLocation} />
+                                </div>
+                            </div>
+
+                            {/* Deskripsi */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi</label>
+                                <textarea
+                                    rows="5"
+                                    value={data.deskripsi}
+                                    onChange={(e) => setData('deskripsi', e.target.value)}
+                                    className="w-full rounded-xl border border-slate-200 px-5 py-3.5 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#4A5D23]/20 focus:border-[#4A5D23] resize-none font-medium"
+                                    placeholder="Jelaskan kondisi barang, alasan dijual..."
+                                />
+                                <InputError message={errors.description} />
                             </div>
                         </div>
 
-                        {/* Deskripsi */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-600 mb-1.5">Deskripsi</label>
-                            <textarea
-                                rows="4"
-                                value={data.deskripsi}
-                                onChange={(e) => setData('deskripsi', e.target.value)}
-                                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:ring-2 focus:ring-[#43552c]/20 focus:border-[#43552c] transition-shadow resize-none"
-                                placeholder="Jelaskan kondisi barang, kelengkapan, dan alasan dijual..."
-                            />
-                            <InputError field="deskripsi" />
-                        </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center justify-end gap-3">
-                        <Link
-                            to="/seller/dashboard"
-                            className="px-5 py-3 bg-white border border-gray-200 text-gray-600 font-medium rounded-xl text-sm hover:bg-gray-50 transition-colors"
-                        >
-                            Batal
-                        </Link>
-                        <button
-                            type="submit"
-                            disabled={processing}
-                            className="px-6 py-3 bg-[#43552c] text-white font-semibold rounded-xl hover:bg-[#364423] shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors flex items-center gap-2"
-                        >
-                            {processing ? (
-                                <>
-                                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    Menyimpan...
-                                </>
-                            ) : (
-                                'Tayangkan Iklan'
-                            )}
-                        </button>
-                    </div>
-                </div>
-
-                {/* ── RIGHT COLUMN: Live Preview ── */}
-                <div className="xl:w-80 flex-shrink-0">
-                    <div className="sticky top-[88px]">
-                        <div className="flex items-center gap-2 mb-3">
-                            <Eye className="w-4 h-4 text-gray-400" />
-                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Preview</p>
-                        </div>
-                        <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 overflow-hidden">
-                            <div className="aspect-square bg-[#f7f9f7] relative flex items-center justify-center">
-                                {previewUrls.length > 0 ? (
-                                    <img src={previewUrls[0]} alt="" className="w-full h-full object-cover" />
+                        {/* Actions */}
+                        <div className="flex items-center justify-end gap-4 pt-2">
+                            <Link
+                                to="/seller/products"
+                                className="px-8 py-3.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-50 transition-all"
+                            >
+                                Batal
+                            </Link>
+                            <button
+                                type="submit"
+                                disabled={processing}
+                                className="px-10 py-3.5 bg-[#4A5D23] text-white font-bold rounded-xl hover:bg-[#3B4A1C] shadow-sm disabled:opacity-70 disabled:cursor-not-allowed text-sm transition-all flex items-center gap-2"
+                            >
+                                {processing ? (
+                                    <>
+                                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Menyimpan...
+                                    </>
                                 ) : (
-                                    <div className="text-gray-300 flex flex-col items-center">
-                                        <ImageIcon className="w-10 h-10 mb-2" />
-                                        <span className="text-xs font-medium">Foto Sampul</span>
-                                    </div>
+                                    'Tayangkan Iklan'
                                 )}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* ── RIGHT COLUMN: Live Preview ── */}
+                    <div className="xl:w-80 flex-shrink-0">
+                        <div className="sticky top-6">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Eye className="w-4 h-4 text-slate-400" />
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Preview Iklan</p>
                             </div>
-                            <div className="p-5">
-                                <span className="text-xl font-black text-[#43552c] block">
-                                    {data.harga
-                                        ? `Rp ${parseInt(data.harga).toLocaleString('id-ID')}`
-                                        : 'Rp -'}
-                                </span>
-                                <h3 className="font-semibold text-gray-800 text-sm mt-1 leading-snug line-clamp-2">
-                                    {data.nama_barang || 'Judul Produk...'}
-                                </h3>
-                                {data.lokasi_kampus && (
-                                    <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                                        <MapPin className="w-3 h-3" /> {data.lokasi_kampus}
-                                    </p>
-                                )}
+                            <div className="bg-white rounded-[1.25rem] shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-slate-200 overflow-hidden">
+                                <div className="aspect-square bg-slate-50 relative flex items-center justify-center border-b border-slate-100">
+                                    {previewUrls.length > 0 ? (
+                                        <img src={previewUrls[0]} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="text-slate-300 flex flex-col items-center">
+                                            <ImageIcon className="w-10 h-10 mb-2 opacity-50" />
+                                            <span className="text-xs font-bold">Foto Sampul</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-5">
+                                    <span className="text-xl font-black text-slate-900 block tracking-tight">
+                                        {data.harga
+                                            ? `Rp ${parseInt(data.harga).toLocaleString('id-ID')}`
+                                            : 'Rp -'}
+                                    </span>
+                                    <h3 className="font-bold text-slate-700 text-sm mt-1.5 leading-snug line-clamp-2">
+                                        {data.nama_barang || 'Judul Produk...'}
+                                    </h3>
+                                    {data.lokasi_kampus && (
+                                        <div className="mt-4 pt-3 border-t border-slate-100">
+                                            <p className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                                                <MapPin className="w-3.5 h-3.5 text-slate-400" /> {data.lokasi_kampus}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </form>
-        </DashboardLayout>
+                </form>
+            </div>
+        </SellerLayout>
     );
 }

@@ -32,10 +32,21 @@ class SellerSettingsApiController extends Controller
                 'kampus'  => 'sometimes|nullable|string|max:255',
                 'bio'     => 'sometimes|nullable|string|max:1000',
                 'nomor_wa'=> 'sometimes|nullable|string|max:20',
+                'komerceDestinationId'    => 'sometimes|nullable|string',
+                'komerceDestinationLabel' => 'sometimes|nullable|string',
             ]);
 
             $user = $request->user();
-            $user->fill($validated);
+            
+            // Manual Map from CamelCase request to snake_case model
+            if (isset($validated['komerceDestinationId'])) {
+                $user->komerce_destination_id = $validated['komerceDestinationId'];
+            }
+            if (isset($validated['komerceDestinationLabel'])) {
+                $user->komerce_destination_label = $validated['komerceDestinationLabel'];
+            }
+
+            $user->fill(collect($validated)->except(['komerceDestinationId', 'komerceDestinationLabel'])->toArray());
             $user->save();
 
             return $this->successResponse(new UserResource($user), 'Pengaturan berhasil disimpan');

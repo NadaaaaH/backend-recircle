@@ -30,6 +30,8 @@ class User extends Authenticatable
         'nomor_wa',
         'kampus',
         'bio',
+        'komerce_destination_id',
+        'komerce_destination_label',
     ];
 
     protected $hidden = [

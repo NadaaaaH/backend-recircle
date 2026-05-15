@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -12,19 +13,34 @@ class MidtransWebhookController extends Controller
     /**
      * Handle incoming Midtrans Webhook / HTTP Notification
      */
-    public function __invoke(Request $request)
+    public function __invoke(Request $request, OrderService $orderService)
     {
         try {
             $payload = $request->all();
             
             Log::info('Midtrans Webhook Received:', $payload);
 
-            // Verifikasi signature key
-            $serverKey    = config('midtrans.server_key');
+            // Robust check: Pastikan semua field kritikal yang dibutuhkan verifikasi ada di payload
+            $requiredFields = ['order_id', 'status_code', 'gross_amount', 'signature_key', 'transaction_status'];
+            foreach ($requiredFields as $field) {
+                if (!isset($payload[$field])) {
+                    Log::warning('Midtrans Webhook: Missing required field ' . $field, ['payload' => $payload]);
+                    return response()->json(['message' => 'Required field missing: ' . $field], 400);
+                }
+            }
+
             $orderIdSent  = $payload['order_id'];
             $statusCode   = $payload['status_code'];
             $grossAmount  = $payload['gross_amount'];
             $signatureKey = $payload['signature_key'];
+
+            // Verifikasi signature key
+            $serverKey    = config('midtrans.server_key');
+            
+            if (!$serverKey) {
+                Log::error('Midtrans Webhook Config Error: server_key not configured in config/midtrans.php');
+                return response()->json(['message' => 'Server configuration error'], 500);
+            }
 
             $expectedSignature = hash('sha512', $orderIdSent . $statusCode . $grossAmount . $serverKey);
 
@@ -33,38 +49,44 @@ class MidtransWebhookController extends Controller
                 return response()->json(['message' => 'Invalid signature'], 403);
             }
 
-            // Extract the original order_id since we appended a timestamp previously (e.g. ORD-XXX-161902)
-            $orderIdParts = explode('-', $orderIdSent);
-            // Reconstruct the original kode_pesanan before the timestamp
-            array_pop($orderIdParts); 
-            $originalOrderId = implode('-', $orderIdParts);
-
-            // Failover just in case it wasn't split properly
-            if (empty($originalOrderId)) {
-                $originalOrderId = $orderIdSent;
+            // 1. Handle Case: Dashboard Settings "Test" button hits
+            // Midtrans sends dynamic test ids like "payment_notif_test_XXXX" which never exist in our DB.
+            if (str_contains($orderIdSent, 'payment_notif_test')) {
+                Log::info('Midtrans Webhook: Received verification test hit. Responding OK.');
+                return response()->json(['message' => 'Connection valid, test accepted'], 200);
             }
 
-            $order = Order::where('kode_pesanan', $originalOrderId)->first();
+            // 2. PRIMARY LOOKUP: Direct match
+            $order = Order::where('kode_pesanan', $orderIdSent)->first();
+            
+            // 3. ROBUST FALLBACK: If there are any prefix/suffixes appended mistakenly by routing
+            if (!$order) {
+                Log::warning('Midtrans Webhook: Exact ID not found, attempting loose extraction search', ['order_id' => $orderIdSent]);
+                // Attempt to match based on pattern if passed aggregated
+                $order = Order::where('kode_pesanan', 'LIKE', '%' . $orderIdSent . '%')->first();
+            }
 
             if (!$order) {
-                Log::error('Midtrans Webhook: Order Not Found', ['order_id' => $originalOrderId]);
-                return response()->json(['message' => 'Order not found'], 404);
+                Log::error('Midtrans Webhook: Order Lookup Failed completely', ['order_id' => $orderIdSent]);
+                return response()->json(['message' => 'Order object could not be resolved in local dataset'], 404);
             }
 
             $transactionStatus = $payload['transaction_status'];
             $fraudStatus       = $payload['fraud_status'] ?? null;
-
+            $transactionId     = $payload['transaction_id'] ?? '';
+            $paymentType       = $payload['payment_type'] ?? 'midtrans';
+ 
             if ($transactionStatus == 'capture') {
-                if ($fraudStatus == 'challenge') {
-                    // TODO set payment status in merchant's database to 'Challenge by FDS'
-                    // $order->update(['status' => 'challenge']);
-                } else if ($fraudStatus == 'accept') {
-                    $order->update(['status' => 'dibayar']);
+                if ($fraudStatus == 'accept') {
+                    // Leverage encapsulated OrderService flow
+                    $orderService->handlePaymentSettlement($order, $transactionId, $paymentType);
                 }
             } else if ($transactionStatus == 'settlement') {
-                $order->update(['status' => 'dibayar']);
+                // Successful payment confirmation
+                $orderService->handlePaymentSettlement($order, $transactionId, $paymentType);
             } else if ($transactionStatus == 'cancel' || $transactionStatus == 'deny' || $transactionStatus == 'expire') {
-                $order->update(['status' => 'dibatalkan']);
+                // Triggers automated product restocking & escrow deletion
+                $orderService->handlePaymentFailure($order);
             } else if ($transactionStatus == 'pending') {
                 $order->update(['status' => 'pending']);
             }

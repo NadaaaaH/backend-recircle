@@ -16,14 +16,26 @@ class SellerProductApiController extends Controller
     {
         try {
             $products = $request->user()->products()
-                ->with(['category', 'orders'])
+                ->withTrashed()
+                ->with(['category', 'orders' => function($q) {
+                    $q->whereIn('status', ['pending', 'dibayar', 'dikirim']);
+                }])
                 ->latest()
-                ->paginate(10);
+                ->get()
+                ->map(fn ($p) => [
+                    'id'            => $p->id,
+                    'name'          => $p->nama_barang,
+                    'price'         => (int) $p->harga,
+                    'category'      => $p->category->nama_kategori ?? '-',
+                    'status'        => $p->status,
+                    'is_archived'   => (bool) $p->is_archived,
+                    'deleted_at'    => $p->deleted_at ? $p->deleted_at->toISOString() : null,
+                    'img'           => $p->foto_barang_url,
+                    'created_at'    => $p->created_at->diffForHumans(),
+                    'active_orders' => $p->orders->count(),
+                ]);
 
-            return $this->successResponse(
-                ProductResource::collection($products)->response()->getData(true),
-                'Seller products retrieved successfully'
-            );
+            return $this->successResponse($products, 'Seller products retrieved successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to retrieve seller products', 500);
         }
@@ -33,12 +45,16 @@ class SellerProductApiController extends Controller
     {
         try {
             $product = Product::findOrFail($id);
-            if ($product->user_id !== $request->user()->id) return $this->errorResponse('Unauthorized', 403);
+            if ($product->user_id !== $request->user()->id) {
+                return $this->errorResponse('Unauthorized', 403);
+            }
 
-            $newStatus = $product->status === 'archived' ? 'active' : 'archived';
-            $product->update(['status' => $newStatus]);
+            $product->update([
+                'is_archived' => !$product->is_archived,
+            ]);
 
-            return $this->successResponse(new ProductResource($product), "Product status updated to {$newStatus}");
+            $statusStr = $product->is_archived ? 'diarsipkan' : 'dikembalikan ke etalase';
+            return $this->successResponse(null, "Produk berhasil {$statusStr}.");
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to toggle archive status', 500);
         }
@@ -48,10 +64,12 @@ class SellerProductApiController extends Controller
     {
         try {
             $product = Product::findOrFail($id);
-            if ($product->user_id !== $request->user()->id) return $this->errorResponse('Unauthorized', 403);
+            if ($product->user_id !== $request->user()->id) {
+                return $this->errorResponse('Unauthorized', 403);
+            }
 
-            $product->delete(); // Soft delete if supported, or regular delete
-            return $this->successResponse(null, 'Product deleted successfully');
+            $product->delete();
+            return $this->successResponse(null, 'Produk berhasil dipindahkan ke Tong Sampah.');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to delete product', 500);
         }
@@ -60,11 +78,13 @@ class SellerProductApiController extends Controller
     public function restore(int $id, Request $request): JsonResponse
     {
         try {
-            $product = Product::withTrashed()->findOrFail($id);
-            if ($product->user_id !== $request->user()->id) return $this->errorResponse('Unauthorized', 403);
+            $product = Product::onlyTrashed()->where('user_id', $request->user()->id)->find($id);
+            if (!$product) {
+                return $this->errorResponse('Produk tidak ditemukan di tong sampah', 404);
+            }
 
             $product->restore();
-            return $this->successResponse(new ProductResource($product), 'Product restored successfully');
+            return $this->successResponse(null, 'Produk berhasil dipulihkan.');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to restore product', 500);
         }
@@ -73,11 +93,17 @@ class SellerProductApiController extends Controller
     public function forceDestroy(int $id, Request $request): JsonResponse
     {
         try {
-            $product = Product::withTrashed()->findOrFail($id);
-            if ($product->user_id !== $request->user()->id) return $this->errorResponse('Unauthorized', 403);
+            $product = Product::onlyTrashed()->where('user_id', $request->user()->id)->find($id);
+            if (!$product) {
+                return $this->errorResponse('Produk tidak ditemukan', 404);
+            }
+
+            if ($product->orders()->exists()) {
+                return $this->errorResponse('Tidak dapat dihapus permanen karena memiliki riwayat transaksi', 422);
+            }
 
             $product->forceDelete();
-            return $this->successResponse(null, 'Product permanently deleted');
+            return $this->successResponse(null, 'Produk berhasil dihapus permanen.');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to force delete product', 500);
         }

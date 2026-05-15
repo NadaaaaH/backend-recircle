@@ -25,6 +25,8 @@ class UserResource extends JsonResource
             'nomor_wa'   => $this->nomor_wa,
             'avatar_url' => $this->avatar_url,
             'wishlist_ids'=> $this->wishlists()->pluck('product_id')->toArray(),
+            'komerceDestinationId' => $this->komerce_destination_id,
+            'komerceDestinationLabel' => $this->komerce_destination_label,
             'joinedAt'   => $this->created_at?->format('Y-m-d H:i:s'),
         ];
     }

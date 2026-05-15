@@ -15,6 +15,7 @@ const LoadingFallback = () => (
 const Home = React.lazy(() => import('@/Pages/Home'))
 const Dashboard = React.lazy(() => import('@/Pages/Dashboard'))
 const Checkout = React.lazy(() => import('@/Pages/Checkout'))
+const PaymentSuccess = React.lazy(() => import('@/Pages/PaymentSuccess'))
 
 // Cart
 const CartIndex = React.lazy(() => import('@/Pages/Cart/Index'))
@@ -70,6 +71,9 @@ const AdminOffers = React.lazy(() => import('@/Pages/Admin/Offers'))
 const AdminVerifications = React.lazy(() => import('@/Pages/Admin/Verifications'))
 const AdminActivities = React.lazy(() => import('@/Pages/Admin/Activities'))
 
+// Core Components
+import ProtectedRoute from '@/Components/ProtectedRoute'
+
 function App() {
   return (
     <Suspense fallback={<LoadingFallback />}>
@@ -77,12 +81,15 @@ function App() {
         {/* Core & Public Routes */}
         <Route path="/" element={<Home />} />
         {/* <Route path="/home" element={<Home />} /> */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/checkout/:id" element={<Checkout />} />
-        <Route path="/cart" element={<CartIndex />} />
-        <Route path="/chat" element={<ChatIndex />} />
-        <Route path="/wishlist" element={<WishlistIndex />} />
-        <Route path="/offers" element={<OffersIndex />} />
+        
+        {/* Protected Dashboard / Operations */}
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/checkout/:id" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+        <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
+        <Route path="/cart" element={<ProtectedRoute><CartIndex /></ProtectedRoute>} />
+        <Route path="/chat" element={<ProtectedRoute><ChatIndex /></ProtectedRoute>} />
+        <Route path="/wishlist" element={<ProtectedRoute><WishlistIndex /></ProtectedRoute>} />
+        <Route path="/offers" element={<ProtectedRoute><OffersIndex /></ProtectedRoute>} />
 
         {/* Authentication Routes */}
         <Route path="/login" element={<Login />} />
@@ -95,37 +102,38 @@ function App() {
         {/* Products Routes */}
         <Route path="/products" element={<ProductIndex />} />
         <Route path="/explore" element={<ProductIndex />} /> {/* alias explore → products */}
-        <Route path="/products/create" element={<ProductCreate />} />
+        <Route path="/products/create" element={<ProtectedRoute sellerOnly><ProductCreate /></ProtectedRoute>} />
+        <Route path="/jual" element={<Navigate to="/products/create" replace />} />
         <Route path="/products/:id" element={<ProductShow />} />
 
         {/* Profile Routes */}
-        <Route path="/profile" element={<ProfileEdit />} />
+        <Route path="/profile" element={<ProtectedRoute><ProfileEdit /></ProtectedRoute>} />
 
         {/* Orders Routes */}
-        <Route path="/orders" element={<OrdersIndex />} />
-        <Route path="/orders/:id" element={<OrdersShow />} />
+        <Route path="/orders" element={<ProtectedRoute><OrdersIndex /></ProtectedRoute>} />
+        <Route path="/orders/:id" element={<ProtectedRoute><OrdersShow /></ProtectedRoute>} />
 
         {/* Seller Area Routes */}
-        <Route path="/seller/dashboard" element={<SellerDashboard />} />
-        <Route path="/seller/register" element={<SellerRegister />} />
-        <Route path="/seller/verification" element={<SellerVerification />} />
-        <Route path="/seller/products" element={<SellerProducts />} />
-        <Route path="/seller/products/:id/edit" element={<SellerEditProduct />} />
-        <Route path="/seller/orders" element={<SellerOrders />} />
-        <Route path="/seller/offers" element={<SellerOffers />} />
-        <Route path="/seller/finance" element={<SellerFinance />} />
-        <Route path="/seller/balance" element={<SellerBalance />} />
-        <Route path="/seller/activities" element={<SellerActivities />} />
-        <Route path="/seller/settings" element={<SellerSettings />} />
+        <Route path="/seller/dashboard" element={<ProtectedRoute sellerOnly><SellerDashboard /></ProtectedRoute>} />
+        <Route path="/seller/register" element={<ProtectedRoute><SellerRegister /></ProtectedRoute>} /> {/* accessible to logged-in before becoming seller */}
+        <Route path="/seller/verification" element={<ProtectedRoute><SellerVerification /></ProtectedRoute>} /> {/* accessible to logged-in before becoming seller */}
+        <Route path="/seller/products" element={<ProtectedRoute sellerOnly><SellerProducts /></ProtectedRoute>} />
+        <Route path="/seller/products/:id/edit" element={<ProtectedRoute sellerOnly><SellerEditProduct /></ProtectedRoute>} />
+        <Route path="/seller/orders" element={<ProtectedRoute sellerOnly><SellerOrders /></ProtectedRoute>} />
+        <Route path="/seller/offers" element={<ProtectedRoute sellerOnly><SellerOffers /></ProtectedRoute>} />
+        <Route path="/seller/finance" element={<ProtectedRoute sellerOnly><SellerFinance /></ProtectedRoute>} />
+        <Route path="/seller/balance" element={<ProtectedRoute sellerOnly><SellerBalance /></ProtectedRoute>} />
+        <Route path="/seller/activities" element={<ProtectedRoute sellerOnly><SellerActivities /></ProtectedRoute>} />
+        <Route path="/seller/settings" element={<ProtectedRoute sellerOnly><SellerSettings /></ProtectedRoute>} />
 
         {/* Admin Area Routes */}
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/admin/products" element={<AdminProducts />} />
-        <Route path="/admin/transactions" element={<AdminTransactions />} />
-        <Route path="/admin/offers" element={<AdminOffers />} />
-        <Route path="/admin/verifications" element={<AdminVerifications />} />
-        <Route path="/admin/activities" element={<AdminActivities />} />
+        <Route path="/admin/dashboard" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/users" element={<ProtectedRoute adminOnly><AdminUsers /></ProtectedRoute>} />
+        <Route path="/admin/products" element={<ProtectedRoute adminOnly><AdminProducts /></ProtectedRoute>} />
+        <Route path="/admin/transactions" element={<ProtectedRoute adminOnly><AdminTransactions /></ProtectedRoute>} />
+        <Route path="/admin/offers" element={<ProtectedRoute adminOnly><AdminOffers /></ProtectedRoute>} />
+        <Route path="/admin/verifications" element={<ProtectedRoute adminOnly><AdminVerifications /></ProtectedRoute>} />
+        <Route path="/admin/activities" element={<ProtectedRoute adminOnly><AdminActivities /></ProtectedRoute>} />
 
         {/* Catch-all Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -42,7 +42,12 @@ class ChatApiController extends Controller
                 ]);
             });
             
-            $messages = ChatMessage::hydrate(iterator_to_array($latestMessages));
+            $results = [];
+            foreach ($latestMessages as $doc) {
+                $results[] = (array) $doc;
+            }
+            
+            $messages = ChatMessage::hydrate($results);
             
             $contacts = [];
             foreach ($messages as $msg) {
@@ -67,7 +72,8 @@ class ChatApiController extends Controller
 
             return $this->successResponse($contacts, 'Chat contacts retrieved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve chat contacts', 500);
+            \Illuminate\Support\Facades\Log::error('Chat index error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
+            return $this->errorResponse('Failed to retrieve chat contacts: ' . $e->getMessage(), 500);
         }
     }
 
@@ -97,7 +103,8 @@ class ChatApiController extends Controller
                 'Chat messages retrieved successfully'
             );
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve chat messages', 500);
+            \Illuminate\Support\Facades\Log::error('Chat show error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
+            return $this->errorResponse('Failed to retrieve chat messages: ' . $e->getMessage(), 500);
         }
     }
 

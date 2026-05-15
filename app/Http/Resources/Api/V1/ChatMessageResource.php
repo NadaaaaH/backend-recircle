@@ -26,9 +26,12 @@ class ChatMessageResource extends JsonResource
                     'image' => $this->product->foto_barang_url,
                 ];
             }),
-            'sender' => [
+            'sender' => $this->relationLoaded('sender') && $this->sender ? [
                 'id'   => $this->sender->id,
                 'name' => $this->sender->name,
+            ] : [
+                'id'   => $this->sender_id,
+                'name' => 'Unknown User',
             ],
         ];
     }

@@ -1,19 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
 import SellerLayout from '@/Layouts/SellerLayout';
-import { ShieldCheck, Upload, CheckCircle, XCircle, Clock, Camera } from 'lucide-react';
+import { ShieldCheck, Upload, CheckCircle, XCircle, Clock, Camera, Loader2 } from 'lucide-react';
+import api from '@/lib/axios';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function SellerVerification() {
-    const is_seller = false;
+    const { user } = useAuth();
+    const is_seller = user?.role === 'seller';
+    
     const [latestVerification, setLatestVerification] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [flash, setFlash] = useState({});
-    const navigate = useNavigate();
+    
     const [fotoKtm, setFotoKtm] = useState(null);
     const [preview, setPreview] = useState(null);
     const [namaKampus, setNamaKampus] = useState('');
     const [nim, setNim] = useState('');
+    
     const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState({});
+
+    useEffect(() => {
+        document.title = "Verifikasi Penjual | ReCircle";
+        fetchVerificationStatus();
+    }, []);
+
+    const fetchVerificationStatus = async () => {
+        setIsLoading(true);
+        try {
+            const res = await api.get('/seller/verification');
+            setLatestVerification(res.data?.data || null);
+        } catch (err) {
+            console.error("Failed to fetch verification", err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -26,20 +49,49 @@ export default function SellerVerification() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setProcessing(true);
+        setErrors({});
+        setFlash({});
 
-        setTimeout(() => {
-            setProcessing(false);
-            setLatestVerification({
-                status: 'pending',
-                created_at: new Date().toLocaleDateString()
+        try {
+            const formData = new FormData();
+            formData.append('nama_kampus', namaKampus);
+            formData.append('nim', nim);
+            formData.append('foto_ktm', fotoKtm);
+
+            const response = await api.post('/seller/verification', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
+
             setFlash({ success: "Data verifikasi berhasil dikirim dan sedang menunggu review." });
-        }, 1500);
+            setLatestVerification(response.data?.data);
+            
+            // Clear form
+            setFotoKtm(null);
+            setPreview(null);
+            setNamaKampus('');
+            setNim('');
+
+        } catch (err) {
+            console.error("Verification submission error", err);
+            if (err.response?.status === 422) {
+                setErrors(err.response.data.errors || {});
+            } else {
+                setFlash({ error: err.response?.data?.message || "Gagal mengirim data verifikasi." });
+            }
+        } finally {
+            setProcessing(false);
+        }
     };
 
-    useEffect(() => {
-        document.title = "Verifikasi Penjual | ReCircle";
-    }, []);
+    if (isLoading) {
+        return (
+            <SellerLayout>
+                <div className="flex min-h-[50vh] items-center justify-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#4A5D23]" />
+                </div>
+            </SellerLayout>
+        )
+    }
 
     if (is_seller) {
         return (
@@ -51,7 +103,7 @@ export default function SellerVerification() {
                     </div>
                     <h2 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Sudah Terverifikasi!</h2>
                     <p className="text-slate-500 mb-8 font-medium">Akun kamu sudah terverifikasi sebagai penjual. Kamu bisa mulai menjual barang.</p>
-                    <Link to="/jual" className="inline-flex bg-[#4A5D23] text-white px-8 py-3.5 rounded-xl hover:bg-[#3B4A1C] transition-colors font-bold shadow-sm">
+                    <Link to="/products/create" className="inline-flex bg-[#4A5D23] text-white px-8 py-3.5 rounded-xl hover:bg-[#3B4A1C] transition-colors font-bold shadow-sm">
                         Mulai Jual Barang
                     </Link>
                 </div>
@@ -79,12 +131,19 @@ export default function SellerVerification() {
                 </div>
             )}
 
+            {flash?.error && (
+                <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl px-5 py-4 mb-8 text-sm font-bold">
+                    {flash.error}
+                </div>
+            )}
+
             {/* Status verifikasi terakhir */}
             {latestVerification && (
-                <div className={`rounded-[1.25rem] p-6 mb-8 ${latestVerification.status === 'pending' ? 'bg-amber-50 border border-amber-200' :
-                        latestVerification.status === 'rejected' ? 'bg-rose-50 border border-rose-200' :
-                            'bg-emerald-50 border border-emerald-200'
-                    }`}>
+                <div className={`rounded-[1.25rem] p-6 mb-8 border ${
+                    latestVerification.status === 'pending' ? 'bg-amber-50 border-amber-200' :
+                    latestVerification.status === 'rejected' ? 'bg-rose-50 border-rose-200' :
+                    'bg-emerald-50 border-emerald-200'
+                }`}>
                     <div className="flex items-start gap-4">
                         <div className="mt-1">
                             {latestVerification.status === 'pending' && <Clock className="w-6 h-6 text-amber-500" />}
@@ -97,23 +156,23 @@ export default function SellerVerification() {
                                 {latestVerification.status === 'rejected' && 'Verifikasi ditolak'}
                                 {latestVerification.status === 'approved' && 'Verifikasi disetujui'}
                             </p>
-                            {latestVerification.catatan_admin && (
-                                <p className="text-sm text-slate-600 mt-2 font-medium bg-white/50 p-3 rounded-lg border border-black/5">Alasan: {latestVerification.catatan_admin}</p>
+                            {latestVerification.catatanAdmin && (
+                                <p className="text-sm text-slate-600 mt-2 font-medium bg-white/50 p-3 rounded-lg border border-black/5">Alasan: {latestVerification.catatanAdmin}</p>
                             )}
-                            <p className="text-xs text-slate-400 mt-2 font-bold uppercase tracking-widest">{latestVerification.created_at}</p>
+                            <p className="text-xs text-slate-400 mt-2 font-bold uppercase tracking-widest">Diajukan: {latestVerification.submittedAt || latestVerification.createdAt}</p>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Form hanya ditampilkan jika belum ada pending */}
+            {/* Form hanya ditampilkan jika belum ada pending/approved */}
             {(!latestVerification || latestVerification.status === 'rejected') && (
                 <form onSubmit={handleSubmit} className="bg-white rounded-[1.25rem] p-8 shadow-[0_2px_4px_rgba(0,0,0,0.02)] border border-slate-200/70 space-y-8">
                     {/* Foto KTM */}
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wider">Foto KTM</label>
                         <div
-                            className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center cursor-pointer hover:border-[#4A5D23] hover:bg-[#4A5D23]/5 transition-all group"
+                            className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer hover:border-[#4A5D23] hover:bg-[#4A5D23]/5 transition-all group ${errors.foto_ktm ? 'border-rose-300 bg-rose-50/30' : 'border-slate-200'}`}
                             onClick={() => document.getElementById('ktm-input').click()}
                         >
                             {preview ? (
@@ -128,6 +187,7 @@ export default function SellerVerification() {
                                 </div>
                             )}
                         </div>
+                        {errors.foto_ktm && <p className="text-rose-500 text-xs mt-1.5 font-bold">{errors.foto_ktm[0]}</p>}
                         <input id="ktm-input" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
                     </div>
 
@@ -140,9 +200,10 @@ export default function SellerVerification() {
                                 value={namaKampus}
                                 onChange={(e) => setNamaKampus(e.target.value)}
                                 placeholder="Contoh: IPB University"
-                                className="w-full bg-slate-50 border border-slate-200/70 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[#4A5D23]/20 focus:border-[#4A5D23] transition-all"
+                                className={`w-full bg-slate-50 border rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[#4A5D23]/20 focus:border-[#4A5D23] transition-all ${errors.nama_kampus ? 'border-rose-300' : 'border-slate-200/70'}`}
                                 required
                             />
+                            {errors.nama_kampus && <p className="text-rose-500 text-xs mt-1.5 font-bold">{errors.nama_kampus[0]}</p>}
                         </div>
 
                         {/* NIM */}
@@ -153,9 +214,10 @@ export default function SellerVerification() {
                                 value={nim}
                                 onChange={(e) => setNim(e.target.value)}
                                 placeholder="Masukkan NIM kamu"
-                                className="w-full bg-slate-50 border border-slate-200/70 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[#4A5D23]/20 focus:border-[#4A5D23] transition-all"
+                                className={`w-full bg-slate-50 border rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[#4A5D23]/20 focus:border-[#4A5D23] transition-all ${errors.nim ? 'border-rose-300' : 'border-slate-200/70'}`}
                                 required
                             />
+                            {errors.nim && <p className="text-rose-500 text-xs mt-1.5 font-bold">{errors.nim[0]}</p>}
                         </div>
                     </div>
 

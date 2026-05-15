@@ -1,57 +1,78 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
-import DashboardLayout from '@/Layouts/DashboardLayout';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import AdminLayout from '@/Layouts/AdminLayout';
 import {
     UserPlus,
     Package,
     ShoppingCart,
     Clock,
     ArrowLeft,
-    Filter
+    Filter,
+    Loader2
 } from 'lucide-react';
+import api from '@/lib/axios';
 
-export default function Activities({ activities }) {
-    const breadcrumbs = [
-        { label: 'Admin', href: '/admin/dashboard' },
-        { label: 'Aktivitas Terbaru', href: '/admin/activities' },
-    ];
+export default function AdminActivitiesPage() {
+    const [activities, setActivities] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        document.title = "Admin — Semua Aktivitas";
+        fetchActivities();
+    }, []);
+
+    const fetchActivities = async () => {
+        setIsLoading(true);
+        try {
+            const res = await api.get('/admin/activities');
+            // Assuming the API returns the activities array directly in res.data.data
+            setActivities(res.data.data);
+        } catch (error) {
+            console.error("Failed to fetch activities", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
-        <DashboardLayout title="Semua Aktivitas" breadcrumbs={breadcrumbs}>
-            <Head title="Semua Aktivitas - Admin Dashboard" />
-
+        <AdminLayout>
             <div className="max-w-4xl mx-auto space-y-6">
                 {/* Header Actions */}
                 <div className="flex items-center justify-between">
                     <Link
-                        href="/admin/dashboard"
-                        className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-[#43552c] transition-colors"
+                        to="/admin/dashboard"
+                        className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-[#2c4055] transition-colors"
                     >
                         <ArrowLeft className="w-4 h-4" />
                         Kembali ke Dashboard
                     </Link>
 
-                    <button className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-600 shadow-sm hover:shadow-md transition-all">
+                    <button className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 shadow-sm hover:border-[#2c4055]/30 transition-all">
                         <Filter className="w-4 h-4" />
                         Filter
                     </button>
                 </div>
 
                 {/* Activities List */}
-                <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-8 border-b border-gray-50">
-                        <h3 className="text-xl font-bold text-gray-900">Log Aktivitas Sistem</h3>
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="p-8 border-b border-gray-100">
+                        <h3 className="text-xl font-bold text-gray-900 tracking-tight">Log Aktivitas Sistem</h3>
                         <p className="text-sm text-gray-500 mt-1">Daftar lengkap aktivitas terbaru di platform ReCircle.</p>
                     </div>
 
-                    <div className="divide-y divide-gray-50">
-                        {activities.length > 0 ? (
+                    <div className="divide-y divide-gray-100">
+                        {isLoading ? (
+                            <div className="p-12 text-center">
+                                <Loader2 className="w-8 h-8 animate-spin text-gray-400 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">Memuat log aktivitas...</p>
+                            </div>
+                        ) : activities?.length > 0 ? (
                             activities.map((activity, idx) => (
                                 <div key={idx} className="p-6 flex gap-4 hover:bg-gray-50/50 transition-colors group">
-                                    <div className={`w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center shadow-sm
-                                        ${activity.type === 'user' ? 'bg-blue-50 text-blue-500' :
-                                            activity.type === 'product' ? 'bg-[#43552c]/10 text-[#43552c]' :
-                                                'bg-[#d4a373]/10 text-[#d4a373]'}`}
+                                    <div className={`w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center shadow-sm border
+                                        ${activity.type === 'user' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                            activity.type === 'product' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                'bg-[#2c4055]/5 text-[#2c4055] border-[#2c4055]/10'}`}
                                     >
                                         {activity.type === 'user' ? <UserPlus className="w-5 h-5" /> :
                                             activity.type === 'product' ? <Package className="w-5 h-5" /> :
@@ -60,10 +81,10 @@ export default function Activities({ activities }) {
                                     <div className="flex-1">
                                         <div className="flex items-start justify-between gap-4">
                                             <div>
-                                                <p className="font-bold text-gray-900 text-lg leading-tight">{activity.title}</p>
-                                                <p className="text-gray-500 mt-1 leading-relaxed">{activity.description}</p>
+                                                <p className="font-semibold text-gray-900 text-base leading-tight">{activity.title}</p>
+                                                <p className="text-sm text-gray-500 mt-1 leading-relaxed">{activity.description}</p>
                                             </div>
-                                            <div className="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-gray-400 bg-gray-50 px-3 py-1.5 rounded-full">
+                                            <div className="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-gray-400 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-full shadow-sm">
                                                 <Clock className="w-3.5 h-3.5" />
                                                 {activity.time}
                                             </div>
@@ -73,12 +94,12 @@ export default function Activities({ activities }) {
                             ))
                         ) : (
                             <div className="p-12 text-center">
-                                <p className="text-gray-400 italic">Tidak ada aktivitas yang ditemukan.</p>
+                                <p className="text-gray-400 text-sm">Tidak ada aktivitas yang ditemukan.</p>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
-        </DashboardLayout>
+        </AdminLayout>
     );
 }

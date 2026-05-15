@@ -74,16 +74,19 @@ Route::prefix('v1')->group(function () {
         Route::get('/chat/{otherUserId}', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'show']);
         Route::post('/chat', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'store']);
 
-        // Seller Dashboard & Operations Endpoints
+        // Seller Operations Pre-Authorization
+        Route::get('/seller/verification', [\App\Http\Controllers\Api\V1\SellerVerificationApiController::class, 'show']);
+        Route::post('/seller/verification', [\App\Http\Controllers\Api\V1\SellerVerificationApiController::class, 'store']);
+
+        // Seller Dashboard & Operations Endpoints (Requires Verified Seller Status)
         Route::middleware('seller')->prefix('seller')->group(function () {
             Route::get('/dashboard', [\App\Http\Controllers\Api\V1\SellerDashboardApiController::class, 'index']);
-            Route::get('/verification', [\App\Http\Controllers\Api\V1\SellerVerificationApiController::class, 'show']);
-            Route::post('/verification', [\App\Http\Controllers\Api\V1\SellerVerificationApiController::class, 'store']);
             
             Route::get('/orders', [\App\Http\Controllers\Api\V1\SellerOrderApiController::class, 'index']);
             Route::post('/orders/{id}/ship', [\App\Http\Controllers\Api\V1\SellerOrderApiController::class, 'ship']);
             
             Route::get('/balance', [\App\Http\Controllers\Api\V1\SellerBalanceApiController::class, 'index']);
+            Route::post('/withdrawals', [\App\Http\Controllers\Api\V1\WithdrawalApiController::class, 'store']);
             Route::get('/activities', [\App\Http\Controllers\Api\V1\SellerActivityApiController::class, 'index']);
             
             // Seller Product Management

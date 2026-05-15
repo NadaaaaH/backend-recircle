@@ -1,54 +1,88 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import MainLayout from "@/Layouts/MainLayout";
 import {
     Store,
     Mail,
     Phone,
-    MapPin,
-    Upload,
+    Building,
     ArrowLeft,
-    CheckCircle,
     AlertCircle,
+    ChevronRight
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import api from "@/lib/axios";
 
 export default function RegisterSeller() {
     const navigate = useNavigate();
+    const { user, setUser } = useAuth();
+    
     const [data, setDataState] = useState({
-        store_name: "",
-        email: "",
-        phone: "",
-        address: "",
-        description: "",
-        document: null,
+        name: user?.name || "",
+        email: user?.email || "",
+        nomor_wa: user?.nomor_wa || "",
+        kampus: user?.kampus || "",
+        bio: user?.bio || "",
     });
+    
     const setData = (key, value) => setDataState(prev => ({ ...prev, [key]: value }));
+    
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState({});
 
     useEffect(() => {
         document.title = "Daftar sebagai Penjual - ReCircle";
-    }, []);
+        if (user) {
+            setDataState({
+                name: user.name || "",
+                email: user.email || "",
+                nomor_wa: user.nomor_wa || "",
+                kampus: user.kampus || "",
+                bio: user.bio || "",
+            });
+        }
+    }, [user]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setProcessing(true);
-        // Simulate API call
-        setTimeout(() => {
-            setProcessing(false);
+        setErrors({});
+
+        try {
+            // Update user profile with initial store details
+            const res = await api.patch('/profile', {
+                name: data.name,
+                email: data.email,
+                nomor_wa: data.nomor_wa,
+                kampus: data.kampus,
+                bio: data.bio
+            });
+
+            // Update global auth state if relevant
+            if (setUser) {
+                setUser(res.data?.data);
+            }
+
+            // Jump to actual Identity Verification step
             navigate("/seller/verification");
-        }, 1500);
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setErrors(err.response.data.errors || {});
+            } else {
+                alert(err.response?.data?.message || 'Terjadi kesalahan, coba lagi nanti.');
+            }
+        } finally {
+            setProcessing(false);
+        }
     };
 
     return (
         <MainLayout>
-
             {/* Header Kembali */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
                 <Link
                     to="/"
-                    className="inline-flex items-center text-sm text-gray-500 hover:text-primary transition-colors"
+                    className="inline-flex items-center text-sm text-gray-500 hover:text-[#4A5D23] transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Kembali ke Beranda
@@ -56,55 +90,55 @@ export default function RegisterSeller() {
             </div>
 
             {/* Hero Section */}
-            <section className="relative px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pt-8 pb-16">
+            <section className="relative px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pt-8 pb-12">
                 <div className="text-center max-w-3xl mx-auto">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white text-gray-600 text-xs font-semibold tracking-wide uppercase mb-6 shadow-sm">
-                        <Store className="w-4 h-4 text-primary" />
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white text-slate-600 text-xs font-semibold tracking-wide uppercase mb-6 shadow-sm">
+                        <Store className="w-4 h-4 text-[#4A5D23]" />
                         Buka Toko Mahasiswa
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-black text-primary tracking-tighter mb-4">
+                    <h1 className="text-4xl md:text-5xl font-black text-[#4A5D23] tracking-tighter mb-4">
                         Jual Barang Bekasmu, <br />
-                        <span className="font-serif italic font-thin text-gray-800">
+                        <span className="font-serif italic font-thin text-slate-800">
                             Raih Penghasilan Tambahan
                         </span>
                     </h1>
-                    <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
-                        Daftarkan tokomu sekarang, hanya untuk mahasiswa
-                        terverifikasi. Proses mudah, aman, dan gratis.
+                    <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
+                        Langkah 1 dari 2: Lengkapi profil tokomu sebelum mengirimkan verifikasi identitas.
                     </p>
                 </div>
             </section>
 
             {/* Form Pendaftaran */}
-            <section className="pb-24 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto">
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8 md:p-10">
+            <section className="pb-24 px-4 sm:px-6 lg:px-8 max-w-2xl mx-auto">
+                <div className="bg-white rounded-3xl border border-slate-100 shadow-xl p-8 md:p-10">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Nama Toko */}
                         <div>
                             <label
-                                htmlFor="store_name"
-                                className="block text-sm font-semibold text-gray-700 mb-2"
+                                htmlFor="name"
+                                className="block text-sm font-bold text-slate-700 mb-2"
                             >
-                                Nama Toko{" "}
-                                <span className="text-red-500">*</span>
+                                Nama Toko / User{" "}
+                                <span className="text-rose-500">*</span>
                             </label>
                             <div className="relative">
-                                <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                                 <input
-                                    id="store_name"
+                                    id="name"
                                     type="text"
-                                    value={data.store_name}
+                                    value={data.name}
                                     onChange={(e) =>
-                                        setData("store_name", e.target.value)
+                                        setData("name", e.target.value)
                                     }
-                                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                    className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#4A5D23]/20 outline-none transition ${errors.name ? 'border-rose-300' : 'border-slate-200 focus:border-[#4A5D23]'}`}
                                     placeholder="Mis: Toko Buku Bekas Andi"
+                                    required
                                 />
                             </div>
-                            {errors.store_name && (
-                                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                                    <AlertCircle className="w-4 h-4" />
-                                    {errors.store_name}
+                            {errors.name && (
+                                <p className="mt-1 text-xs text-rose-600 flex items-center gap-1">
+                                    <AlertCircle className="w-3.5 h-3.5" />
+                                    {errors.name[0]}
                                 </p>
                             )}
                         </div>
@@ -113,13 +147,13 @@ export default function RegisterSeller() {
                         <div>
                             <label
                                 htmlFor="email"
-                                className="block text-sm font-semibold text-gray-700 mb-2"
+                                className="block text-sm font-bold text-slate-700 mb-2"
                             >
                                 Email Aktif{" "}
-                                <span className="text-red-500">*</span>
+                                <span className="text-rose-500">*</span>
                             </label>
                             <div className="relative">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                                 <input
                                     id="email"
                                     type="email"
@@ -127,14 +161,15 @@ export default function RegisterSeller() {
                                     onChange={(e) =>
                                         setData("email", e.target.value)
                                     }
-                                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                    className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#4A5D23]/20 outline-none transition ${errors.email ? 'border-rose-300' : 'border-slate-200 focus:border-[#4A5D23]'}`}
                                     placeholder="kamu@mahasiswa.edu"
+                                    required
                                 />
                             </div>
                             {errors.email && (
-                                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                                    <AlertCircle className="w-4 h-4" />
-                                    {errors.email}
+                                <p className="mt-1 text-xs text-rose-600 flex items-center gap-1">
+                                    <AlertCircle className="w-3.5 h-3.5" />
+                                    {errors.email[0]}
                                 </p>
                             )}
                         </div>
@@ -142,120 +177,79 @@ export default function RegisterSeller() {
                         {/* No Telepon */}
                         <div>
                             <label
-                                htmlFor="phone"
-                                className="block text-sm font-semibold text-gray-700 mb-2"
+                                htmlFor="nomor_wa"
+                                className="block text-sm font-bold text-slate-700 mb-2"
                             >
-                                Nomor WhatsApp{" "}
-                                <span className="text-red-500">*</span>
+                                Nomor WhatsApp
                             </label>
                             <div className="relative">
-                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                                 <input
-                                    id="phone"
+                                    id="nomor_wa"
                                     type="tel"
-                                    value={data.phone}
+                                    value={data.nomor_wa}
                                     onChange={(e) =>
-                                        setData("phone", e.target.value)
+                                        setData("nomor_wa", e.target.value)
                                     }
-                                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+                                    className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#4A5D23]/20 outline-none transition ${errors.nomor_wa ? 'border-rose-300' : 'border-slate-200 focus:border-[#4A5D23]'}`}
                                     placeholder="08123456789"
                                 />
                             </div>
-                            {errors.phone && (
-                                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                                    <AlertCircle className="w-4 h-4" />
-                                    {errors.phone}
+                            {errors.nomor_wa && (
+                                <p className="mt-1 text-xs text-rose-600 flex items-center gap-1">
+                                    <AlertCircle className="w-3.5 h-3.5" />
+                                    {errors.nomor_wa[0]}
                                 </p>
                             )}
                         </div>
 
-                        {/* Alamat */}
-                        <div>
+                         {/* Kampus */}
+                         <div>
                             <label
-                                htmlFor="address"
-                                className="block text-sm font-semibold text-gray-700 mb-2"
+                                htmlFor="kampus"
+                                className="block text-sm font-bold text-slate-700 mb-2"
                             >
-                                Alamat Lengkap{" "}
-                                <span className="text-red-500">*</span>
+                                Asal Kampus
                             </label>
                             <div className="relative">
-                                <MapPin className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
-                                <textarea
-                                    id="address"
-                                    rows="3"
-                                    value={data.address}
+                                <Building className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                <input
+                                    id="kampus"
+                                    type="text"
+                                    value={data.kampus}
                                     onChange={(e) =>
-                                        setData("address", e.target.value)
+                                        setData("kampus", e.target.value)
                                     }
-                                    className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition resize-none"
-                                    placeholder="Jalan, gedung, kamar, dsb."
+                                    className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#4A5D23]/20 outline-none transition ${errors.kampus ? 'border-rose-300' : 'border-slate-200 focus:border-[#4A5D23]'}`}
+                                    placeholder="Contoh: IPB University"
                                 />
                             </div>
-                            {errors.address && (
-                                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                                    <AlertCircle className="w-4 h-4" />
-                                    {errors.address}
+                            {errors.kampus && (
+                                <p className="mt-1 text-xs text-rose-600 flex items-center gap-1">
+                                    <AlertCircle className="w-3.5 h-3.5" />
+                                    {errors.kampus[0]}
                                 </p>
                             )}
                         </div>
 
-                        {/* Deskripsi Toko */}
+                        {/* Bio Deskripsi Toko */}
                         <div>
                             <label
-                                htmlFor="description"
-                                className="block text-sm font-semibold text-gray-700 mb-2"
+                                htmlFor="bio"
+                                className="block text-sm font-bold text-slate-700 mb-2"
                             >
                                 Deskripsi Toko
                             </label>
                             <textarea
-                                id="description"
+                                id="bio"
                                 rows="3"
-                                value={data.description}
+                                value={data.bio}
                                 onChange={(e) =>
-                                    setData("description", e.target.value)
+                                    setData("bio", e.target.value)
                                 }
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition resize-none"
-                                placeholder="Ceritakan sedikit tentang toko kamu..."
+                                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#4A5D23]/20 outline-none transition resize-none ${errors.bio ? 'border-rose-300' : 'border-slate-200 focus:border-[#4A5D23]'}`}
+                                placeholder="Ceritakan sedikit tentang barang apa yang kamu jual..."
                             />
-                        </div>
-
-                        {/* Upload Dokumen */}
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Upload KTP / Kartu Mahasiswa
-                                <span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-6 hover:border-primary/50 transition">
-                                <input
-                                    type="file"
-                                    id="document"
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    onChange={(e) =>
-                                        setData("document", e.target.files[0])
-                                    }
-                                />
-                                <div className="text-center">
-                                    <Upload className="mx-auto w-8 h-8 text-gray-400 mb-2" />
-                                    <p className="text-sm text-gray-600">
-                                        Klik atau drag & drop file di sini
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        PNG, JPG, PDF maks. 2MB
-                                    </p>
-                                </div>
-                            </div>
-                            {data.document && (
-                                <p className="mt-2 text-sm text-green-600 flex items-center gap-1">
-                                    <CheckCircle className="w-4 h-4" />
-                                    {data.document.name}
-                                </p>
-                            )}
-                            {errors.document && (
-                                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                                    <AlertCircle className="w-4 h-4" />
-                                    {errors.document}
-                                </p>
-                            )}
                         </div>
 
                         {/* Submit Button */}
@@ -263,21 +257,11 @@ export default function RegisterSeller() {
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="w-full bg-primary text-white py-4 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                                className="w-full bg-[#4A5D23] text-white py-4 rounded-xl font-bold hover:bg-[#3B4A1C] transition-all shadow-lg shadow-[#4A5D23]/20 disabled:opacity-50 flex items-center justify-center gap-2"
                             >
-                                {processing
-                                    ? "Mendaftarkan..."
-                                    : "Daftar sebagai Penjual"}
+                                {processing ? "Menyimpan..." : "Lanjut ke Verifikasi"}
+                                {!processing && <ChevronRight className="w-5 h-5" />}
                             </button>
-                            <p className="text-center text-xs text-gray-400 mt-4">
-                                Dengan mendaftar, kamu setuju dengan{" "}
-                                <Link
-                                    to="/syarat-ketentuan"
-                                    className="text-primary underline"
-                                >
-                                    Syarat & Ketentuan
-                                </Link>
-                            </p>
                         </div>
                     </form>
                 </div>

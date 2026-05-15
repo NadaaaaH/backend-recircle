@@ -29,6 +29,8 @@ class ChatMessage extends Model
         'sender_id' => 'integer',
         'receiver_id' => 'integer',
         'product_id' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**

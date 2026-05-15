@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import SellerLayout from "@/Layouts/SellerLayout";
-import { Store, Save, CheckCircle } from "lucide-react";
+import { Store, Save, CheckCircle, MapPin, Search, Loader2, X } from "lucide-react";
 import api from "@/lib/axios";
 
 export default function Settings() {
@@ -11,11 +11,20 @@ export default function Settings() {
         kampus:   '',
         bio:      '',
         nomor_wa: '',
+        komerceDestinationId: '',
+        komerceDestinationLabel: ''
     });
     const setData = (key, value) => setDataState(prev => ({ ...prev, [key]: value }));
+    
     const [isLoading, setIsLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [flash, setFlash] = useState({});
+
+    // Autocomplete logistics states
+    const [searchKeyword, setSearchKeyword] = useState('');
+    const [debouncedKeyword, setDebouncedKeyword] = useState('');
+    const [destinations, setDestinations] = useState([]);
+    const [isSearchingDest, setIsSearchingDest] = useState(false);
 
     // Load current settings from API
     useEffect(() => {
@@ -29,7 +38,10 @@ export default function Settings() {
                         kampus:   u.kampus   ?? '',
                         bio:      u.bio      ?? '',
                         nomor_wa: u.nomor_wa ?? '',
+                        komerceDestinationId: u.komerceDestinationId ?? '',
+                        komerceDestinationLabel: u.komerceDestinationLabel ?? ''
                     });
+                    setSearchKeyword(u.komerceDestinationLabel ?? '');
                 }
             })
             .catch(() => {
@@ -39,10 +51,67 @@ export default function Settings() {
                     kampus:   user?.kampus   ?? '',
                     bio:      user?.bio      ?? '',
                     nomor_wa: user?.nomor_wa ?? '',
+                    komerceDestinationId: '',
+                    komerceDestinationLabel: ''
                 });
             })
             .finally(() => setIsLoading(false));
     }, [user]);
+
+    // Hook Debounce (500ms) for autocomplete
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedKeyword(searchKeyword);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchKeyword]);
+
+    // Fetch destinations from debounced key
+    useEffect(() => {
+        // Avoid triggering search if it matches exactly our established label or short
+        if (debouncedKeyword === data.komerceDestinationLabel) {
+            setDestinations([]);
+            return;
+        }
+        if (debouncedKeyword.length < 3) {
+            setDestinations([]);
+            return;
+        }
+
+        const fetchDest = async () => {
+            setIsSearchingDest(true);
+            try {
+                const res = await api.get(`/logistics/destination?keyword=${debouncedKeyword}`);
+                setDestinations(res.data?.data || []);
+            } catch (err) {
+                console.error("Failed to search destinations", err);
+            } finally {
+                setIsSearchingDest(false);
+            }
+        };
+        fetchDest();
+    }, [debouncedKeyword, data.komerceDestinationLabel]);
+
+    const handleSelectDest = (dest) => {
+        const label = `${dest.subdistrict_name}, ${dest.district_name}, ${dest.city_name} ${dest.zip_code}`;
+        setDataState(p => ({
+            ...p,
+            komerceDestinationId: dest.id.toString(),
+            komerceDestinationLabel: label
+        }));
+        setSearchKeyword(label);
+        setDestinations([]);
+    };
+
+    const clearSelectedDest = () => {
+        setDataState(p => ({
+            ...p,
+            komerceDestinationId: '',
+            komerceDestinationLabel: ''
+        }));
+        setSearchKeyword('');
+        setDestinations([]);
+    };
 
     const submit = async (e) => {
         e.preventDefault();
@@ -80,7 +149,7 @@ export default function Settings() {
                     Pengaturan Toko
                 </h1>
                 <p className="text-slate-500 mt-1 text-sm font-medium">
-                    Kelola informasi publik toko dan nomor kontakmu.
+                    Kelola informasi publik toko, kontak, dan lokasi pengiriman.
                 </p>
             </div>
 
@@ -151,6 +220,83 @@ export default function Settings() {
                                 className="w-full bg-slate-50 border border-slate-200/70 rounded-xl px-4 py-3 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[#4A5D23]/20 focus:border-[#4A5D23] transition-all resize-none"
                             />
                         </div>
+                    </div>
+                </div>
+
+                {/* Card 2: Lokasi Pengiriman (New Logic for Accurate Ongkir) */}
+                <div className="bg-white rounded-[1.25rem] border border-slate-200/70 shadow-[0_2px_4px_rgba(0,0,0,0.02)] p-6 md:p-8">
+                    <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-100">
+                        <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center">
+                            <MapPin className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-900">Lokasi Asal Pengiriman</h2>
+                            <p className="text-sm font-medium text-slate-500">Digunakan untuk menghitung ongkos kirim pembeli secara akurat dari lokasi Anda.</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2 relative">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Kecamatan / Kota Asal</label>
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                                type="text"
+                                value={searchKeyword}
+                                onChange={(e) => setSearchKeyword(e.target.value)}
+                                placeholder="Ketik nama kecamatan Anda (min. 3 huruf)..."
+                                className="w-full bg-slate-50 border border-slate-200/70 rounded-xl pl-11 pr-10 py-3.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                            />
+                            {(searchKeyword && data.komerceDestinationId) && (
+                                <button 
+                                    type="button"
+                                    onClick={clearSelectedDest}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Autocomplete Dropdown Results */}
+                        {isSearchingDest && (
+                            <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg p-4 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
+                                <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+                                Mencari daerah...
+                            </div>
+                        )}
+
+                        {!isSearchingDest && destinations.length > 0 && (
+                            <ul className="absolute z-10 left-0 right-0 mt-1 max-h-60 overflow-auto bg-white border border-slate-200 rounded-xl shadow-xl divide-y divide-slate-50 border-emerald-100/50 ring-1 ring-black/5">
+                                {destinations.map((dest) => (
+                                    <li key={dest.id}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSelectDest(dest)}
+                                            className="w-full text-left px-5 py-3 text-sm font-medium text-slate-700 hover:bg-emerald-50 transition-colors"
+                                        >
+                                            {dest.subdistrict_name}, {dest.district_name}, {dest.city_name}
+                                            <span className="block text-xs text-slate-400 mt-0.5 font-normal">{dest.province_name} ({dest.zip_code})</span>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        
+                        {/* Current status */}
+                        {data.komerceDestinationId ? (
+                            <div className="mt-2.5 flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50/50 w-fit px-3 py-1.5 rounded-lg border border-emerald-100">
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                Lokasi pengiriman tersimpan (ID: {data.komerceDestinationId})
+                            </div>
+                        ) : (
+                            <p className="text-xs text-slate-400 italic mt-1.5 flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> Belum ada lokasi dipilih, sistem akan menggunakan fallback default.
+                            </p>
+                        )}
+
+                        {!data.komerceDestinationId && !isSearchingDest && debouncedKeyword.length >= 3 && destinations.length === 0 && debouncedKeyword !== data.komerceDestinationLabel && (
+                            <p className="text-xs text-rose-500 font-semibold mt-1.5 pl-1">Daerah tidak ditemukan. Silakan ketik kata kunci lain.</p>
+                        )}
                     </div>
                 </div>
 

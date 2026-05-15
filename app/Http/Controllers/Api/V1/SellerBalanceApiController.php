@@ -24,8 +24,18 @@ class SellerBalanceApiController extends Controller
                 ->whereIn('status', ['dilepas', 'ditarik'])
                 ->sum('jumlah');
 
+            $totalDitahan = SellerBalance::where('user_id', $request->user()->id)
+                ->where('status', 'ditahan')
+                ->sum('jumlah');
+
+            $totalDitarik = SellerBalance::where('user_id', $request->user()->id)
+                ->where('status', 'ditarik')
+                ->sum('jumlah');
+
             return $this->successResponse([
-                'total_dilepas' => $totalDilepas,
+                'totalDilepas' => $totalDilepas,
+                'totalDitahan' => $totalDitahan,
+                'totalDitarik' => $totalDitarik,
                 'history' => SellerBalanceResource::collection($balances)->response()->getData(true)
             ], 'Balance history retrieved successfully');
         } catch (\Exception $e) {

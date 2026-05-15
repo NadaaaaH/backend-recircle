@@ -1,30 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams, Navigate } from 'react-router-dom';
+import { Link, useNavigate, useParams, Navigate, useSearchParams } from 'react-router-dom';
 import MainLayout from '@/Layouts/MainLayout';
-import { ShieldCheck, MapPin, Package, MessageCircle, ArrowLeft, CheckCircle, CreditCard, Loader2, Box } from 'lucide-react';
+import { ShieldCheck, MapPin, Package, ArrowLeft, CheckCircle, CreditCard, Loader2, Box } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import axios from 'axios';
+import api from '@/lib/axios';
 
 export default function Checkout() {
     const navigate = useNavigate();
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
     const { user: currentUser } = useAuth();
 
-    if (!currentUser) {
-        return <Navigate to="/login" replace />;
-    }
-
-    // Mock data for initial SPA phase
-    const product = {
-        id: id || 1,
-        name: "MacBook Pro M1 2020",
-        price: 12000000,
-        img: "https://placehold.co/400x400?text=MacBook",
-        seller_area_id: "34260"
-    };
-    const offer = null;
-    const final_price = product.price;
-    const midtrans_client_key = import.meta.env.VITE_MIDTRANS_CLIENT_KEY || 'SB-Mid-client-XXXXX';
+    const [isLoading, setIsLoading] = useState(true);
+    const [product, setProduct] = useState(null);
+    const [offer, setOffer] = useState(null);
+    const [finalPrice, setFinalPrice] = useState(0);
+    const [midtransClientKey, setMidtransClientKey] = useState('');
 
     const [metodePengiriman, setMetodePengiriman] = useState('cod');
     
@@ -54,12 +45,48 @@ export default function Checkout() {
     const [processing, setProcessing] = useState(false);
     const [paymentSuccess, setPaymentSuccess] = useState(false);
 
+    // Initialize basic auth context to form state
+    useEffect(() => {
+        if (currentUser) {
+            const nameParts = currentUser.name ? currentUser.name.split(' ') : ['', ''];
+            setFirstName(nameParts[0] || '');
+            setLastName(nameParts.slice(1).join(' ') || '');
+            setEmail(currentUser.email || '');
+            setPhone(currentUser.nomor_wa || '');
+        }
+    }, [currentUser]);
+
+    // Fetch Checkout Initial Data
+    useEffect(() => {
+        if (!id) return;
+        setIsLoading(true);
+        const offerId = searchParams.get('offer_id');
+        const url = offerId ? `/checkout/${id}?offer_id=${offerId}` : `/checkout/${id}`;
+
+        api.get(url)
+            .then(res => {
+                const data = res.data?.data;
+                if (data) {
+                    setProduct(data.product);
+                    setOffer(data.offer);
+                    setFinalPrice(data.final_price);
+                    setMidtransClientKey(data.midtrans_client_key);
+                }
+            })
+            .catch(err => {
+                console.error("Failed to fetch checkout info", err);
+                alert("Gagal memuat data checkout. Produk mungkin sudah tidak tersedia.");
+                navigate('/explore');
+            })
+            .finally(() => setIsLoading(false));
+    }, [id, searchParams, navigate]);
+
     // Load Midtrans Snap.js
     useEffect(() => {
-        if (midtrans_client_key) {
+        if (midtransClientKey) {
             const script = document.createElement('script');
             script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
-            script.setAttribute('data-client-key', midtrans_client_key);
+            script.setAttribute('data-client-key', midtransClientKey);
             script.async = true;
             document.head.appendChild(script);
         }
@@ -69,9 +96,9 @@ export default function Checkout() {
                  document.head.removeChild(script);
              }
         };
-    }, [midtrans_client_key]);
+    }, [midtransClientKey]);
 
-    // 1. Hook Debounce (500ms)
+    // Hook Debounce (500ms)
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedKeyword(searchKeyword);
@@ -79,7 +106,7 @@ export default function Checkout() {
         return () => clearTimeout(timer);
     }, [searchKeyword]);
 
-    // 2. Fetch Komerce Destination otomatis saat debouncedKeyword berubah
+    // Fetch Destination otomatis saat debouncedKeyword berubah
     useEffect(() => {
         if (debouncedKeyword.length < 3) {
             setDestinations([]);
@@ -92,10 +119,11 @@ export default function Checkout() {
         const fetchDestinations = async () => {
             setIsSearchingDest(true);
             try {
-                const res = await axios.get(`/api/rajaongkir/destination?keyword=${debouncedKeyword}`);
-                setDestinations(res.data || []);
+                const res = await api.get(`/logistics/destination?keyword=${debouncedKeyword}`);
+                // Adjusted based on standard backend response data wrap
+                setDestinations(res.data?.data || res.data || []);
             } catch (error) {
-                console.error("Failed to fetch Komerce destinations", error);
+                console.error("Failed to fetch destinations", error);
             } finally {
                 setIsSearchingDest(false);
             }
@@ -113,12 +141,12 @@ export default function Checkout() {
     };
 
     const handleSelectDestination = (dest) => {
-        const destName = `${dest.label} ${dest.zip_code}`;
+        const destName = `${dest.district_name}, ${dest.city_name} ${dest.zip_code || ''}`;
         setSelectedDestinationId(dest.id);
         setSelectedDestDetails(dest);
         setSearchKeyword(destName);
         setLastSelectedName(destName);
-        setDebouncedKeyword(''); // Hindari fetch ulang
+        setDebouncedKeyword(''); 
         setDestinations([]);
         setShippingCost(0);
         if (selectedCourier) {
@@ -136,32 +164,31 @@ export default function Checkout() {
     };
 
     const checkShippingCost = async (destId, courier) => {
+        if (!product) return;
         setCheckingCost(true);
         try {
-            // Karena Komerce butuh Integer ID dan profil produk seller lama menggunakan ID Biteship string ('IDNP10CT66ID')
-            // Kita inject validasi jika isNaN/Biteship string, maka gunakan fallback default ID '34260'.
+            // Use the backend injected default or actual seller_area_id from API
             const originId = product.seller_area_id && /^\d+$/.test(product.seller_area_id.toString()) 
                 ? product.seller_area_id 
-                : '34260';
+                : '34260'; // Default Safe Fallback
 
-            const res = await axios.post('/api/rajaongkir/calculate', {
+            const res = await api.post('/logistics/calculate', {
                 origin: originId,
                 destination: destId,
                 courier: courier,
-                weight: 1000 // 1kg
+                weight: 1000 
             });
 
-            // Komerce Returns Object Flat Array: { name, code, service, description, cost, etd }
-            const availableServices = res.data?.filter(c => c.code?.toLowerCase() === courier.toLowerCase());
+            // Handle successful pricing data
+            const data = res.data?.data || res.data || [];
+            const availableServices = data.filter(c => c.code?.toLowerCase() === courier.toLowerCase());
             
             if (availableServices && availableServices.length > 0) {
-                // Ambil layanan termurah/pertama dari list hasil
                 const service = availableServices[0];
                 setShippingCost(service.cost || 0);
                 setCourierServiceLabel(`${service.name} - ${service.service}`);
-            } else if (res.data && res.data.length > 0) {
-                // Fallback layanan jika tidak ada tapi API mengeluarkan kurir lain
-                const service = res.data[0];
+            } else if (data.length > 0) {
+                const service = data[0];
                 setShippingCost(service.cost || 0); 
                 setCourierServiceLabel(`${service.name} - ${service.service}`);
             } else {
@@ -169,9 +196,9 @@ export default function Checkout() {
                 alert("Layanan kurir ini tidak tersedia untuk rute Anda.");
             }
         } catch (error) {
-            console.error("RO Komerce Error:", error.response?.data);
+            console.error("Logistics Error:", error.response?.data);
             setShippingCost(0);
-            alert(`Gagal menghitung tarif: ${error.response?.data?.error || error.message}`);
+            alert(`Gagal menghitung tarif: ${error.response?.data?.message || "Terjadi kesalahan network"}`);
         } finally {
             setCheckingCost(false);
         }
@@ -186,7 +213,7 @@ export default function Checkout() {
         }
     };
 
-    const grandTotal = Number(final_price) + Number(shippingCost);
+    const grandTotal = Number(finalPrice) + Number(shippingCost);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -203,54 +230,60 @@ export default function Checkout() {
         setProcessing(true);
 
         try {
-            // Mocking API call for SPA phase
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            // Simulasikan sukses langsung untuk mempermudah navigasi SPA sementara
-            setPaymentSuccess(true);
-
-            /* === KODE ASLI UNTUK INTEGRASI MIDTRANS & BACKEND ===
             const fullShippingAddress = (metodePengiriman === 'kirim_paket' && selectedDestDetails) 
-                ? `${alamat}, ${selectedDestDetails.label} ${selectedDestDetails.zip_code}`
+                ? `${alamat}, ${selectedDestDetails.district_name}, ${selectedDestDetails.city_name}, ${selectedDestDetails.province_name} ${selectedDestDetails.zip_code || ''}`
                 : alamat;
 
-            const response = await axios.post('/checkout', {
+            const payload = {
                 product_id: product.id,
                 offer_id: offer?.id || null,
                 metode_pengiriman: metodePengiriman,
                 alamat_pengiriman: fullShippingAddress,
                 catatan: catatan,
                 shipping_cost: shippingCost,
-                courier_info: courierServiceLabel,
-                area_id: selectedDestinationId
-            });
+                courier_info: courierServiceLabel
+            };
 
-            if (response.data.success) {
-                if (response.data.metode_pengiriman === 'kirim_paket' && response.data.snap_token) {
-                    window.snap.pay(response.data.snap_token, {
-                        onSuccess: () => setPaymentSuccess(true),
-                        onPending: () => {
-                            navigate(response.data.redirect_url);
-                        },
-                        onError: () => alert('Pembayaran gagal. Silakan coba lagi.'),
-                        onClose: () => {
-                            navigate(response.data.redirect_url);
-                        },
-                    });
+            const response = await api.post('/checkout', payload);
+
+            if (response.status === 201 || response.data?.data || response.data?.success) {
+                const respData = response.data?.data || response.data;
+
+                // IF MIDTRANS FLOW IS PRESENT
+                if (metodePengiriman === 'kirim_paket' && respData.snap_token) {
+                    if (window.snap) {
+                        window.snap.pay(respData.snap_token, {
+                            onSuccess: (result) => {
+                                navigate(`/payment/success?order_id=${respData.order_id}`);
+                            },
+                            onPending: (result) => {
+                                navigate('/orders');
+                            },
+                            onError: (result) => {
+                                alert('Proses pembayaran gagal / dibatalkan.');
+                            },
+                            onClose: () => {
+                                // Just push to orders where they can resume if applicable or see pending
+                                navigate('/orders');
+                            },
+                        });
+                    } else {
+                        alert("Menghubungkan ke sistem pembayaran gagal. Hubungi support.");
+                    }
                 } else {
-                    navigate(response.data.redirect_url);
+                    // COD FLOW -> Navigate to dedicated success page
+                    navigate(`/payment/success?order_id=${respData.order_id}`);
                 }
             }
-            */
         } catch (error) {
             console.error('Checkout error:', error);
-            alert(error.response?.data?.message || 'Terjadi kesalahan saat checkout.');
+            alert(error.response?.data?.message || 'Terjadi kesalahan saat memproses checkout.');
         } finally {
             setProcessing(false);
         }
     };
 
-    const formatPrice = (price) => 'Rp ' + Number(price).toLocaleString('id-ID');
+    const formatPrice = (price) => 'Rp ' + Number(price || 0).toLocaleString('id-ID');
 
     useEffect(() => {
         if (paymentSuccess) {
@@ -260,24 +293,25 @@ export default function Checkout() {
         }
     }, [paymentSuccess]);
 
-    if (paymentSuccess) {
+    if (!currentUser) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (isLoading) {
         return (
             <MainLayout>
-                <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-                    <div className="bg-white rounded-3xl p-10 max-w-md w-full text-center shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
-                        <div className="w-20 h-20 rounded-full bg-[#43552c]/10 flex items-center justify-center mx-auto mb-6">
-                            <CheckCircle className="w-10 h-10 text-[#43552c]" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Pembayaran Berhasil</h2>
-                        <p className="text-gray-500 mb-6">Pesanan Anda telah kami terima dan akan segera diproses oleh penjual.</p>
-                        <Link to="/orders" className="inline-block bg-[#43552c] text-white px-8 py-4 rounded-full hover:bg-[#364423] transition-colors font-medium active:scale-[0.98]">
-                            Lihat Pesanan Saya
-                        </Link>
+                <div className="min-h-screen flex items-center justify-center">
+                    <div className="text-center">
+                        <Loader2 className="w-10 h-10 animate-spin text-[#43552c] mx-auto mb-4" />
+                        <p className="text-gray-500">Menyiapkan halaman checkout...</p>
                     </div>
                 </div>
             </MainLayout>
         );
     }
+
+    if (!product) return null;
+
 
     return (
         <MainLayout>
@@ -299,7 +333,7 @@ export default function Checkout() {
                             <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
                                 <div className="flex items-center gap-3 mb-8 border-b border-gray-50 pb-4">
                                     <div className="w-8 h-8 rounded-full bg-[#43552c]/10 flex items-center justify-center text-[#43552c] font-semibold text-sm">1</div>
-                                    <h2 className="text-xl font-bold text-gray-900">1. Informasi Kontak</h2>
+                                    <h2 className="text-xl font-bold text-gray-900">Informasi Kontak</h2>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
                                     <div>
@@ -327,7 +361,7 @@ export default function Checkout() {
                             <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
                                 <div className="flex items-center gap-3 mb-8 border-b border-gray-50 pb-4">
                                     <div className="w-8 h-8 rounded-full bg-[#43552c]/10 flex items-center justify-center text-[#43552c] font-semibold text-sm">2</div>
-                                    <h2 className="text-xl font-bold text-gray-900">2. Metode Pengiriman</h2>
+                                    <h2 className="text-xl font-bold text-gray-900">Metode Pengiriman</h2>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <label className={`relative flex flex-col cursor-pointer rounded-2xl border-2 p-6 transition-all duration-200 hover:shadow-md ${metodePengiriman === 'cod' ? 'border-[#43552c] bg-[#43552c]/[0.10]' : 'border-gray-200 bg-white hover:border-gray-300'}`} onClick={() => handleMetodeChange('cod')}>
@@ -336,7 +370,7 @@ export default function Checkout() {
                                             <MapPin className="w-6 h-6" />
                                         </div>
                                         <p className={`text-lg font-bold mb-1 tracking-tight ${metodePengiriman === 'cod' ? 'text-[#43552c]' : 'text-gray-900'}`}>Ketemuan (COD)</p>
-                                        <p className="text-sm text-gray-500">Bayar langsung di tempat</p>
+                                        <p className="text-sm text-gray-500">Area Sekitar: {product.loc || "Kampus"}</p>
                                     </label>
 
                                     <label className={`relative flex flex-col cursor-pointer rounded-2xl border-2 p-6 transition-all duration-200 hover:shadow-md ${metodePengiriman === 'kirim_paket' ? 'border-[#43552c] bg-[#43552c]/[0.10]' : 'border-gray-200 bg-white hover:border-gray-300'}`} onClick={() => handleMetodeChange('kirim_paket')}>
@@ -365,7 +399,7 @@ export default function Checkout() {
                                                 type="text"
                                                 value={searchKeyword}
                                                 onChange={(e) => handleSearchChange(e.target.value)}
-                                                placeholder="Ketik Kelurahan / Kecamatan / Kota / Kode Pos..."
+                                                placeholder="Ketik Kelurahan / Kecamatan / Kota..."
                                                 className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-gray-900 focus:border-[#43552c] focus:ring-[#43552c] text-sm font-medium bg-gray-50 focus:bg-white"
                                             />
                                             {isSearchingDest && (
@@ -378,7 +412,6 @@ export default function Checkout() {
                                             {destinations.length > 0 && searchKeyword.length >= 3 && (
                                                 <ul className={`absolute z-50 w-[calc(100vw-32px)] sm:w-full bg-white border border-gray-200 rounded-xl mt-1 shadow-2xl max-h-[300px] overflow-y-auto transition-opacity duration-200 left-0 ${isSearchingDest ? 'opacity-50' : 'opacity-100'}`}>
                                                     {destinations.map((dest, i) => {
-                                                        const destDisplayName = `${dest.label} ${dest.zip_code}`;
                                                         return (
                                                             <li 
                                                                 key={dest.id || i} 
@@ -397,7 +430,7 @@ export default function Checkout() {
                                         </div>
                                     </div>
 
-                                    {/* Auto-filled details from Komerce */}
+                                    {/* Auto-filled details */}
                                     {selectedDestDetails && (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 bg-gray-50/50 p-5 rounded-2xl border border-gray-200/60 shadow-inner">
                                             <div>
@@ -443,18 +476,30 @@ export default function Checkout() {
                                     </div>
 
                                     <div>
-                                        <label htmlFor="alamat" className="block text-sm font-semibold text-gray-700 mb-2">Alamat Lengkap</label>
+                                        <label htmlFor="alamat" className="block text-sm font-semibold text-gray-700 mb-2">Alamat Lengkap (RT/RW, No Rumah)</label>
                                         <textarea
                                             id="alamat"
                                             value={alamat}
                                             onChange={(e) => setAlamat(e.target.value)}
-                                            placeholder="Contoh: Jl. Sudirman No. 10..."
+                                            placeholder="Contoh: Jl. Sudirman No. 10, RT 01 RW 02..."
                                             rows={3}
                                             className="w-full rounded-xl border border-gray-200 px-4 py-4 text-gray-900 focus:border-[#43552c] sm:text-sm resize-none bg-gray-50 focus:bg-white"
                                         />
                                     </div>
                                 </section>
                             )}
+                            
+                            {/* Add optional catatatan section always */}
+                             <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                                <label className="block text-xl font-bold text-gray-900 mb-4">Catatan Tambahan</label>
+                                <textarea
+                                    value={catatan}
+                                    onChange={(e) => setCatatan(e.target.value)}
+                                    placeholder="Tulis catatan untuk penjual (opsional)..."
+                                    className="w-full rounded-xl border border-gray-200 px-4 py-3.5 text-gray-900 focus:border-[#43552c] focus:ring-[#43552c] text-sm bg-gray-50 resize-none"
+                                    rows="2"
+                                />
+                            </section>
                         </div>
 
                         {/* Order Summary Area - 4 cols */}
@@ -470,7 +515,7 @@ export default function Checkout() {
                                         <p className="font-bold text-gray-900 leading-tight mb-1 truncate text-lg pr-2">{product.name}</p>
                                         <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-100 w-fit px-2.5 py-1 rounded-md mb-2">
                                             <Box className="w-3.5 h-3.5" />
-                                            <span className="truncate max-w-[120px]">Preloved Item</span>
+                                            <span className="truncate max-w-[120px]">Oleh: {product.seller_name}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -478,7 +523,12 @@ export default function Checkout() {
                                 <div className="space-y-4 py-6 border-y border-dashed border-gray-200 mb-8">
                                     <div className="flex items-center justify-between text-base">
                                         <span className="text-gray-500 font-medium">Subtotal Produk</span>
-                                        <span className="font-semibold text-gray-900">{formatPrice(offer ? offer.harga_deal : product.price)}</span>
+                                        <div className="text-right">
+                                            {offer && (
+                                                <span className="text-xs text-gray-400 line-through block font-medium">{formatPrice(product.price)}</span>
+                                            )}
+                                            <span className="font-semibold text-gray-900">{formatPrice(finalPrice)}</span>
+                                        </div>
                                     </div>
                                     <div className="flex items-center justify-between text-base transition-all duration-300">
                                         <span className="text-gray-500 font-medium whitespace-nowrap">Biaya Pengiriman</span>
@@ -497,7 +547,7 @@ export default function Checkout() {
 
                                 <div className="flex flex-col mb-8">
                                     <div className="flex items-center justify-between mb-1.5">
-                                        <span className="text-base font-bold text-gray-900">Total Harga</span>
+                                        <span className="text-base font-bold text-gray-900">Total Tagihan</span>
                                         <span className="text-3xl font-black text-[#43552c] tabular-nums tracking-tight">
                                             {formatPrice(grandTotal)}
                                         </span>

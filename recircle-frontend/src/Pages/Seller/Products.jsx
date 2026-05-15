@@ -1,18 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
 import SellerLayout from '@/Layouts/SellerLayout';
-import { Package, Plus, Edit, Trash2, Search, ArrowRight, LayoutGrid, List, CheckCircle, Archive, ArchiveRestore, RefreshCw, Trash } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Search, ArrowRight, LayoutGrid, List, CheckCircle, Archive, ArchiveRestore, RefreshCw, Trash, Loader2 } from 'lucide-react';
 import ConfirmModal from '@/Components/ConfirmModal';
+import api from '@/lib/axios';
 
 export default function SellerProducts() {
-    // Mock data for SPA phase
-    const dummyProducts = [
-        { id: 1, name: "MacBook Pro M1 2020", price: 12000000, category: "Elektronik", status: "active", is_archived: false, deleted_at: null, active_orders: 1, created_at: "2023-10-01" },
-        { id: 2, name: "Buku Kalkulus", price: 150000, category: "Buku", status: "active", is_archived: true, deleted_at: null, active_orders: 0, created_at: "2023-10-05" },
-        { id: 3, name: "Meja Belajar", price: 300000, category: "Furniture", status: "sold", is_archived: false, deleted_at: "2023-10-10", active_orders: 0, created_at: "2023-10-08" },
-    ];
-    const [products, setProducts] = useState(dummyProducts);
+    const [products, setProducts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [flash, setFlash] = useState({});
     const [errors, setErrors] = useState({});
     const [search, setSearch] = useState('');
@@ -25,10 +20,28 @@ export default function SellerProducts() {
     const [deleteType, setDeleteType] = useState('soft'); // 'soft' | 'force'
     const [isProcessing, setIsProcessing] = useState(false);
 
-    const formatPrice = (p) => 'Rp ' + Number(p).toLocaleString('id-ID');
+    const formatPrice = (p) => 'Rp ' + Number(p || 0).toLocaleString('id-ID');
+
+    useEffect(() => {
+        document.title = "Kelola Produk | ReCircle";
+        fetchProducts();
+    }, []);
+
+    const fetchProducts = async () => {
+        setIsLoading(true);
+        try {
+            const res = await api.get('/seller/products');
+            setProducts(res.data?.data || []);
+        } catch (err) {
+            console.error("Failed loading products", err);
+            setErrors({ error: "Gagal memuat data produk" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const filteredProducts = products.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
+        const matchesSearch = (p.name || '').toLowerCase().includes(search.toLowerCase());
         let matchesTab = false;
         if (activeTab === 'active') {
             matchesTab = !p.is_archived && !p.deleted_at;
@@ -46,33 +59,51 @@ export default function SellerProducts() {
         setIsConfirmOpen(true);
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (!productToDelete) return;
         setIsProcessing(true);
-        setTimeout(() => {
-            if (deleteType === 'force') {
-                setProducts(prev => prev.filter(p => p.id !== productToDelete));
-            } else {
-                setProducts(prev => prev.map(p => p.id === productToDelete ? { ...p, deleted_at: new Date().toISOString() } : p));
-            }
+        try {
+            const url = deleteType === 'force' 
+                ? `/seller/products/${productToDelete}/force`
+                : `/seller/products/${productToDelete}`;
+            
+            const method = deleteType === 'force' ? 'delete' : 'delete'; 
+            // Notice both map to DELETE method physically but different endpoints
+            await api.delete(url);
+
+            setFlash({ success: deleteType === 'force' ? "Produk dihapus permanen" : "Produk dipindah ke tong sampah" });
+            setTimeout(() => setFlash({}), 3000);
+            fetchProducts(); // Reload data refresh state
+        } catch (err) {
+            setErrors({ error: err.response?.data?.message || "Gagal memproses penghapusan" });
+            setTimeout(() => setErrors({}), 4000);
+        } finally {
             setIsProcessing(false);
             setIsConfirmOpen(false);
             setProductToDelete(null);
-            setFlash({ success: deleteType === 'force' ? "Produk dihapus permanen" : "Produk dipindah ke tong sampah" });
+        }
+    };
+
+    const handleToggleArchive = async (id) => {
+        try {
+            await api.post(`/seller/products/${id}/toggle-archive`);
+            setFlash({ success: "Status arsip produk diperbarui" });
             setTimeout(() => setFlash({}), 3000);
-        }, 1000);
+            fetchProducts();
+        } catch (err) {
+            alert("Gagal merubah arsip");
+        }
     };
 
-    const handleToggleArchive = (id) => {
-        setProducts(prev => prev.map(p => p.id === id ? { ...p, is_archived: !p.is_archived } : p));
-        setFlash({ success: "Status arsip produk diperbarui" });
-        setTimeout(() => setFlash({}), 3000);
-    };
-
-    const handleRestore = (id) => {
-        setProducts(prev => prev.map(p => p.id === id ? { ...p, deleted_at: null } : p));
-        setFlash({ success: "Produk dipulihkan" });
-        setTimeout(() => setFlash({}), 3000);
+    const handleRestore = async (id) => {
+        try {
+            await api.post(`/seller/products/${id}/restore`);
+            setFlash({ success: "Produk dipulihkan" });
+            setTimeout(() => setFlash({}), 3000);
+            fetchProducts();
+        } catch (err) {
+            alert("Gagal memulihkan produk");
+        }
     };
 
     const getDaysLeft = (deletedAtStr) => {
@@ -87,7 +118,7 @@ export default function SellerProducts() {
     const TabButton = ({ id, label, count }) => (
         <button
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-5 py-3 border-b-2 font-medium text-sm transition-colors ${
+            className={`flex items-center gap-2 px-5 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                 activeTab === id 
                 ? 'border-[#4A5D23] text-[#4A5D23]' 
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
@@ -107,10 +138,6 @@ export default function SellerProducts() {
         archived: products.filter(p => p.is_archived && !p.deleted_at).length,
         trash: products.filter(p => !!p.deleted_at).length,
     };
-
-    useEffect(() => {
-        document.title = "Kelola Produk | ReCircle";
-    }, []);
 
     return (
         <SellerLayout>
@@ -150,8 +177,8 @@ export default function SellerProducts() {
                             <List className="w-4 h-4" />
                         </button>
                     </div>
-                    <Link
-                        to="/jual"
+                        <Link
+                            to="/products/create"
                         className="flex items-center gap-2 bg-[#4A5D23] text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-[#3B4A1C] transition-all"
                     >
                         <Plus className="w-4 h-4" /> Tambah
@@ -181,7 +208,12 @@ export default function SellerProducts() {
                 <TabButton id="trash" label="Tong Sampah" count={counts.trash} />
             </div>
 
-            {filteredProducts.length === 0 ? (
+            {isLoading ? (
+                <div className="py-20 text-center bg-white border border-slate-100 rounded-2xl">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#4A5D23] mx-auto mb-2" />
+                    <p className="text-slate-500 text-sm">Memuat data produk...</p>
+                </div>
+            ) : filteredProducts.length === 0 ? (
                 <div className="bg-white rounded-[1.25rem] p-12 text-center shadow-[0_2px_4px_rgba(0,0,0,0.02)] border border-slate-200/70 flex flex-col items-center justify-center">
                     <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
                         <Package className="w-8 h-8" strokeWidth={1.5} />
@@ -195,7 +227,7 @@ export default function SellerProducts() {
                     </p>
                     {activeTab === 'active' && (
                         <Link
-                            to="/jual"
+                            to="/products/create"
                             className="inline-flex items-center gap-2 bg-white border border-[#4A5D23] text-[#4A5D23] px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#4A5D23]/5 transition-all group"
                         >
                             Mulai Jualan <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

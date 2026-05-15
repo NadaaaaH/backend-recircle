@@ -2,47 +2,60 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import MainLayout from '@/Layouts/MainLayout';
 import {
-    ArrowLeft,
-    Package,
-    CreditCard,
-    MapPin,
-    Calendar,
-    CheckCircle2,
-    Clock,
-    XCircle,
-    Truck,
-    ShieldCheck
+    ArrowLeft, Package, CreditCard, MapPin, Calendar, 
+    CheckCircle2, Clock, XCircle, Truck, ShieldCheck, Loader2
 } from 'lucide-react';
+import api from '@/lib/axios';
 
 export default function Show() {
     const { id } = useParams();
-    const order = { id: id, kode_pesanan: 'ORD-001', created_at: '10 Okt 2023', total_harga: 12000000, metode_pengiriman: 'kirim_paket', metode_pembayaran: 'bank_transfer', status: 'dikirim', alamat_pengiriman: 'Jl. Raya Dramaga', catatan: 'Tolong packing kayu', is_pending: false };
-    const product = { name: 'MacBook Pro M1', seller_name: 'Apple Store', seller_kampus: 'IPB', img: null };
-    const snap_token = null;
-    const midtrans_client_key = null;
+    const [order, setOrder] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [isPaying, setIsPaying] = useState(false);
+
+    useEffect(() => {
+        fetchOrder();
+    }, [id]);
+
+    const fetchOrder = async () => {
+        try {
+            const response = await api.get(`/orders/${id}`);
+            const data = response.data?.data || response.data;
+            setOrder(data);
+            document.title = `Pesanan ${data.orderCode} | ReCircle`;
+        } catch (error) {
+            console.error("Gagal memuat detail pesanan:", error);
+            alert("Gagal memuat detail pesanan.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // Initialize Midtrans Snap Script
     useEffect(() => {
-        if (snap_token && midtrans_client_key) {
+        if (order?.snapToken && order?.midtransClientKey) {
             const script = document.createElement('script');
             script.src = 'https://app.sandbox.midtrans.com/snap/snap.js'; // Sandbox URL
-            script.setAttribute('data-client-key', midtrans_client_key);
+            script.setAttribute('data-client-key', order.midtransClientKey);
             script.async = true;
             document.head.appendChild(script);
 
             return () => {
-                document.head.removeChild(script);
+                const existingScript = document.querySelector(`script[src="https://app.sandbox.midtrans.com/snap/snap.js"]`);
+                if (existingScript && document.head.contains(existingScript)) {
+                    document.head.removeChild(existingScript);
+                }
             };
         }
-    }, [snap_token, midtrans_client_key]);
+    }, [order]);
 
     const handlePayNow = () => {
-        if (window.snap && snap_token) {
+        if (window.snap && order?.snapToken) {
             setIsPaying(true);
-            window.snap.pay(snap_token, {
+            window.snap.pay(order.snapToken, {
                 onSuccess: function (result) {
                     setIsPaying(false);
+                    fetchOrder();
                     alert("Pembayaran Berhasil");
                 },
                 onPending: function (result) {
@@ -103,6 +116,18 @@ export default function Show() {
         }
     };
 
+    if (isLoading) {
+        return (
+            <MainLayout>
+                <div className="min-h-screen bg-[#f7f9f7] flex items-center justify-center">
+                    <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                </div>
+            </MainLayout>
+        );
+    }
+
+    if (!order) return null;
+
     const currentStatus = statusConfig[order.status] || statusConfig.pending;
 
     // Ordered steps logic
@@ -125,13 +150,8 @@ export default function Show() {
         }
     ];
 
-    useEffect(() => {
-        document.title = `Pesanan ${order.kode_pesanan} | ReCircle`;
-    }, [order.kode_pesanan]);
-
     return (
         <MainLayout>
-            
             <div className="min-h-screen bg-[#f7f9f7] py-12">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     
@@ -152,10 +172,10 @@ export default function Show() {
                                 </span>
                             </h1>
                             <p className="text-sm font-medium text-gray-500 mt-1 flex items-center gap-2">
-                                <span className="uppercase tracking-wider">#{order.kode_pesanan}</span>
+                                <span className="uppercase tracking-wider">#{order.orderCode}</span>
                                 <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                                 <Calendar className="w-4 h-4" />
-                                {order.created_at}
+                                {new Date(order.createdAt).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})}
                             </p>
                         </div>
                     </div>
@@ -175,22 +195,22 @@ export default function Show() {
                                 <div className="flex gap-6 items-start">
                                     <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100 shadow-inner">
                                         <img 
-                                            src={product.img || 'https://placehold.co/400x400/eeeeee/999999?text=No+Image'} 
-                                            alt={product.name}
+                                            src={order.product?.images?.[0] || 'https://placehold.co/400x400/eeeeee/999999?text=No+Image'} 
+                                            alt={order.product?.name}
                                             className="w-full h-full object-cover"
                                             onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x400/eeeeee/999999?text=No+Image'; }}
                                         />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-1">{product.name}</h3>
+                                        <h3 className="text-lg font-bold text-gray-900 mb-1">{order.product?.name || 'Produk'}</h3>
                                         <p className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-1.5">
-                                            Penjual: <span className="text-gray-900">{product.seller_name}</span> 
+                                            Penjual: <span className="text-gray-900">{order.product?.seller?.name || 'Anonim'}</span> 
                                             <span className="text-gray-300 mx-1">•</span> 
-                                            {product.seller_kampus}
+                                            {order.product?.campusLocation || '-'}
                                         </p>
                                         <div className="flex items-center justify-between mt-4">
-                                            <span className="text-sm font-medium text-gray-500">1 x {formatPrice(order.total_harga)}</span>
-                                            <span className="text-lg font-black text-gray-900">{formatPrice(order.total_harga)}</span>
+                                            <span className="text-sm font-medium text-gray-500">1 x {formatPrice(order.totalPrice)}</span>
+                                            <span className="text-lg font-black text-gray-900">{formatPrice(order.totalPrice)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -208,14 +228,14 @@ export default function Show() {
                                             <div>
                                                 <p className="text-xs font-medium text-gray-400 mb-1">Metode</p>
                                                 <p className="text-sm font-bold text-gray-900 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100 inline-flex">
-                                                    {order.metode_pengiriman === 'cod' ? 'Cash on Delivery (COD)' : 'Kirim Paket'}
+                                                    {order.shippingMethod === 'cod' ? 'Cash on Delivery (COD)' : 'Kirim Paket'}
                                                 </p>
                                             </div>
-                                            {order.metode_pengiriman === 'kirim_paket' && (
+                                            {order.shippingMethod === 'kirim_paket' && (
                                                 <div>
                                                     <p className="text-xs font-medium text-gray-400 mb-1">Alamat Pengiriman</p>
                                                     <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                                        {order.alamat_pengiriman || 'Tidak ada alamat tercatat.'}
+                                                        {order.shippingAddress || 'Tidak ada alamat tercatat.'}
                                                     </p>
                                                 </div>
                                             )}
@@ -233,7 +253,7 @@ export default function Show() {
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-bold text-gray-900 hover:text-primary transition-colors cursor-default">
-                                                        {order.metode_pembayaran ? order.metode_pembayaran.replace('_', ' ').toUpperCase() : 'Midtrans Payment'}
+                                                        {order.paymentMethod ? order.paymentMethod.replace('_', ' ').toUpperCase() : 'Midtrans Payment'}
                                                     </p>
                                                     <p className="text-xs font-medium text-gray-500">Otomatis & Aman</p>
                                                 </div>
@@ -241,10 +261,10 @@ export default function Show() {
                                         </div>
                                         
                                         {/* Catatan */}
-                                        {order.catatan && (
+                                        {order.notes && (
                                             <div className="mt-6 pt-6 border-t border-gray-100">
                                                 <p className="text-xs font-medium text-gray-400 mb-2">Catatan untuk Penjual</p>
-                                                <p className="text-sm font-medium text-gray-700 italic border-l-2 border-gray-300 pl-3">"{order.catatan}"</p>
+                                                <p className="text-sm font-medium text-gray-700 italic border-l-2 border-gray-300 pl-3">"{order.notes}"</p>
                                             </div>
                                         )}
                                     </div>
@@ -267,11 +287,11 @@ export default function Show() {
                                     <div className="space-y-3 mb-6">
                                         <div className="flex justify-between items-center text-sm font-medium text-gray-500">
                                             <span>Subtotal (1 Barang)</span>
-                                            <span className="text-gray-900">{formatPrice(order.total_harga)}</span>
+                                            <span className="text-gray-900">{formatPrice(order.totalPrice)}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-sm font-medium text-gray-500">
                                             <span>Ongkos Kirim</span>
-                                            <span className="text-gray-900">{order.metode_pengiriman === 'cod' ? 'Rp 0' : 'Menyusul (Resi)'}</span>
+                                            <span className="text-gray-900">{order.shippingMethod === 'cod' ? 'Rp 0' : 'Menyusul (Resi)'}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-sm font-medium text-gray-500">
                                             <span>Biaya Layanan</span>
@@ -282,22 +302,22 @@ export default function Show() {
                                     <div className="border-t border-dashed border-gray-200 pt-4 mb-6">
                                         <div className="flex justify-between items-end">
                                             <span className="text-sm font-bold text-gray-900">Total Belanja</span>
-                                            <span className="text-2xl font-black text-primary">{formatPrice(order.total_harga)}</span>
+                                            <span className="text-2xl font-black text-primary">{formatPrice(order.totalPrice)}</span>
                                         </div>
                                     </div>
 
                                     {/* Action Buttons based on status */}
-                                    {order.is_pending && order.metode_pengiriman === 'kirim_paket' && (
+                                    {order.isPending && order.shippingMethod === 'kirim_paket' && (
                                         <button 
                                             onClick={handlePayNow}
-                                            disabled={isPaying || !snap_token}
-                                            className="w-full bg-[#43552c] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#43552c]/20 hover:-translate-y-0.5 hover:shadow-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                            disabled={isPaying || !order.snapToken}
+                                            className="w-full bg-[#8cc63f] hover:bg-[#7caf37] text-white font-bold py-3.5 rounded-xl transition-colors active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base"
                                         >
-                                            {isPaying ? 'Memproses...' : 'Selesaikan Pembayaran'}
+                                            {isPaying ? 'Memproses...' : 'Bayar Sekarang'}
                                         </button>
                                     )}
 
-                                    {order.metode_pengiriman === 'cod' && order.is_pending && (
+                                    {order.shippingMethod === 'cod' && order.isPending && (
                                         <div className="w-full bg-primary/10 text-primary border border-primary/20 font-bold py-4 rounded-xl flex items-center justify-center gap-2 text-sm text-center px-4">
                                             Menunggu COD. Hubungi penjual.
                                         </div>

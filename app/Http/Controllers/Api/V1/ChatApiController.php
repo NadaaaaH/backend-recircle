@@ -42,7 +42,7 @@ class ChatApiController extends Controller
                 ]);
             });
             
-            $messages = ChatMessage::hydrate(iterator_to_array($latestMessages));
+            $messages = iterator_to_array($latestMessages);
             
             $contacts = [];
             foreach ($messages as $msg) {

@@ -6,7 +6,7 @@ import { Send, Search, CheckCircle2, ChevronLeft, Tag } from "lucide-react";
 import axios from "axios";
 
 export default function ChatIndex() {
-    const { user: currentUser } = useAuth();
+    const { user: currentUser, setUnreadChatCount } = useAuth();
     
     const [searchParams] = useSearchParams();
     const initial_selected_user_id = parseInt(searchParams.get('user_id')) || null;
@@ -95,9 +95,13 @@ export default function ChatIndex() {
         setSelectedUser(user);
 
         // Zero out unread count in UI locally
-        setContacts((prev) =>
-            prev.map((c) => (c.id === user.id ? { ...c, unread_count: 0 } : c)),
-        );
+        setContacts((prev) => {
+            const targetContact = prev.find(c => c.id === user.id);
+            if (targetContact && targetContact.unread_count > 0 && setUnreadChatCount) {
+                setUnreadChatCount(count => Math.max(0, count - targetContact.unread_count));
+            }
+            return prev.map((c) => (c.id === user.id ? { ...c, unread_count: 0 } : c));
+        });
 
         // Optimistically set active product context from URL if available
         if (initial_product_id) {

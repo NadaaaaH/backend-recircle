@@ -1,30 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams, Navigate } from 'react-router-dom';
+import { Link, useNavigate, useParams, Navigate, useSearchParams } from 'react-router-dom';
 import MainLayout from '@/Layouts/MainLayout';
 import { ShieldCheck, MapPin, Package, MessageCircle, ArrowLeft, CheckCircle, CreditCard, Loader2, Box } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import api from '@/lib/axios';
 import axios from 'axios';
 
 export default function Checkout() {
     const navigate = useNavigate();
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
+    const offer_id = searchParams.get('offer_id');
     const { user: currentUser } = useAuth();
 
-    if (!currentUser) {
-        return <Navigate to="/login" replace />;
-    }
-
-    // Mock data for initial SPA phase
-    const product = {
-        id: id || 1,
-        name: "MacBook Pro M1 2020",
-        price: 12000000,
-        img: "https://placehold.co/400x400?text=MacBook",
-        seller_area_id: "34260"
-    };
-    const offer = null;
-    const final_price = product.price;
-    const midtrans_client_key = import.meta.env.VITE_MIDTRANS_CLIENT_KEY || 'SB-Mid-client-XXXXX';
+    const [product, setProduct] = useState(null);
+    const [offer, setOffer] = useState(null);
+    const [finalPrice, setFinalPrice] = useState(0);
+    const [midtransClientKey, setMidtransClientKey] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
 
     const [metodePengiriman, setMetodePengiriman] = useState('cod');
     
@@ -46,30 +39,49 @@ export default function Checkout() {
     const [selectedDestDetails, setSelectedDestDetails] = useState(null);
 
     // Form state
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [email, setEmail] = useState('');
-    const [phone, setPhone] = useState('');
+    const [firstName, setFirstName] = useState(currentUser?.name?.split(' ')[0] || '');
+    const [lastName, setLastName] = useState(currentUser?.name?.split(' ').slice(1).join(' ') || '');
+    const [email, setEmail] = useState(currentUser?.email || '');
+    const [phone, setPhone] = useState(currentUser?.nomor_wa || '');
 
     const [processing, setProcessing] = useState(false);
     const [paymentSuccess, setPaymentSuccess] = useState(false);
 
+    // Fetch Checkout Data
+    useEffect(() => {
+        if (!id) return;
+        
+        setIsLoading(true);
+        api.get(`/checkout/${id}`, { params: { offer_id } })
+            .then(res => {
+                const data = res.data.data;
+                setProduct(data.product);
+                setOffer(data.offer);
+                setFinalPrice(data.final_price);
+                setMidtransClientKey(data.midtrans_client_key);
+            })
+            .catch(err => {
+                console.error("Failed to fetch checkout data", err);
+                alert("Gagal mengambil data checkout. Silakan coba lagi.");
+                navigate(-1);
+            })
+            .finally(() => setIsLoading(false));
+    }, [id, offer_id, navigate]);
+
     // Load Midtrans Snap.js
     useEffect(() => {
-        if (midtrans_client_key) {
-            const script = document.createElement('script');
-            script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
-            script.setAttribute('data-client-key', midtrans_client_key);
-            script.async = true;
-            document.head.appendChild(script);
+        if (midtransClientKey) {
+            const scriptId = 'midtrans-snap-script';
+            if (!document.getElementById(scriptId)) {
+                const script = document.createElement('script');
+                script.id = scriptId;
+                script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+                script.setAttribute('data-client-key', midtransClientKey);
+                script.async = true;
+                document.head.appendChild(script);
+            }
         }
-        return () => {
-             const script = document.querySelector(`script[src="https://app.sandbox.midtrans.com/snap/snap.js"]`);
-             if (script && document.head.contains(script)) {
-                 document.head.removeChild(script);
-             }
-        };
-    }, [midtrans_client_key]);
+    }, [midtransClientKey]);
 
     // 1. Hook Debounce (500ms)
     useEffect(() => {
@@ -92,7 +104,8 @@ export default function Checkout() {
         const fetchDestinations = async () => {
             setIsSearchingDest(true);
             try {
-                const res = await axios.get(`/api/rajaongkir/destination?keyword=${debouncedKeyword}`);
+                // Gunakan axios langsung untuk Komerce proxy atau api jika sudah ada di backend
+                const res = await axios.get(`http://localhost:8000/api/rajaongkir/destination?keyword=${debouncedKeyword}`);
                 setDestinations(res.data || []);
             } catch (error) {
                 console.error("Failed to fetch Komerce destinations", error);
@@ -136,6 +149,7 @@ export default function Checkout() {
     };
 
     const checkShippingCost = async (destId, courier) => {
+        if (!product) return;
         setCheckingCost(true);
         try {
             // Karena Komerce butuh Integer ID dan profil produk seller lama menggunakan ID Biteship string ('IDNP10CT66ID')
@@ -144,7 +158,7 @@ export default function Checkout() {
                 ? product.seller_area_id 
                 : '34260';
 
-            const res = await axios.post('/api/rajaongkir/calculate', {
+            const res = await axios.post('http://localhost:8000/api/rajaongkir/calculate', {
                 origin: originId,
                 destination: destId,
                 courier: courier,
@@ -186,7 +200,7 @@ export default function Checkout() {
         }
     };
 
-    const grandTotal = Number(final_price) + Number(shippingCost);
+    const grandTotal = Number(finalPrice) + Number(shippingCost);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -203,18 +217,11 @@ export default function Checkout() {
         setProcessing(true);
 
         try {
-            // Mocking API call for SPA phase
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            // Simulasikan sukses langsung untuk mempermudah navigasi SPA sementara
-            setPaymentSuccess(true);
-
-            /* === KODE ASLI UNTUK INTEGRASI MIDTRANS & BACKEND ===
             const fullShippingAddress = (metodePengiriman === 'kirim_paket' && selectedDestDetails) 
                 ? `${alamat}, ${selectedDestDetails.label} ${selectedDestDetails.zip_code}`
                 : alamat;
 
-            const response = await axios.post('/checkout', {
+            const response = await api.post('/checkout', {
                 product_id: product.id,
                 offer_id: offer?.id || null,
                 metode_pengiriman: metodePengiriman,
@@ -226,22 +233,22 @@ export default function Checkout() {
             });
 
             if (response.data.success) {
-                if (response.data.metode_pengiriman === 'kirim_paket' && response.data.snap_token) {
-                    window.snap.pay(response.data.snap_token, {
+                const data = response.data.data;
+                if (metodePengiriman === 'kirim_paket' && data.snap_token) {
+                    window.snap.pay(data.snap_token, {
                         onSuccess: () => setPaymentSuccess(true),
                         onPending: () => {
-                            navigate(response.data.redirect_url);
+                            navigate('/orders');
                         },
                         onError: () => alert('Pembayaran gagal. Silakan coba lagi.'),
                         onClose: () => {
-                            navigate(response.data.redirect_url);
+                            navigate('/orders');
                         },
                     });
                 } else {
-                    navigate(response.data.redirect_url);
+                    setPaymentSuccess(true);
                 }
             }
-            */
         } catch (error) {
             console.error('Checkout error:', error);
             alert(error.response?.data?.message || 'Terjadi kesalahan saat checkout.');
@@ -259,6 +266,37 @@ export default function Checkout() {
             document.title = "Checkout | ReCircle";
         }
     }, [paymentSuccess]);
+
+    if (!currentUser) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (isLoading) {
+        return (
+            <MainLayout>
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <Loader2 className="w-10 h-10 animate-spin text-[#43552c]" />
+                        <p className="text-gray-500 font-medium animate-pulse">Menyiapkan data checkout...</p>
+                    </div>
+                </div>
+            </MainLayout>
+        );
+    }
+
+    if (!product) {
+        return (
+            <MainLayout>
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                    <div className="text-center">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Produk Tidak Ditemukan</h2>
+                        <p className="text-gray-500 mb-6">Maaf, data produk yang Anda cari tidak tersedia.</p>
+                        <Link to="/products" className="text-[#43552c] font-bold hover:underline">Kembali Belanja</Link>
+                    </div>
+                </div>
+            </MainLayout>
+        );
+    }
 
     if (paymentSuccess) {
         return (

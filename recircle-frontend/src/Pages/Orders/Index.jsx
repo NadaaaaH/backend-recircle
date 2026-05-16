@@ -1,17 +1,42 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
 import MainLayout from '@/Layouts/MainLayout';
 import { ShoppingBag, ArrowLeft, Package, CheckCircle2 } from 'lucide-react';
+import api from '@/lib/axios';
 
 export default function BuyerOrders() {
-    const dummyOrders = [
-        { id: 1, kode_pesanan: 'ORD-001', created_at: '10 Okt 2023', total_harga: 12000000, metode_pengiriman: 'kirim_paket', status: 'dikirim', product: { name: 'MacBook Pro M1', seller_name: 'Apple Store', img: null } },
-        { id: 2, kode_pesanan: 'ORD-002', created_at: '11 Okt 2023', total_harga: 150000, metode_pengiriman: 'cod', status: 'pending', product: { name: 'Buku Kalkulus', seller_name: 'Toko Buku', img: null } }
-    ];
-    const [orders, setOrders] = useState(dummyOrders);
+    const [orders, setOrders] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [flash, setFlash] = useState({});
+
+    const fetchOrders = () => {
+        setIsLoading(true);
+        api.get('/orders')
+            .then((res) => {
+                const raw = res.data?.data;
+                const list = Array.isArray(raw) ? raw : (raw?.data ?? []);
+                setOrders(list);
+            })
+            .catch((err) => {
+                console.error(err);
+                setFlash({ error: 'Gagal memuat data pesanan.' });
+            })
+            .finally(() => setIsLoading(false));
+    };
+
+    useEffect(() => {
+        document.title = "Pesanan Saya | ReCircle";
+        fetchOrders();
+    }, []);
+
     const formatPrice = (price) => 'Rp ' + Number(price).toLocaleString('id-ID');
+
+    // Helper formatter for date if it's ISO string
+    const formatDate = (dateString) => {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+    };
 
     const statusColors = {
         pending: 'bg-amber-100 text-amber-700',
@@ -31,15 +56,31 @@ export default function BuyerOrders() {
 
     const handleConfirm = (orderId) => {
         if (confirm('Konfirmasi barang sudah diterima? Dana akan dilepas ke penjual.')) {
-            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'selesai' } : o));
-            setFlash({ success: "Pesanan berhasil diselesaikan. Dana diteruskan ke penjual." });
-            setTimeout(() => setFlash({}), 3000);
+            api.post(`/orders/${orderId}/confirm`)
+                .then(() => {
+                    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'selesai' } : o));
+                    setFlash({ success: "Pesanan berhasil diselesaikan. Dana diteruskan ke penjual." });
+                    setTimeout(() => setFlash({}), 3000);
+                })
+                .catch((err) => {
+                    setFlash({ error: err.response?.data?.message || 'Gagal mengkonfirmasi pesanan.' });
+                    setTimeout(() => setFlash({}), 3000);
+                });
         }
     };
 
-    useEffect(() => {
-        document.title = "Pesanan Saya | ReCircle";
-    }, []);
+    if (isLoading) {
+        return (
+            <MainLayout>
+                <div className="min-h-screen bg-secondary flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#118B50]/20 border-t-[#118B50]"></div>
+                        <p className="text-sm font-semibold text-[#118B50] animate-pulse">Memuat Pesanan...</p>
+                    </div>
+                </div>
+            </MainLayout>
+        );
+    }
 
     return (
         <MainLayout>
@@ -50,6 +91,10 @@ export default function BuyerOrders() {
                     {flash?.success && (
                         <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 mb-6 text-sm">{flash.success}</div>
                     )}
+                    
+                    {flash?.error && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-6 text-sm">{flash.error}</div>
+                    )}
 
                     {orders.length === 0 ? (
                         <div className="bg-white rounded-[2rem] p-10 text-center shadow-sm">
@@ -59,49 +104,64 @@ export default function BuyerOrders() {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {orders.map((order) => (
-                                <div key={order.id} className="bg-white rounded-2xl p-5 shadow-sm">
-                                    <div className="flex items-start gap-4">
-                                        <img src={order.product.img} alt={order.product.name} className="w-16 h-16 rounded-xl object-cover" />
-                                        <div className="flex-1">
-                                            <div className="flex items-start justify-between mb-2">
-                                                <Link to={`/orders/${order.id}`} className="hover:text-primary transition-colors block">
-                                                    <p className="font-bold text-gray-900 text-lg">{order.product.name}</p>
-                                                    <p className="text-sm font-medium text-gray-500 mb-1">{order.product.seller_name}</p>
-                                                    <p className="text-xs text-gray-400 font-medium">{order.kode_pesanan} &bull; {order.created_at}</p>
-                                                </Link>
-                                                <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${statusColors[order.status]}`}>
-                                                    {statusLabels[order.status]}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                                                <div className="flex items-center gap-4">
-                                                    <span className="font-bold text-primary">{formatPrice(order.total_harga)}</span>
-                                                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg">
-                                                        {order.metode_pengiriman === 'cod' ? 'COD' : 'Kirim Paket'}
+                            {orders.map((order) => {
+                                const productName = order.product?.name || 'Produk Tidak Diketahui';
+                                const sellerName = order.product?.seller?.name || order.product?.user?.name || '-';
+                                // In ProductResource, images is an array of urls.
+                                const productImg = (order.product?.images && order.product.images.length > 0) 
+                                                    ? order.product.images[0] 
+                                                    : (order.product?.imageUrl || null);
+
+                                return (
+                                    <div key={order.id} className="bg-white rounded-2xl p-5 shadow-sm">
+                                        <div className="flex items-start gap-4">
+                                            {productImg ? (
+                                                <img src={productImg} alt={productName} className="w-16 h-16 rounded-xl object-cover bg-gray-100" />
+                                            ) : (
+                                                <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center">
+                                                    <Package className="w-8 h-8 text-gray-300" />
+                                                </div>
+                                            )}
+                                            <div className="flex-1">
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <Link to={`/orders/${order.id}`} className="hover:text-primary transition-colors block">
+                                                        <p className="font-bold text-gray-900 text-lg">{productName}</p>
+                                                        <p className="text-sm font-medium text-gray-500 mb-1">{sellerName}</p>
+                                                        <p className="text-xs text-gray-400 font-medium">{order.orderCode} &bull; {formatDate(order.createdAt)}</p>
+                                                    </Link>
+                                                    <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${statusColors[order.status] || 'bg-gray-100 text-gray-600'}`}>
+                                                        {statusLabels[order.status] || order.status}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center gap-3">
-                                                    <Link 
-                                                        to={`/orders/${order.id}`}
-                                                        className="px-4 py-2 rounded-xl text-sm font-bold text-primary border border-primary/20 hover:bg-primary/5 transition-colors"
-                                                    >
-                                                        Lihat Detail
-                                                    </Link>
-                                                    {order.status === 'dikirim' && (
-                                                        <button
-                                                            onClick={(e) => { e.preventDefault(); handleConfirm(order.id); }}
-                                                            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-sm shadow-primary/20"
+                                                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="font-bold text-primary">{formatPrice(order.totalPrice)}</span>
+                                                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg">
+                                                            {order.shippingMethod === 'cod' ? 'COD' : 'Kirim Paket'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <Link 
+                                                            to={`/orders/${order.id}`}
+                                                            className="px-4 py-2 rounded-xl text-sm font-bold text-primary border border-primary/20 hover:bg-primary/5 transition-colors"
                                                         >
-                                                            <CheckCircle2 className="w-4 h-4" /> Terima Barang
-                                                        </button>
-                                                    )}
+                                                            Lihat Detail
+                                                        </Link>
+                                                        {order.status === 'dikirim' && (
+                                                            <button
+                                                                onClick={(e) => { e.preventDefault(); handleConfirm(order.id); }}
+                                                                className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-sm shadow-primary/20"
+                                                            >
+                                                                <CheckCircle2 className="w-4 h-4" /> Terima Barang
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>

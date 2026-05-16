@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/Layouts/MainLayout';
+import api from '@/lib/axios';
 import {
     ArrowLeft,
     Package,
@@ -11,43 +12,60 @@ import {
     Clock,
     XCircle,
     Truck,
-    ShieldCheck
+    ShieldCheck,
+    Loader2
 } from 'lucide-react';
 
 export default function Show() {
     const { id } = useParams();
-    const order = { id: id, kode_pesanan: 'ORD-001', created_at: '10 Okt 2023', total_harga: 12000000, metode_pengiriman: 'kirim_paket', metode_pembayaran: 'bank_transfer', status: 'dikirim', alamat_pengiriman: 'Jl. Raya Dramaga', catatan: 'Tolong packing kayu', is_pending: false };
-    const product = { name: 'MacBook Pro M1', seller_name: 'Apple Store', seller_kampus: 'IPB', img: null };
-    const snap_token = null;
-    const midtrans_client_key = null;
+    const navigate = useNavigate();
+    const [order, setOrder] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [isPaying, setIsPaying] = useState(false);
+    const [midtransClientKey, setMidtransClientKey] = useState(import.meta.env.VITE_MIDTRANS_CLIENT_KEY || '');
+
+    useEffect(() => {
+        fetchOrderDetails();
+    }, [id]);
+
+    const fetchOrderDetails = async () => {
+        setIsLoading(true);
+        try {
+            const response = await api.get(`/orders/${id}`);
+            setOrder(response.data.data);
+        } catch (error) {
+            console.error('Failed to fetch order details:', error);
+            alert('Gagal mengambil detail pesanan.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // Initialize Midtrans Snap Script
     useEffect(() => {
-        if (snap_token && midtrans_client_key) {
-            const script = document.createElement('script');
-            script.src = 'https://app.sandbox.midtrans.com/snap/snap.js'; // Sandbox URL
-            script.setAttribute('data-client-key', midtrans_client_key);
-            script.async = true;
-            document.head.appendChild(script);
-
-            return () => {
-                document.head.removeChild(script);
-            };
+        if (order?.isPending && order?.snapToken && midtransClientKey) {
+            const scriptId = 'midtrans-snap-script';
+            if (!document.getElementById(scriptId)) {
+                const script = document.createElement('script');
+                script.id = scriptId;
+                script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+                script.setAttribute('data-client-key', midtransClientKey);
+                script.async = true;
+                document.head.appendChild(script);
+            }
         }
-    }, [snap_token, midtrans_client_key]);
+    }, [order, midtransClientKey]);
 
     const handlePayNow = () => {
-        if (window.snap && snap_token) {
+        if (window.snap && order?.snapToken) {
             setIsPaying(true);
-            window.snap.pay(snap_token, {
+            window.snap.pay(order.snapToken, {
                 onSuccess: function (result) {
                     setIsPaying(false);
-                    alert("Pembayaran Berhasil");
+                    fetchOrderDetails();
                 },
                 onPending: function (result) {
                     setIsPaying(false);
-                    alert("Pembayaran Pending");
                 },
                 onError: function (result) {
                     setIsPaying(false);
@@ -103,7 +121,42 @@ export default function Show() {
         }
     };
 
+    useEffect(() => {
+        if (order?.orderCode) {
+            document.title = `Pesanan ${order.orderCode} | ReCircle`;
+        } else {
+            document.title = 'Detail Pesanan | ReCircle';
+        }
+    }, [order?.orderCode]);
+
+    if (isLoading) {
+        return (
+            <MainLayout>
+                <div className="min-h-screen bg-[#f7f9f7] flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <Loader2 className="w-10 h-10 animate-spin text-[#43552c]" />
+                        <p className="text-gray-500 font-medium animate-pulse">Memuat detail pesanan...</p>
+                    </div>
+                </div>
+            </MainLayout>
+        );
+    }
+
+    if (!order) {
+        return (
+            <MainLayout>
+                <div className="min-h-screen bg-[#f7f9f7] flex items-center justify-center">
+                    <div className="text-center">
+                        <h2 className="text-xl font-bold text-gray-900 mb-2">Pesanan Tidak Ditemukan</h2>
+                        <Link to="/orders" className="text-primary font-bold hover:underline">Kembali ke Daftar Pesanan</Link>
+                    </div>
+                </div>
+            </MainLayout>
+        );
+    }
+
     const currentStatus = statusConfig[order.status] || statusConfig.pending;
+    const product = order.product;
 
     // Ordered steps logic
     const timelineSteps = [
@@ -125,10 +178,6 @@ export default function Show() {
         }
     ];
 
-    useEffect(() => {
-        document.title = `Pesanan ${order.kode_pesanan} | ReCircle`;
-    }, [order.kode_pesanan]);
-
     return (
         <MainLayout>
             
@@ -139,23 +188,23 @@ export default function Show() {
                     <div className="flex items-center gap-4 mb-8">
                         <Link 
                             to="/orders"
-                            className="p-3 bg-white rounded-full shadow-sm hover:shadow-md transition-shadow text-gray-400 hover:text-primary border border-gray-100"
+                            className="p-3 bg-white rounded-full shadow-sm hover:shadow-md transition-shadow text-gray-400 hover:text-[#43552c] border border-gray-100"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </Link>
                         <div>
                             <h1 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                                 Detail Pesanan
-                                <span className={`px-3 py-1 text-xs font-bold rounded-full border flex items-center gap-1.5 ${currentStatus.bg} ${currentStatus.color} ${currentStatus.border}`}>
+                                <span className={`px-3 py-1 text-xs font-bold rounded-full border border-gray-200 flex items-center gap-1.5 ${currentStatus.bg} ${currentStatus.color} ${currentStatus.border}`}>
                                     {currentStatus.icon}
                                     {currentStatus.label}
                                 </span>
                             </h1>
                             <p className="text-sm font-medium text-gray-500 mt-1 flex items-center gap-2">
-                                <span className="uppercase tracking-wider">#{order.kode_pesanan}</span>
+                                <span className="uppercase tracking-wider">#{order.orderCode}</span>
                                 <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                                 <Calendar className="w-4 h-4" />
-                                {order.created_at}
+                                {new Date(order.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                             </p>
                         </div>
                     </div>
@@ -168,29 +217,29 @@ export default function Show() {
                             {/* Product Card */}
                             <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
                                 <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                                    <Package className="w-5 h-5 text-primary" />
+                                    <Package className="w-5 h-5 text-[#43552c]" />
                                     Barang yang Dibeli
                                 </h2>
                                 
                                 <div className="flex gap-6 items-start">
                                     <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100 shadow-inner">
                                         <img 
-                                            src={product.img || 'https://placehold.co/400x400/eeeeee/999999?text=No+Image'} 
-                                            alt={product.name}
+                                            src={product?.images?.[0] || 'https://placehold.co/400x400/eeeeee/999999?text=No+Image'} 
+                                            alt={product?.name}
                                             className="w-full h-full object-cover"
                                             onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x400/eeeeee/999999?text=No+Image'; }}
                                         />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-1">{product.name}</h3>
+                                        <h3 className="text-lg font-bold text-gray-900 mb-1">{product?.name}</h3>
                                         <p className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-1.5">
-                                            Penjual: <span className="text-gray-900">{product.seller_name}</span> 
+                                            Penjual: <span className="text-gray-900">{product?.seller?.name}</span> 
                                             <span className="text-gray-300 mx-1">•</span> 
-                                            {product.seller_kampus}
+                                            {product?.seller?.kampus}
                                         </p>
                                         <div className="flex items-center justify-between mt-4">
-                                            <span className="text-sm font-medium text-gray-500">1 x {formatPrice(order.total_harga)}</span>
-                                            <span className="text-lg font-black text-gray-900">{formatPrice(order.total_harga)}</span>
+                                            <span className="text-sm font-medium text-gray-500">1 x {formatPrice(order.totalPrice)}</span>
+                                            <span className="text-lg font-black text-gray-900">{formatPrice(order.totalPrice)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -201,21 +250,21 @@ export default function Show() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div>
                                         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                            <MapPin className="w-4 h-4 text-primary" />
+                                            <MapPin className="w-4 h-4 text-[#43552c]" />
                                             Info Pengiriman
                                         </h3>
                                         <div className="space-y-4">
                                             <div>
                                                 <p className="text-xs font-medium text-gray-400 mb-1">Metode</p>
                                                 <p className="text-sm font-bold text-gray-900 bg-gray-50 px-3 py-2 rounded-xl border border-gray-100 inline-flex">
-                                                    {order.metode_pengiriman === 'cod' ? 'Cash on Delivery (COD)' : 'Kirim Paket'}
+                                                    {order.shippingMethod === 'cod' ? 'Cash on Delivery (COD)' : 'Kirim Paket'}
                                                 </p>
                                             </div>
-                                            {order.metode_pengiriman === 'kirim_paket' && (
+                                            {order.shippingMethod === 'kirim_paket' && (
                                                 <div>
                                                     <p className="text-xs font-medium text-gray-400 mb-1">Alamat Pengiriman</p>
                                                     <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                                        {order.alamat_pengiriman || 'Tidak ada alamat tercatat.'}
+                                                        {order.shippingAddress || 'Tidak ada alamat tercatat.'}
                                                     </p>
                                                 </div>
                                             )}
@@ -223,17 +272,17 @@ export default function Show() {
                                     </div>
                                     
                                     <div>
-                                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-l-4 border-primary pl-3">
+                                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-l-4 border-[#43552c] pl-3">
                                             Metode Pembayaran
                                         </h3>
                                         <div className="space-y-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                                <div className="w-10 h-10 rounded-full bg-[#43552c]/10 flex items-center justify-center text-[#43552c]">
                                                     <CreditCard className="w-5 h-5" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-bold text-gray-900 hover:text-primary transition-colors cursor-default">
-                                                        {order.metode_pembayaran ? order.metode_pembayaran.replace('_', ' ').toUpperCase() : 'Midtrans Payment'}
+                                                    <p className="text-sm font-bold text-gray-900 hover:text-[#43552c] transition-colors cursor-default">
+                                                        {order.paymentMethod ? order.paymentMethod.replace('_', ' ').toUpperCase() : 'Midtrans Payment'}
                                                     </p>
                                                     <p className="text-xs font-medium text-gray-500">Otomatis & Aman</p>
                                                 </div>
@@ -241,10 +290,10 @@ export default function Show() {
                                         </div>
                                         
                                         {/* Catatan */}
-                                        {order.catatan && (
+                                        {order.notes && (
                                             <div className="mt-6 pt-6 border-t border-gray-100">
                                                 <p className="text-xs font-medium text-gray-400 mb-2">Catatan untuk Penjual</p>
-                                                <p className="text-sm font-medium text-gray-700 italic border-l-2 border-gray-300 pl-3">"{order.catatan}"</p>
+                                                <p className="text-sm font-medium text-gray-700 italic border-l-2 border-gray-300 pl-3">"{order.notes}"</p>
                                             </div>
                                         )}
                                     </div>
@@ -259,7 +308,7 @@ export default function Show() {
                             {/* Payment Action Box */}
                             <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 relative overflow-hidden">
                                 {/* Decorative accent */}
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-[100px] z-0 pointer-events-none"></div>
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-[#43552c]/5 rounded-bl-[100px] z-0 pointer-events-none"></div>
                                 
                                 <div className="relative z-10">
                                     <h3 className="text-lg font-bold text-gray-900 mb-6">Ringkasan Pesanan</h3>
@@ -267,11 +316,11 @@ export default function Show() {
                                     <div className="space-y-3 mb-6">
                                         <div className="flex justify-between items-center text-sm font-medium text-gray-500">
                                             <span>Subtotal (1 Barang)</span>
-                                            <span className="text-gray-900">{formatPrice(order.total_harga)}</span>
+                                            <span className="text-gray-900">{formatPrice(order.totalPrice)}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-sm font-medium text-gray-500">
                                             <span>Ongkos Kirim</span>
-                                            <span className="text-gray-900">{order.metode_pengiriman === 'cod' ? 'Rp 0' : 'Menyusul (Resi)'}</span>
+                                            <span className="text-gray-900">{order.shippingMethod === 'cod' ? 'Rp 0' : 'Gratis / Sesuai Aplikasi'}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-sm font-medium text-gray-500">
                                             <span>Biaya Layanan</span>
@@ -282,23 +331,23 @@ export default function Show() {
                                     <div className="border-t border-dashed border-gray-200 pt-4 mb-6">
                                         <div className="flex justify-between items-end">
                                             <span className="text-sm font-bold text-gray-900">Total Belanja</span>
-                                            <span className="text-2xl font-black text-primary">{formatPrice(order.total_harga)}</span>
+                                            <span className="text-2xl font-black text-[#43552c]">{formatPrice(order.totalPrice)}</span>
                                         </div>
                                     </div>
 
                                     {/* Action Buttons based on status */}
-                                    {order.is_pending && order.metode_pengiriman === 'kirim_paket' && (
+                                    {order.isPending && order.shippingMethod === 'kirim_paket' && (
                                         <button 
                                             onClick={handlePayNow}
-                                            disabled={isPaying || !snap_token}
+                                            disabled={isPaying || !order.snapToken}
                                             className="w-full bg-[#43552c] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#43552c]/20 hover:-translate-y-0.5 hover:shadow-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                         >
                                             {isPaying ? 'Memproses...' : 'Selesaikan Pembayaran'}
                                         </button>
                                     )}
 
-                                    {order.metode_pengiriman === 'cod' && order.is_pending && (
-                                        <div className="w-full bg-primary/10 text-primary border border-primary/20 font-bold py-4 rounded-xl flex items-center justify-center gap-2 text-sm text-center px-4">
+                                    {order.shippingMethod === 'cod' && order.isPending && (
+                                        <div className="w-full bg-[#43552c]/10 text-[#43552c] border border-[#43552c]/20 font-bold py-4 rounded-xl flex items-center justify-center gap-2 text-sm text-center px-4">
                                             Menunggu COD. Hubungi penjual.
                                         </div>
                                     )}
@@ -323,7 +372,7 @@ export default function Show() {
                                                 const isDone = step.done;
                                                 return (
                                                     <div key={step.key} className="relative flex items-start gap-4 z-10">
-                                                        <div className={`w-4 h-4 rounded-full flex-shrink-0 mt-0.5 ${isDone ? 'bg-primary ring-4 ring-primary/20' : 'bg-gray-200'}`}></div>
+                                                        <div className={`w-4 h-4 rounded-full flex-shrink-0 mt-0.5 ${isDone ? 'bg-[#43552c] ring-4 ring-[#43552c]/20' : 'bg-gray-200'}`}></div>
                                                         <div>
                                                             <p className={`text-sm font-bold ${isDone ? 'text-gray-900' : 'text-gray-400'}`}>
                                                                 {step.label}

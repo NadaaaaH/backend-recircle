@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function Navbar() {
     // Gunakan AuthContext — jangan duplikasi state auth
-    const { user, logout } = useAuth();
+    const { user, logout, unreadChatCount } = useAuth();
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -85,10 +85,16 @@ export default function Navbar() {
                                 </Link>
                                 <Link
                                     to="/chat"
-                                    className="p-2 text-gray-500 hover:text-primary transition-colors"
+                                    className="p-2 text-gray-500 hover:text-primary transition-colors relative"
                                     title="Pesan"
                                 >
                                     <MessageCircle className="w-5 h-5" />
+                                    {unreadChatCount > 0 && (
+                                        <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                        </span>
+                                    )}
                                 </Link>
                                 <Link
                                     to="/offers"

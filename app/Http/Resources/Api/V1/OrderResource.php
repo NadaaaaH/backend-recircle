@@ -18,6 +18,8 @@ class OrderResource extends JsonResource
             'paymentMethod'    => $this->metode_pembayaran,
             'isPending'        => (bool) $this->is_pending,
             'snapToken'        => $this->when($this->is_pending, $this->snap_token),
+            'shippingAddress'  => $this->alamat_pengiriman,
+            'notes'            => $this->catatan,
             'createdAt'        => $this->created_at?->toIso8601String(),
             'product' => new ProductResource($this->whenLoaded('product')),
         ];

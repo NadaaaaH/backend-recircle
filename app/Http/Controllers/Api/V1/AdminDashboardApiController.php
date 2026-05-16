@@ -31,7 +31,25 @@ class AdminDashboardApiController extends Controller
             'activeOffers'         => Offer::where('status', 'pending')->count(),
         ];
 
-        return $this->successResponse($stats, 'Admin dashboard stats retrieved successfully');
+        $monthlyStats = Order::where('status', 'completed')
+            ->whereYear('created_at', date('Y'))
+            ->selectRaw('MONTH(created_at) as month, SUM(total_harga) as revenue, COUNT(*) as count')
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get()
+            ->map(fn($s) => [
+                'month'   => (string) $s->month,
+                'revenue' => (float) $s->revenue,
+                'count'   => (int) $s->count,
+            ]);
+
+        $recentActivities = \App\Services\ActivityService::getRecentActivities(5);
+
+        return $this->successResponse([
+            'stats'             => $stats,
+            'monthly_stats'     => $monthlyStats,
+            'recent_activities' => $recentActivities,
+        ], 'Admin dashboard stats retrieved successfully');
     }
 
     public function users(Request $request): JsonResponse

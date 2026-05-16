@@ -64,7 +64,7 @@ export default function PublicProfile() {
         <MainLayout>
             <div className="bg-secondary min-h-screen pb-24">
                 {/* --- HEADER PROFILE CARD --- */}
-                <div className="pt-10 pb-6">
+                <div className="pt-28 pb-6">
                     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="bg-white rounded-[2rem] p-6 sm:p-8 shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6">
                             
@@ -138,7 +138,7 @@ export default function PublicProfile() {
                         {/* Bio Section Below Card */}
                         {profile.bio && (
                             <div className="mt-6 px-4">
-                                <p className="text-gray-600 text-sm italic border-l-4 border-gray-200 pl-4 py-1 max-w-2xl">
+                                <p className="text-gray-600 text-sm italic border-l-4 border-emerald-200 pl-4 py-1 max-w-2xl">
                                     "{profile.bio}"
                                 </p>
                             </div>

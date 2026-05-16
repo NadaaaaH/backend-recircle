@@ -8,6 +8,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ProfileApiController extends Controller
 {
@@ -22,7 +23,21 @@ class ProfileApiController extends Controller
     {
         try {
             $user = $request->user();
-            $user->fill($request->validated());
+
+            // Handle avatar upload
+            if ($request->hasFile('avatar')) {
+                // Hapus avatar lama jika ada dan bukan URL eksternal
+                if ($user->avatar && !filter_var($user->avatar, FILTER_VALIDATE_URL)) {
+                    Storage::disk('public')->delete($user->avatar);
+                }
+                $path = $request->file('avatar')->store('avatars', 'public');
+                $user->avatar = $path;
+            }
+
+            // Fill validated fields (name, email, bio, kampus)
+            $validated = $request->validated();
+            unset($validated['avatar']); // sudah ditangani di atas
+            $user->fill($validated);
 
             if ($user->isDirty('email')) {
                 $user->email_verified_at = null;
@@ -32,7 +47,7 @@ class ProfileApiController extends Controller
 
             return $this->successResponse(new UserResource($user), 'Profile updated successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to update profile', 500);
+            return $this->errorResponse('Failed to update profile: ' . $e->getMessage(), 500);
         }
     }
 

@@ -135,8 +135,12 @@ export default function Navbar() {
                                                 {user.is_seller ? 'Penjual' : user.role === 'admin' ? 'Admin' : 'Pembeli'}
                                             </p>
                                         </div>
-                                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
-                                            {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg overflow-hidden">
+                                            {user.avatar_url ? (
+                                                <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                user.name ? user.name.charAt(0).toUpperCase() : 'U'
+                                            )}
                                         </div>
                                     </button>
 

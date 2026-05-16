@@ -43,6 +43,7 @@ const ProductCreate = React.lazy(() => import('@/Pages/Product/Create'))
 
 // Profile Pages
 const ProfileEdit = React.lazy(() => import('@/Pages/Profile/Edit'))
+const ProfileEditForm = React.lazy(() => import('@/Pages/Profile/EditForm'))
 const ProfilePublic = React.lazy(() => import('@/Pages/Profile/Public'))
 
 // Orders Pages
@@ -101,6 +102,7 @@ function App() {
 
         {/* Profile Routes */}
         <Route path="/profile" element={<ProfileEdit />} />
+        <Route path="/profile/edit" element={<ProfileEditForm />} />
         <Route path="/users/:id" element={<ProfilePublic />} />
 
         {/* Orders Routes */}

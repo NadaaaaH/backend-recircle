@@ -128,8 +128,8 @@ export default function SellerLayout({ children }) {
                     <div className="bg-white border border-slate-200/70 rounded-xl p-3 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
                         <button className="flex items-center gap-3 w-full text-left mb-3 group">
                             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
-                                {user?.avatar ? (
-                                    <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                {user?.avatar_url ? (
+                                    <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
                                     <span className="text-sm font-bold text-slate-600">{user?.name?.charAt(0)}</span>
                                 )}

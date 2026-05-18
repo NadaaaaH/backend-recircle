@@ -108,7 +108,7 @@ export default function BuyerOffers() {
                                                 {/* CTA for accepted non-expired offers */}
                                                 {offer.status === 'accepted' && !offer.isExpired && (
                                                     <Link
-                                                        to={`/checkout?product_id=${offer.product?.id}&offer_id=${offer.id}`}
+                                                        to={`/checkout/${offer.product?.id}?offer_id=${offer.id}`}
                                                         className="inline-flex items-center gap-2 mt-4 bg-primary text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary-hover transition-colors"
                                                     >
                                                         <ShoppingCart className="w-4 h-4" /> Checkout Sekarang

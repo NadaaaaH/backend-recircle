@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import MainLayout from "@/Layouts/MainLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -20,7 +20,7 @@ import {
 import api from '@/lib/axios';
 
 export default function Edit() {
-    const { user, logout } = useAuth();
+    const { user, logout, isSeller } = useAuth();
     const navigate = useNavigate();
     
     const [activeTab, setActiveTab] = useState("orders");
@@ -80,14 +80,10 @@ export default function Edit() {
     };
 
     return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="font-bold text-xl text-gray-800 leading-tight">
-                    Profil Saya
-                </h2>
-            }
-        >
-            <div className="py-8 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <MainLayout>
+            <div className="min-h-screen bg-secondary">
+            <div className="max-w-4xl mx-auto px-4 py-8 pt-28">
+                <h1 className="text-3xl font-bold text-gray-900 mb-8">Profil Saya</h1>
                 {/* --- 1. PROFILE CARD HERO --- */}
                 <div className="bg-white rounded-[2rem] p-6 md:p-8 border border-gray-100 shadow-sm mb-8 relative overflow-hidden">
                     <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6">
@@ -96,6 +92,8 @@ export default function Edit() {
                             <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-secondary border-4 border-white shadow-lg overflow-hidden">
                                 <img
                                     src={
+                                        user?.avatar_url
+                                            || `https://ui-avatars.com/api/?name=${user?.name}&background=43552c&color=fff`
                                         user?.avatar
                                             ? user.avatar
                                             : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=43552c&color=fff`
@@ -270,16 +268,24 @@ export default function Edit() {
                             </div>
                         )}
 
-                        {/* TAB: SETTINGS */}
-                        {activeTab === "settings" && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div onClick={() => navigate('/profile/edit-details')} className="bg-white border border-gray-100 p-5 rounded-2xl hover:border-[#4A5D23]/30 transition-all cursor-pointer group shadow-sm">
-                                    <div className="w-10 h-10 bg-[#E4E8DA] rounded-xl flex items-center justify-center text-[#4A5D23] mb-3 group-hover:bg-[#4A5D23] group-hover:text-white transition-colors">
-                                        <UserIcon className="w-5 h-5" />
-                                    </div>
-                                    <h4 className="font-bold text-gray-900">Edit Info Pribadi</h4>
-                                    <p className="text-xs text-gray-500 mt-1">Nama, Email, Foto Profil, Bio</p>
-                                </div>
+                {/* TAB: SETTINGS (Menu Grid) */}
+                {activeTab === "settings" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Profile Edit */}
+                        <div
+                            onClick={() => navigate('/profile/edit')}
+                            className="bg-white border border-gray-100 p-5 rounded-2xl hover:border-primary/30 transition-all cursor-pointer group"
+                        >
+                            <div className="w-10 h-10 bg-secondary rounded-xl flex items-center justify-center text-primary mb-3 group-hover:bg-primary group-hover:text-white transition-colors">
+                                <User className="w-5 h-5" />
+                            </div>
+                            <h4 className="font-bold text-gray-900">
+                                Edit Profil
+                            </h4>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Nama, Email, Foto Profil, Bio
+                            </p>
+                        </div>
 
                                 <div className="bg-white border border-gray-100 p-5 rounded-2xl hover:border-[#4A5D23]/30 transition-all cursor-pointer group shadow-sm">
                                     <div className="w-10 h-10 bg-[#E4E8DA] rounded-xl flex items-center justify-center text-[#4A5D23] mb-3 group-hover:bg-[#4A5D23] group-hover:text-white transition-colors">
@@ -289,15 +295,21 @@ export default function Edit() {
                                     <p className="text-xs text-gray-500 mt-1">Ubah alamat default penerimaan</p>
                                 </div>
 
-                                {user?.is_seller && (
-                                    <div onClick={() => navigate('/seller/dashboard')} className="bg-white border border-gray-100 p-5 rounded-2xl hover:border-[#4A5D23]/30 transition-all cursor-pointer group shadow-sm">
-                                        <div className="w-10 h-10 bg-[#E4E8DA] rounded-xl flex items-center justify-center text-[#4A5D23] mb-3 group-hover:bg-[#4A5D23] group-hover:text-white transition-colors">
-                                            <ShoppingBag className="w-5 h-5" />
-                                        </div>
-                                        <h4 className="font-bold text-gray-900">Seller Dashboard</h4>
-                                        <p className="text-xs text-gray-500 mt-1">Cek pesanan masuk & saldo jualan</p>
-                                    </div>
-                                )}
+                        {/* Seller Center */}
+                        <div
+                            onClick={() => navigate(isSeller ? '/seller/dashboard' : '/seller/verification')}
+                            className="bg-white border border-gray-100 p-5 rounded-2xl hover:border-primary/30 transition-all cursor-pointer group"
+                        >
+                            <div className="w-10 h-10 bg-secondary rounded-xl flex items-center justify-center text-primary mb-3 group-hover:bg-primary group-hover:text-white transition-colors">
+                                <ShoppingBag className="w-5 h-5" />
+                            </div>
+                            <h4 className="font-bold text-gray-900">
+                                Menu Penjual
+                            </h4>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Kelola barang daganganmu
+                            </p>
+                        </div>
 
                                 <div className="bg-white border border-gray-100 p-5 rounded-2xl hover:border-[#4A5D23]/30 transition-all cursor-pointer group shadow-sm">
                                     <div className="w-10 h-10 bg-[#E4E8DA] rounded-xl flex items-center justify-center text-[#4A5D23] mb-3 group-hover:bg-[#4A5D23] group-hover:text-white transition-colors">
@@ -320,7 +332,8 @@ export default function Edit() {
                     </>
                 )}
             </div>
-        </AuthenticatedLayout>
+            </div>
+        </MainLayout>
     );
 }
 

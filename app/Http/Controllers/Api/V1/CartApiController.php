@@ -3,12 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\Api\V1\CartGroupResource;
-use App\Models\Cart;
-use App\Models\Product;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CartApiController extends Controller
 {
@@ -16,41 +14,92 @@ class CartApiController extends Controller
 
     /**
      * Display a listing of the user's cart grouped by seller.
+     * Cart = Wishlist items + Accepted (non-expired) Offer items
      */
     public function index(Request $request): JsonResponse
     {
         try {
-            // Get carts with eager loading to prevent N+1
-            $carts = Cart::with(['product.user', 'offer'])
-                ->where('user_id', $request->user()->id)
+            $userId = $request->user()->id;
+
+            // 1. Get product IDs from Wishlist pivot table
+            $wishlistedProductIds = DB::table('wishlists')
+                ->where('user_id', $userId)
+                ->pluck('product_id');
+
+            // 2. Get accepted & non-expired offers for this buyer
+            $acceptedOffers = \App\Models\Offer::where('user_id', $userId)
+                ->where('status', 'accepted')
+                ->where('deal_expired_at', '>', now())
+                ->get();
+            $acceptedOfferProductIds = $acceptedOffers->pluck('product_id');
+
+            // 3. Combine unique product IDs (wishlist + accepted offers)
+            $allProductIds = $wishlistedProductIds->merge($acceptedOfferProductIds)->unique()->values();
+
+            if ($allProductIds->isEmpty()) {
+                return $this->successResponse(collect([]), 'Cart is empty');
+            }
+
+            // 4. Fetch Products with seller & images
+            $products = \App\Models\Product::with(['user', 'images'])
+                ->whereIn('id', $allProductIds)
                 ->get();
 
-            // Group by seller_id efficiently using Collection's groupBy
-            $groupedCarts = $carts->groupBy(function ($cartItem) {
-                return $cartItem->product->user_id;
+            // 5. Build Cart Items array
+            $cartItems = $products->map(function ($product) use ($acceptedOffers) {
+                $offer = $acceptedOffers->firstWhere('product_id', $product->id);
+
+                // Resolve product image
+                $image = null;
+                if (!empty($product->foto_barang_url)) {
+                    $image = $product->foto_barang_url;
+                } elseif ($product->images && $product->images->isNotEmpty()) {
+                    $image = $product->images->first()->image_url ?? null;
+                }
+
+                return [
+                    'id'      => $product->id,
+                    'product' => [
+                        'id'    => $product->id,
+                        'name'  => $product->nama_barang,
+                        'price' => (int) $product->harga,
+                        'image' => $image,
+                    ],
+                    'offer'  => $offer ? [
+                        'id'         => $offer->id,
+                        'harga_deal' => (int) $offer->harga_deal,
+                        'expires_at' => $offer->deal_expired_at,
+                    ] : null,
+                    'seller' => $product->user,
+                ];
+            });
+
+            // 6. Group by Seller ID
+            $groupedCarts = $cartItems->groupBy(function ($item) {
+                return $item['seller']->id;
             })->map(function ($items) {
-                $seller = $items->first()->product->user;
+                $seller = $items->first()['seller'];
                 return [
                     'seller' => [
                         'id'          => $seller->id,
                         'name'        => $seller->name,
                         'universitas' => $seller->kampus ?? $seller->universitas ?? null,
                     ],
-                    'items' => $items,
+                    'items' => collect($items)->map(function ($i) {
+                        unset($i['seller']);
+                        return $i;
+                    })->values(),
                 ];
             })->values();
 
-            return $this->successResponse(
-                CartGroupResource::collection($groupedCarts),
-                'Cart retrieved successfully'
-            );
+            return $this->successResponse($groupedCarts, 'Cart retrieved successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to retrieve cart: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Store a newly created cart item in storage.
+     * Add a product to the wishlist/cart.
      */
     public function store(Request $request): JsonResponse
     {
@@ -59,61 +108,54 @@ class CartApiController extends Controller
                 'product_id' => 'required|exists:products,id',
             ]);
 
-            $userId = $request->user()->id;
+            $userId    = $request->user()->id;
             $productId = $request->product_id;
 
-            // Check if product is already in cart to prevent duplicates
-            $exists = Cart::where('user_id', $userId)
+            $exists = DB::table('wishlists')
+                ->where('user_id', $userId)
                 ->where('product_id', $productId)
                 ->exists();
 
-            if ($exists) {
-                return $this->errorResponse('Barang sudah ada di keranjang', 400);
+            if (!$exists) {
+                DB::table('wishlists')->insert([
+                    'user_id'    => $userId,
+                    'product_id' => $productId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
 
-            // Verify the product exists and is active (optional, but good practice)
-            $product = Product::find($productId);
-            if (!$product || !$product->isActive()) {
-                return $this->errorResponse('Barang tidak tersedia', 400);
-            }
-
-            // Prevent buying own product
-            if ($product->user_id === $userId) {
-                return $this->errorResponse('Tidak bisa memasukkan barang sendiri ke keranjang', 400);
-            }
-
-            $cart = Cart::create([
-                'user_id'    => $userId,
-                'product_id' => $productId,
-                // offer_id can be null initially unless specified
-            ]);
-
-            return $this->successResponse(
-                null,
-                'Berhasil dimasukkan ke keranjang',
-                201
-            );
-        } catch (\Illuminate\Validation\ValidationException $e) {
-             return $this->errorResponse('Validation Error', 422, $e->errors());
+            return $this->successResponse(null, 'Berhasil dimasukkan ke keranjang', 201);
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to add to cart', 500);
+            return $this->errorResponse('Failed to add to cart: ' . $e->getMessage(), 500);
         }
     }
 
     /**
-     * Remove the specified cart item from storage.
+     * Remove the specified product from the cart.
+     * $id = product_id
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
         try {
-            $cart = Cart::where('user_id', $request->user()->id)->findOrFail($id);
-            $cart->delete();
+            $userId    = $request->user()->id;
+            $productId = $id;
+
+            // Remove from wishlist pivot table
+            DB::table('wishlists')
+                ->where('user_id', $userId)
+                ->where('product_id', $productId)
+                ->delete();
+
+            // Also cancel any pending/accepted offers for this product by this buyer
+            \App\Models\Offer::where('user_id', $userId)
+                ->where('product_id', $productId)
+                ->whereIn('status', ['pending', 'accepted'])
+                ->update(['status' => 'cancelled']);
 
             return $this->successResponse(null, 'Berhasil dihapus dari keranjang');
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return $this->errorResponse('Cart item not found', 404);
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to delete cart item', 500);
+            return $this->errorResponse('Failed to delete cart item: ' . $e->getMessage(), 500);
         }
     }
 }

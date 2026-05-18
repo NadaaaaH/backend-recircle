@@ -13,6 +13,20 @@ export function AuthProvider({ children }) {
         }
     });
     const [loading, setLoading] = useState(true);
+    const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+    const fetchUnreadChatCount = useCallback(() => {
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
+        
+        api.get('/chat')
+            .then(res => {
+                const contacts = res.data?.data || [];
+                const total = contacts.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+                setUnreadChatCount(total);
+            })
+            .catch(() => {});
+    }, []);
 
     // Verifikasi token ke server sekali saat app mount
     useEffect(() => {
@@ -28,50 +42,58 @@ export function AuthProvider({ children }) {
                 if (userData) {
                     setUser(userData);
                     localStorage.setItem('auth_user', JSON.stringify(userData));
+                    fetchUnreadChatCount();
                 }
-                // Jika userData null tapi tidak error, biarkan user dari localStorage tetap ada
             })
             .catch((err) => {
-                // Hanya logout jika server mengatakan 401 (token benar-benar tidak valid)
                 if (err.response?.status === 401) {
                     setUser(null);
                     localStorage.removeItem('auth_token');
                     localStorage.removeItem('auth_user');
                 }
-                // Error lain (network, 500, dsb) — jangan logout, biarkan user tetap login
             })
             .finally(() => setLoading(false));
-    }, []);
+    }, [fetchUnreadChatCount]);
+
+    // Polling unread chat count secara berkala agar terasa realtime
+    useEffect(() => {
+        let interval;
+        if (user) {
+            interval = setInterval(() => {
+                fetchUnreadChatCount();
+            }, 10000); // Polling setiap 10 detik
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [user, fetchUnreadChatCount]);
 
     /**
      * Simpan token & user setelah login berhasil.
-     * Dipanggil dari Login.jsx / Register.jsx
      */
     const loginSuccess = useCallback((token, userData) => {
         localStorage.setItem('auth_token', token);
         localStorage.setItem('auth_user', JSON.stringify(userData));
         setUser(userData);
-    }, []);
+        fetchUnreadChatCount();
+    }, [fetchUnreadChatCount]);
 
     /**
-     * Logout — hapus token, user, redirect ke /login
+     * Logout
      */
     const logout = useCallback(async () => {
         try {
             await api.post('/logout');
         } catch {
-            // Tetap logout lokal meskipun API gagal
         } finally {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('auth_user');
             setUser(null);
+            setUnreadChatCount(0);
             window.location.href = '/login';
         }
     }, []);
 
-    /**
-     * Refresh user data dari server (dipanggil setelah update profil, dll)
-     */
     const refreshUser = useCallback(async () => {
         try {
             const res = await api.get('/profile');
@@ -79,18 +101,18 @@ export function AuthProvider({ children }) {
             if (userData) {
                 setUser(userData);
                 localStorage.setItem('auth_user', JSON.stringify(userData));
+                fetchUnreadChatCount();
             }
         } catch {
-            // Diam saja jika gagal
         }
-    }, []);
+    }, [fetchUnreadChatCount]);
 
     const isAdmin = user?.role === 'admin';
     const isSeller = user?.role === 'seller' || user?.is_seller === true;
     const isLoggedIn = !!user;
 
     return (
-        <AuthContext.Provider value={{ user, loading, loginSuccess, logout, refreshUser, isAdmin, isSeller, isLoggedIn }}>
+        <AuthContext.Provider value={{ user, loading, loginSuccess, logout, refreshUser, isAdmin, isSeller, isLoggedIn, unreadChatCount, setUnreadChatCount, fetchUnreadChatCount }}>
             {children}
         </AuthContext.Provider>
     );

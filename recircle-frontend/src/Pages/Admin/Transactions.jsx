@@ -1,204 +1,269 @@
-import React, { useState, useEffect } from 'react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import React, { useState, useEffect, useCallback } from "react";
+import AdminLayout from "@/Layouts/AdminLayout";
+import axios from "@/lib/axios";
 import {
-    Search,
-    ShoppingCart,
-    User,
-    Calendar,
-    CheckCircle2,
-    Clock,
-    Truck,
-    CreditCard,
-    MoreVertical,
-    DollarSign,
-    Box,
-    Loader2
-} from 'lucide-react';
-import api from '@/lib/axios';
+  Search,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Truck,
+  MoreVertical,
+  RefreshCw,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import api from "@/lib/axios";
 
-export default function AdminTransactionsPage() {
-    const [transactions, setTransactions] = useState({ data: [], current_page: 1, last_page: 1, total: 0 });
-    const [isLoading, setIsLoading] = useState(true);
-    const [search, setSearch] = useState('');
+const formatCurrency = (n) =>
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(n || 0);
+const formatDate = (d) =>
+  d
+    ? new Date(d).toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "-";
 
-    useEffect(() => {
-        document.title = "Admin — Data Transaksi";
-        const delayDebounceFn = setTimeout(() => {
-            fetchTransactions(1);
-        }, 500);
+const statusColors = {
+  completed: "bg-green-50 text-green-600 border-green-100",
+  shipping: "bg-blue-50 text-blue-600 border-blue-100",
+  pending: "bg-orange-50 text-orange-600 border-orange-100",
+  cancelled: "bg-red-50 text-red-600 border-red-100",
+};
 
-        return () => clearTimeout(delayDebounceFn);
-    }, [search]);
+const paymentColors = {
+  paid: "bg-green-500",
+  unpaid: "bg-orange-400",
+  failed: "bg-red-500",
+};
 
-    const fetchTransactions = async (page = 1) => {
-        setIsLoading(true);
-        try {
-            const res = await api.get('/admin/transactions', {
-                params: { search, page }
-            });
-            setTransactions(res.data.data);
-        } catch (error) {
-            console.error("Failed to fetch transactions", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+export default function AdminTransactions() {
+  const [transactions, setTransactions] = useState({
+    data: [],
+    total: 0,
+    current_page: 1,
+    last_page: 1,
+  });
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
 
-    const handleSearch = (e) => {
-        e.preventDefault();
-        fetchTransactions(1);
-    };
+  const fetchTransactions = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get("/admin/transactions", {
+        params: { page, search },
+      });
+      setTransactions(res.data?.data || res.data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Gagal memuat data transaksi.");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, search]);
 
-    const statusColors = {
-        completed: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-        shipping: 'bg-blue-50 text-blue-600 border-blue-100',
-        pending: 'bg-amber-50 text-amber-600 border-amber-100',
-        cancelled: 'bg-red-50 text-red-600 border-red-100',
-    };
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
 
-    const paymentColors = {
-        paid: 'bg-emerald-500',
-        unpaid: 'bg-amber-400',
-        failed: 'bg-red-500',
-    };
+  return (
+    <AdminLayout title="Data Transaksi">
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+              Data Transaksi
+            </h2>
+            <p className="text-gray-500 mt-1">
+              Riwayat semua pesanan dan pembayaran di platform.
+            </p>
+          </div>
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) =>
+                e.key === "Enter" && (setPage(1), fetchTransactions())
+              }
+              placeholder="Cari Order ID, produk, atau user..."
+              className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-100 rounded-xl text-sm focus:ring-2 focus:ring-[#43552c]/20 focus:border-[#43552c] transition-all shadow-sm"
+            />
+          </div>
+        </div>
 
-    const renderPagination = () => {
-        if (transactions.last_page <= 1) return null;
-        
-        const pages = [];
-        for (let i = 1; i <= transactions.last_page; i++) {
-            pages.push(
-                <button
-                    key={i}
-                    onClick={() => fetchTransactions(i)}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all
-                        ${transactions.current_page === i 
-                            ? 'bg-[#2c4055] text-white shadow-sm' 
-                            : 'bg-white border border-gray-200 text-gray-500 hover:border-[#2c4055] hover:text-[#2c4055]'
-                        }`}
-                >
-                    {i}
-                </button>
-            );
-        }
-        return <div className="flex gap-2">{pages}</div>;
-    };
-
-    return (
-        <AdminLayout>
-            <div className="space-y-6">
-                {/* Header & Search */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Data Transaksi</h2>
-                        <p className="text-gray-500 mt-1">Riwayat semua pesanan dan pembayaran di platform.</p>
-                    </div>
-
-                    <form onSubmit={handleSearch} className="relative w-full md:w-80">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Cari Order ID, produk, atau user..."
-                            className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#2c4055]/20 focus:border-[#2c4055] transition-all shadow-sm"
-                        />
-                    </form>
-                </div>
-
-                {/* Transactions Table */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-gray-50 border-b border-gray-200">
-                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Order ID & Produk</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nominal</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Pihak Terkait</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Pembayaran</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {isLoading ? (
-                                    <tr>
-                                        <td colSpan="5" className="px-6 py-12 text-center">
-                                            <Loader2 className="w-8 h-8 animate-spin text-gray-400 mx-auto mb-2" />
-                                            <p className="text-sm text-gray-500">Memuat data transaksi...</p>
-                                        </td>
-                                    </tr>
-                                ) : transactions?.data?.length > 0 ? (
-                                    transactions.data.map((order) => (
-                                        <tr key={order.id} className="group hover:bg-gray-50/50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-bold text-gray-400 tracking-tighter">#{order.id}</span>
-                                                        <p className="font-semibold text-gray-900 text-sm truncate max-w-[180px]">{order.product}</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-500">
-                                                        <Calendar className="w-3.5 h-3.5" />
-                                                        {new Date(order.created_at).toLocaleDateString('id-ID')}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-50 text-xs font-semibold text-[#2c4055] border border-gray-200">
-                                                    Rp {new Intl.NumberFormat('id-ID').format(order.total_price)}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                                        {order.buyer} <span className="text-[10px] text-gray-400">(Buyer)</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-[#2c4055]" />
-                                                        {order.seller} <span className="text-[10px] text-gray-400">(Seller)</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wider border ${statusColors[order.status] || statusColors.pending}`}>
-                                                    {order.status === 'completed' ? <CheckCircle2 className="w-3.5 h-3.5" /> :
-                                                        order.status === 'shipping' ? <Truck className="w-3.5 h-3.5" /> :
-                                                            <Clock className="w-3.5 h-3.5" />}
-                                                    {order.status}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2.5">
-                                                    <div className="flex flex-col items-end">
-                                                        <span className="text-[10px] font-bold text-gray-800 uppercase tracking-tight">{order.payment_status}</span>
-                                                        <div className={`w-12 h-1 rounded-full mt-1 ${paymentColors[order.payment_status] || 'bg-gray-200'}`} />
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="5" className="px-6 py-12 text-center text-gray-500 text-sm">
-                                            Tidak ada data transaksi ditemukan.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Pagination */}
-                    {!isLoading && transactions?.total > 0 && (
-                        <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-200 flex items-center justify-between">
-                            <p className="text-sm text-gray-500 font-medium">
-                                Menampilkan <span className="text-gray-900 font-semibold">{((transactions.current_page - 1) * 15) + 1}</span> - <span className="text-gray-900 font-semibold">{Math.min(transactions.current_page * 15, transactions.total)}</span> dari <span className="text-gray-900 font-semibold">{transactions.total}</span> transaksi
-                            </p>
-                            {renderPagination()}
-                        </div>
-                    )}
-                </div>
+        <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <RefreshCw className="w-6 h-6 text-[#43552c] animate-spin" />
             </div>
-        </AdminLayout>
-    );
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <AlertCircle className="w-8 h-8 text-red-400" />
+              <p className="text-gray-500 text-sm">{error}</p>
+              <button
+                onClick={fetchTransactions}
+                className="text-[#43552c] font-bold text-sm hover:underline"
+              >
+                Coba Lagi
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#f7f9f7]/50 border-b border-gray-50">
+                    <th className="px-8 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      Order ID & Produk
+                    </th>
+                    <th className="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      Nominal
+                    </th>
+                    <th className="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      Pihak Terkait
+                    </th>
+                    <th className="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      Status
+                    </th>
+                    <th className="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">
+                      Pembayaran
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {transactions.data?.length > 0 ? (
+                    transactions.data.map((order) => (
+                      <tr
+                        key={order.id}
+                        className="group hover:bg-gray-50/50 transition-colors"
+                      >
+                        <td className="px-8 py-5">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-gray-400 tracking-tighter">
+                                #{order.id}
+                              </span>
+                              <p className="font-bold text-gray-800 text-sm truncate max-w-[180px]">
+                                {order.product}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-400">
+                              <Calendar className="w-3 h-3" />{" "}
+                              {formatDate(order.created_at)}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 text-[11px] font-bold text-[#43552c] border border-gray-100">
+                            {formatCurrency(order.total_price)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-600">
+                              <span className="w-1 h-1 rounded-full bg-blue-400" />{" "}
+                              {order.buyer}{" "}
+                              <span className="text-[9px] text-gray-400">
+                                (Buyer)
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-600">
+                              <span className="w-1 h-1 rounded-full bg-[#43552c]" />{" "}
+                              {order.seller}{" "}
+                              <span className="text-[9px] text-gray-400">
+                                (Seller)
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusColors[order.status] || statusColors.pending}`}
+                          >
+                            {order.status === "completed" ? (
+                              <CheckCircle2 className="w-3 h-3" />
+                            ) : order.status === "shipping" ? (
+                              <Truck className="w-3 h-3" />
+                            ) : (
+                              <Clock className="w-3 h-3" />
+                            )}
+                            {order.status}
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-right">
+                          <div className="flex items-center justify-end gap-2.5">
+                            <div className="flex flex-col items-end">
+                              <span className="text-[10px] font-bold text-gray-800 uppercase tracking-tighter">
+                                {order.payment_status}
+                              </span>
+                              <div
+                                className={`w-12 h-1 rounded-full mt-1 ${paymentColors[order.payment_status] || "bg-gray-200"}`}
+                              />
+                            </div>
+                            <button className="p-1.5 rounded-lg text-gray-300 hover:bg-gray-100 transition-colors">
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan="5"
+                        className="px-8 py-10 text-center text-gray-500 italic text-sm"
+                      >
+                        Tidak ada data transaksi.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {transactions?.last_page > 1 && (
+            <div className="px-8 py-5 bg-[#f7f9f7]/30 border-t border-gray-50 flex items-center justify-between">
+              <p className="text-xs text-gray-500 font-medium">
+                Halaman{" "}
+                <span className="font-bold text-gray-900">
+                  {transactions.current_page}
+                </span>{" "}
+                dari{" "}
+                <span className="font-bold text-gray-900">
+                  {transactions.last_page}
+                </span>
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="p-2 rounded-lg bg-white border border-gray-100 text-gray-500 hover:border-[#43552c] hover:text-[#43552c] disabled:opacity-40 disabled:pointer-events-none transition-all"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() =>
+                    setPage((p) => Math.min(transactions.last_page, p + 1))
+                  }
+                  disabled={page >= transactions.last_page}
+                  className="p-2 rounded-lg bg-white border border-gray-100 text-gray-500 hover:border-[#43552c] hover:text-[#43552c] disabled:opacity-40 disabled:pointer-events-none transition-all"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </AdminLayout>
+  );
 }

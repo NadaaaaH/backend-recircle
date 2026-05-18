@@ -26,34 +26,36 @@ class ChatApiController extends Controller
             }
 
             $user = $request->user();
-            
+
             // Get latest messages per room
             $latestMessages = ChatMessage::raw(function ($collection) use ($user) {
                 $userId = (int) $user->id;
                 return $collection->aggregate([
                     ['$match' => ['$or' => [['sender_id' => $userId], ['receiver_id' => $userId]]]],
                     ['$sort' => ['created_at' => -1]],
-                    ['$group' => [
-                        '_id' => '$room_id',
-                        'original' => ['$first' => '$$ROOT']
-                    ]],
+                    [
+                        '$group' => [
+                            '_id' => '$room_id',
+                            'original' => ['$first' => '$$ROOT']
+                        ]
+                    ],
                     ['$replaceRoot' => ['newRoot' => '$original']],
                     ['$sort' => ['created_at' => -1]]
                 ]);
             });
-            
+
             $results = [];
             foreach ($latestMessages as $doc) {
                 $results[] = (array) $doc;
             }
-            
+
             $messages = ChatMessage::hydrate($results);
-            
+
             $contacts = [];
             foreach ($messages as $msg) {
                 $otherUserId = $msg->sender_id === $user->id ? $msg->receiver_id : $msg->sender_id;
                 $otherUser = User::find($otherUserId);
-                
+
                 if ($otherUser) {
                     $contacts[] = [
                         'id' => $otherUser->id,
@@ -92,7 +94,7 @@ class ChatApiController extends Controller
                 ->where('is_read', false)
                 ->update(['is_read' => true]);
 
-            $roomId = ChatMessage::generateRoomId((int)$userId, (int)$otherUserId);
+            $roomId = ChatMessage::generateRoomId((int) $userId, (int) $otherUserId);
             $messages = ChatMessage::where('room_id', $roomId)
                 ->with(['product', 'sender'])
                 ->orderBy('created_at', 'asc')
@@ -121,7 +123,7 @@ class ChatApiController extends Controller
                 'message' => 'required|string|max:1000',
             ]);
 
-            $roomId = ChatMessage::generateRoomId((int)$request->user()->id, (int)$validated['receiver_id']);
+            $roomId = ChatMessage::generateRoomId((int) $request->user()->id, (int) $validated['receiver_id']);
 
             $message = ChatMessage::create([
                 'room_id' => $roomId,

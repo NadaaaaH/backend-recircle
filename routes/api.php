@@ -31,6 +31,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/products', [ProductApiController::class, 'index']);
     Route::get('/products/{id}', [ProductApiController::class, 'show']);
 
+    // Public Profile Endpoint
+    Route::get('/users/{id}', [\App\Http\Controllers\Api\V1\PublicProfileApiController::class, 'show']);
+
     // --- Protected Routes ---
     Route::middleware('auth:sanctum')->group(function () {
         // Auth Endpoints

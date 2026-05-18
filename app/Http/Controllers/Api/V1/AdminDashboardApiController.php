@@ -23,17 +23,17 @@ class AdminDashboardApiController extends Controller
     public function index(): JsonResponse
     {
         $stats = [
-            'totalUsers'           => User::count(),
-            'totalProducts'        => Product::count(),
+            'totalUsers' => User::count(),
+            'totalProducts' => Product::count(),
             'pendingVerifications' => SellerVerification::where('status', 'pending')->count(),
-            'totalTransactions'    => Order::count(),
-            'totalRevenue'         => Order::where('status', 'selesai')->sum('total_harga'),
-            'activeOffers'         => Offer::where('status', 'pending')->count(),
+            'totalTransactions' => Order::count(),
+            'totalRevenue' => Order::where('status', 'selesai')->sum('total_harga'),
+            'activeOffers' => Offer::where('status', 'pending')->count(),
             // Pre-populated mocked trends for cosmetic view parity if exact calculations are not available
-            'usersTrend'           => 12,
-            'productsTrend'        => 5,
-            'transactionsTrend'    => 8,
-            'verificationsTrend'   => 3,
+            'usersTrend' => 12,
+            'productsTrend' => 5,
+            'transactionsTrend' => 8,
+            'verificationsTrend' => 3,
         ];
 
         // Generate last 6 months statistics
@@ -41,7 +41,7 @@ class AdminDashboardApiController extends Controller
         for ($i = 5; $i >= 0; $i--) {
             $date = now()->subMonths($i);
             $monthlyStats[] = [
-                'month'   => $date->format('n'), // Numerical month representation
+                'month' => $date->format('n'), // Numerical month representation
                 'revenue' => Order::whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)
                     ->sum('total_harga') ?? 0
@@ -51,8 +51,8 @@ class AdminDashboardApiController extends Controller
         $recentActivities = \App\Services\ActivityService::getRecentActivities(5);
 
         return $this->successResponse([
-            'stats'            => $stats,
-            'monthlyStats'     => $monthlyStats,
+            'stats' => $stats,
+            'monthlyStats' => $monthlyStats,
             'recentActivities' => $recentActivities
         ], 'Admin dashboard summary aggregated successfully');
     }

@@ -207,12 +207,12 @@ export default function Show() {
                                         </p>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={() => alert('Fitur profil publik penjual sedang dalam pengembangan.')}
+                                <Link 
+                                    to={`/users/${product.seller.id}`}
                                     className="text-xs font-bold text-primary border border-primary/20 px-3 py-1.5 rounded-full hover:bg-primary hover:text-white transition-colors"
                                 >
                                     Lihat Profil
-                                </button>
+                                </Link>
                             </div>
 
                             {/* Description */}

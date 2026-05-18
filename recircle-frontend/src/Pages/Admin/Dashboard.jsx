@@ -17,45 +17,6 @@ import {
     AlertCircle,
 } from 'lucide-react';
 
-export default function Dashboard() {
-    const [isLoading, setIsLoading] = useState(true);
-    const [dashData, setDashData] = useState(null);
-
-    useEffect(() => {
-        document.title = "Admin Dashboard | ReCircle";
-        fetchData();
-    }, []);
-
-    const fetchData = async () => {
-        setIsLoading(true);
-        try {
-            const response = await api.get('/admin/dashboard');
-            setDashData(response.data?.data);
-        } catch (err) {
-            console.error("Dashboard fetch error:", err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    if (isLoading) {
-        return (
-            <AdminLayout>
-                <div className="flex min-h-[60vh] items-center justify-center">
-                    <div className="flex flex-col items-center gap-4">
-                        <Loader2 className="w-10 h-10 animate-spin text-[#2c4055]" />
-                        <p className="text-sm font-bold text-[#2c4055] animate-pulse">Memuat Dashboard...</p>
-                    </div>
-                </div>
-            </AdminLayout>
-        );
-    }
-
-    const stats = dashData?.stats || {};
-    const monthlyStats = dashData?.monthlyStats || [];
-    const recentActivities = dashData?.recentActivities || [];
-    
-
 const formatCurrency = (n) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0);
 
@@ -70,7 +31,7 @@ export default function AdminDashboard() {
         setLoading(true);
         setError(null);
         try {
-            const res = await axios.get('/admin/dashboard');
+            const res = await api.get('/admin/dashboard');
             // Backend now returns: { data: { stats, monthly_stats, recent_activities } }
             const payload = res.data?.data || res.data;
             setStats(payload.stats || payload);
@@ -91,7 +52,6 @@ export default function AdminDashboard() {
         {
             label: 'Total Pengguna',
             value: stats.totalUsers || 0,
-            trend: stats.usersTrend,
             icon: Users,
             bg: 'bg-blue-50',
             textColor: 'text-blue-600',
@@ -100,20 +60,6 @@ export default function AdminDashboard() {
         {
             label: 'Total Produk',
             value: stats.totalProducts || 0,
-            trend: stats.productsTrend,
-            icon: ShoppingBag,
-            bg: 'bg-[#2c4055]/10',
-            textColor: 'text-[#2c4055]',
-            href: '/admin/products'
-        },
-        {
-            label: 'Transaksi',
-            value: stats.totalTransactions || 0,
-            trend: stats.transactionsTrend,
-            icon: ShoppingCart,
-            bg: 'bg-amber-50',
-            textColor: 'text-amber-600',
-            value: stats.totalProducts ?? 0,
             icon: ShoppingBag,
             bg: 'bg-[#43552c]/10',
             textColor: 'text-[#43552c]',
@@ -121,7 +67,7 @@ export default function AdminDashboard() {
         },
         {
             label: 'Total Transaksi',
-            value: stats.totalTransactions ?? 0,
+            value: stats.totalTransactions || 0,
             icon: ShoppingCart,
             bg: 'bg-[#d4a373]/10',
             textColor: 'text-[#d4a373]',
@@ -129,7 +75,7 @@ export default function AdminDashboard() {
         },
         {
             label: 'Verifikasi Pending',
-            value: stats.pendingVerifications ?? 0,
+            value: stats.pendingVerifications || 0,
             icon: ShieldCheck,
             bg: 'bg-red-50',
             textColor: 'text-red-600',
@@ -247,16 +193,16 @@ export default function AdminDashboard() {
                                 {monthlyStats.length > 0 ? (
                                     monthlyStats.map((item, i) => {
                                         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-                                        const monthLabel = monthNames[parseInt(stat.month) - 1] || '???';
+                                        const monthLabel = monthNames[parseInt(item.month) - 1] || '???';
                                         const maxRevenue = Math.max(...monthlyStats.map(s => s.revenue || 0), 1);
-                                        const height = ((stat.revenue || 0) / maxRevenue) * 90 + 10;
+                                        const height = ((item.revenue || 0) / maxRevenue) * 90 + 10;
 
                                         return (
                                             <div key={i} className="flex-1 flex flex-col items-center gap-3 group/bar">
                                                 <div
                                                     className="w-full bg-[#f7f9f7] rounded-xl relative overflow-hidden group-hover/bar:bg-[#43552c]/5 transition-colors"
                                                     style={{ height: '100%' }}
-                                                    title={`${monthLabel}: ${formatCurrency(stat.revenue)}`}
+                                                    title={`${monthLabel}: ${formatCurrency(item.revenue)}`}
                                                 >
                                                     <div
                                                         className="absolute bottom-0 left-0 right-0 bg-[#43552c] rounded-t-xl transition-all duration-700 ease-out opacity-80 group-hover/bar:opacity-100"
@@ -264,7 +210,7 @@ export default function AdminDashboard() {
                                                     />
                                                 </div>
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                    {labelStr}
+                                                    {monthLabel}
                                                 </span>
                                             </div>
                                         );

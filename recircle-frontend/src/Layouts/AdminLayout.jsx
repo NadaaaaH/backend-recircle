@@ -17,6 +17,10 @@ import {
   X,
   User,
   Settings,
+  ShoppingBag,
+  ShoppingCart,
+  ShieldCheck,
+  Activity,
 } from "lucide-react";
 
 export default function AdminLayout({ children, title }) {

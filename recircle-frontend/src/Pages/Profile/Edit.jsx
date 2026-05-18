@@ -93,8 +93,6 @@ export default function Edit() {
                                 <img
                                     src={
                                         user?.avatar_url
-                                            || `https://ui-avatars.com/api/?name=${user?.name}&background=43552c&color=fff`
-                                        user?.avatar
                                             ? user.avatar
                                             : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=43552c&color=fff`
                                     }

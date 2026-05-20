@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -16,13 +16,61 @@ import {
     ChevronDown,
     Activity
 } from 'lucide-react';
+import api from '@/lib/axios';
 
 export default function SellerLayout({ children }) {
     const { user, logout } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [isNotifLoading, setIsNotifLoading] = useState(false);
     
     const location = useLocation();
     const navigate = useNavigate();
+    const notifRef = useRef(null);
+
+    // Fetch unread count on mount
+    useEffect(() => {
+        api.get('/notifications?role=seller')
+            .then((res) => {
+                const raw = res.data?.data;
+                if (Array.isArray(raw)) {
+                    setUnreadCount(raw.filter(n => !n.is_read).length);
+                }
+            })
+            .catch(() => {});
+    }, []);
+
+    // Fetch notifications list when dropdown is opened
+    useEffect(() => {
+        if (showNotifications) {
+            setIsNotifLoading(true);
+            api.get('/notifications?role=seller')
+                .then((res) => {
+                    const raw = res.data?.data;
+                    const list = Array.isArray(raw) ? raw : [];
+                    setNotifications(list.slice(0, 5));
+                    setUnreadCount(list.filter(n => !n.is_read).length);
+                })
+                .catch(() => {
+                    setNotifications([]);
+                })
+                .finally(() => setIsNotifLoading(false));
+        }
+    }, [showNotifications]);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (notifRef.current && !notifRef.current.contains(event.target)) {
+                setShowNotifications(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     const isActive = (path) => {
         const currentUrl = location.pathname || '';
@@ -44,6 +92,32 @@ export default function SellerLayout({ children }) {
         { name: 'Pesanan', href: '/seller/orders', icon: ShoppingCart },
         { name: 'Saldo', href: '/seller/balance', icon: Wallet },
     ];
+
+    const getIcon = (type) => {
+        switch (type) {
+            case 'new_offer':
+            case 'offer':
+                return <MessageSquareText className="w-4 h-4 text-blue-600" />;
+            case 'order_update':
+            case 'order':
+                return <ShoppingCart className="w-4 h-4 text-emerald-600" />;
+            default:
+                return <Bell className="w-4 h-4 text-amber-600" />;
+        }
+    };
+
+    const getBg = (type) => {
+        switch (type) {
+            case 'new_offer':
+            case 'offer':
+                return 'bg-blue-50 border-blue-100';
+            case 'order_update':
+            case 'order':
+                return 'bg-emerald-50 border-emerald-100';
+            default:
+                return 'bg-amber-50 border-amber-100';
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#F4F5F7] flex text-slate-900 font-sans">
@@ -157,11 +231,75 @@ export default function SellerLayout({ children }) {
 
             {/* Main Content Area */}
             <div className="flex-1 lg:pl-[260px] flex flex-col min-w-0">
-                <header className="lg:hidden bg-white border-b border-slate-200/70 h-16 flex items-center px-4 justify-between">
-                    <span className="text-lg font-bold">ReCircle</span>
-                    <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-slate-600">
-                        <Menu className="w-5 h-5" />
-                    </button>
+                {/* Sleek Top Navbar */}
+                <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur px-6 flex justify-between items-center sticky top-0 z-50">
+                    <div className="lg:hidden flex items-center gap-3">
+                        <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg">
+                            <Menu className="w-5 h-5" />
+                        </button>
+                        <span className="text-lg font-bold">ReCircle</span>
+                    </div>
+                    <div className="hidden lg:block">
+                        {/* Right aligned header items */}
+                    </div>
+                    
+                    <div className="flex items-center gap-4 ml-auto">
+                        {/* Notification Bell with Dropdown Popover */}
+                        <div className="relative" ref={notifRef}>
+                            <button 
+                                onClick={() => setShowNotifications(!showNotifications)}
+                                className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl transition-all relative"
+                            >
+                                <Bell className="w-5 h-5" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white animate-pulse" />
+                                )}
+                            </button>
+
+                            {showNotifications && (
+                                <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+                                    <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+                                        <p className="text-xs font-bold text-slate-800 tracking-wide uppercase">Notifikasi Toko</p>
+                                    </div>
+                                    <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                                        {isNotifLoading ? (
+                                            <div className="p-4 text-center text-xs text-slate-400">Memuat...</div>
+                                        ) : notifications.length > 0 ? (
+                                            notifications.map((notif) => (
+                                                <div key={notif._id} className="p-4 flex gap-3 hover:bg-slate-50 transition-colors">
+                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 border ${getBg(notif.type)}`}>
+                                                        {getIcon(notif.type)}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className={`text-xs ${notif.is_read ? 'text-slate-500' : 'font-bold text-slate-900'}`}>
+                                                            {notif.message}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-400 mt-1">
+                                                            {new Date(notif.created_at).toLocaleDateString("id-ID", {
+                                                                hour: "2-digit",
+                                                                minute: "2-digit"
+                                                            })}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="p-8 text-center">
+                                                <p className="text-xs text-slate-400 font-medium">Tidak ada notifikasi baru</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <Link 
+                                        to="/notifications" 
+                                        onClick={() => setShowNotifications(false)}
+                                        className="block text-center py-2.5 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-[#4A5D23] transition-all border-t border-slate-100"
+                                    >
+                                        Lihat Semua
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </header>
                 <main className="flex-1 p-6 lg:p-10">
                     {children}

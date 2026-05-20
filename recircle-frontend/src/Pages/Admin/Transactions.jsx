@@ -62,9 +62,36 @@ export default function AdminTransactions() {
       const res = await axios.get("/admin/transactions", {
         params: { page, search },
       });
-      setTransactions(res.data?.data || res.data);
+      const rawData = res.data?.data || res.data;
+      if (rawData && typeof rawData === 'object') {
+        const dataArray = Array.isArray(rawData) ? rawData : (rawData.data || []);
+        const meta = rawData.meta || {};
+        setTransactions({
+          data: dataArray,
+          total: meta.total ?? rawData.total ?? dataArray.length,
+          current_page: meta.current_page ?? rawData.current_page ?? 1,
+          last_page: meta.last_page ?? rawData.last_page ?? 1,
+        });
+      } else {
+        setTransactions({
+          data: [],
+          total: 0,
+          current_page: 1,
+          last_page: 1,
+        });
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Gagal memuat data transaksi.");
+      console.error("Fetch transactions error:", err);
+      const status = err.response?.status;
+      let errorMsg = "Gagal memuat data transaksi.";
+      if (status === 404) {
+        errorMsg = "Endpoint transaksi tidak ditemukan (404). Silakan hubungi admin.";
+      } else if (status === 500) {
+        errorMsg = "Terjadi kesalahan internal pada server (500). Silakan coba beberapa saat lagi.";
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -109,10 +136,10 @@ export default function AdminTransactions() {
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
               <AlertCircle className="w-8 h-8 text-red-400" />
-              <p className="text-gray-500 text-sm">{error}</p>
+              <p className="text-gray-500 text-sm font-medium">{error}</p>
               <button
                 onClick={fetchTransactions}
-                className="text-[#43552c] font-bold text-sm hover:underline"
+                className="inline-flex items-center gap-2 px-5 py-2 bg-[#43552c] text-white rounded-xl text-xs font-bold hover:bg-[#324021] transition-colors"
               >
                 Coba Lagi
               </button>
@@ -140,82 +167,95 @@ export default function AdminTransactions() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {transactions.data?.length > 0 ? (
-                    transactions.data.map((order) => (
-                      <tr
-                        key={order.id}
-                        className="group hover:bg-gray-50/50 transition-colors"
-                      >
-                        <td className="px-8 py-5">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold text-gray-400 tracking-tighter">
-                                #{order.id}
-                              </span>
-                              <p className="font-bold text-gray-800 text-sm truncate max-w-[180px]">
-                                {order.product}
-                              </p>
+                  {transactions?.data?.length > 0 ? (
+                    transactions.data?.map((order) => {
+                      const productName = typeof order.product === "object"
+                        ? (order.product?.name || "Produk Dihapus")
+                        : (order.product || "Produk Dihapus");
+                      const buyerName = typeof order.buyer === "object"
+                        ? (order.buyer?.name || "Buyer Dihapus")
+                        : (order.buyer || "Buyer Dihapus");
+                      const sellerName = typeof order.seller === "object"
+                        ? (order.seller?.name || "Seller Dihapus")
+                        : (order.seller || "Seller Dihapus");
+                      const payStatus = order.paymentStatus || order.payment_status || "unpaid";
+
+                      return (
+                        <tr
+                          key={order.id}
+                          className="group hover:bg-gray-50/50 transition-colors"
+                        >
+                          <td className="px-8 py-5">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-gray-400 tracking-tighter">
+                                  #{order.id}
+                                </span>
+                                <p className="font-bold text-gray-800 text-sm truncate max-w-[180px]">
+                                  {productName}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-400">
+                                <Calendar className="w-3 h-3" />{" "}
+                                {formatDate(order.createdAt || order.created_at)}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-400">
-                              <Calendar className="w-3 h-3" />{" "}
-                              {formatDate(order.created_at)}
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 text-[11px] font-bold text-[#43552c] border border-gray-100">
+                              {formatCurrency(order.totalPrice || order.total_price)}
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-50 text-[11px] font-bold text-[#43552c] border border-gray-100">
-                            {formatCurrency(order.total_price)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-600">
-                              <span className="w-1 h-1 rounded-full bg-blue-400" />{" "}
-                              {order.buyer}{" "}
-                              <span className="text-[9px] text-gray-400">
-                                (Buyer)
-                              </span>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-600">
+                                <span className="w-1 h-1 rounded-full bg-blue-400" />{" "}
+                                {buyerName}{" "}
+                                <span className="text-[9px] text-gray-400">
+                                  (Buyer)
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-600">
+                                <span className="w-1 h-1 rounded-full bg-[#43552c]" />{" "}
+                                {sellerName}{" "}
+                                <span className="text-[9px] text-gray-400">
+                                  (Seller)
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-600">
-                              <span className="w-1 h-1 rounded-full bg-[#43552c]" />{" "}
-                              {order.seller}{" "}
-                              <span className="text-[9px] text-gray-400">
-                                (Seller)
-                              </span>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusColors[order.status] || statusColors.pending}`}
+                            >
+                              {order.status === "completed" ? (
+                                <CheckCircle2 className="w-3 h-3" />
+                              ) : order.status === "shipping" ? (
+                                <Truck className="w-3 h-3" />
+                              ) : (
+                                <Clock className="w-3 h-3" />
+                              )}
+                              {order.status}
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusColors[order.status] || statusColors.pending}`}
-                          >
-                            {order.status === "completed" ? (
-                              <CheckCircle2 className="w-3 h-3" />
-                            ) : order.status === "shipping" ? (
-                              <Truck className="w-3 h-3" />
-                            ) : (
-                              <Clock className="w-3 h-3" />
-                            )}
-                            {order.status}
-                          </div>
-                        </td>
-                        <td className="px-6 py-5 text-right">
-                          <div className="flex items-center justify-end gap-2.5">
-                            <div className="flex flex-col items-end">
-                              <span className="text-[10px] font-bold text-gray-800 uppercase tracking-tighter">
-                                {order.payment_status}
-                              </span>
-                              <div
-                                className={`w-12 h-1 rounded-full mt-1 ${paymentColors[order.payment_status] || "bg-gray-200"}`}
-                              />
+                          </td>
+                          <td className="px-6 py-5 text-right">
+                            <div className="flex items-center justify-end gap-2.5">
+                              <div className="flex flex-col items-end">
+                                <span className="text-[10px] font-bold text-gray-800 uppercase tracking-tighter">
+                                  {payStatus}
+                                </span>
+                                <div
+                                  className={`w-12 h-1 rounded-full mt-1 ${paymentColors[payStatus] || "bg-gray-200"}`}
+                                />
+                              </div>
+                              <button className="p-1.5 rounded-lg text-gray-300 hover:bg-gray-100 transition-colors">
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
                             </div>
-                            <button className="p-1.5 rounded-lg text-gray-300 hover:bg-gray-100 transition-colors">
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td

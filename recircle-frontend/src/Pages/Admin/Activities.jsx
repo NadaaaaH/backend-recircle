@@ -26,6 +26,7 @@ const formatDate = (d) =>
 
 export default function AdminActivities() {
   const [activities, setActivities] = useState([]);
+  const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -33,7 +34,7 @@ export default function AdminActivities() {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get("/admin/activities");
+      const res = await axios.get(`/admin/activities?type=${filter}`);
       setActivities(res.data?.data || res.data || []);
     } catch (err) {
       setError(err.response?.data?.message || "Gagal memuat aktivitas.");
@@ -44,7 +45,7 @@ export default function AdminActivities() {
 
   useEffect(() => {
     fetchActivities();
-  }, []);
+  }, [filter]);
 
   return (
     <AdminLayout title="Semua Aktivitas">
@@ -56,15 +57,32 @@ export default function AdminActivities() {
           >
             <ArrowLeft className="w-4 h-4" /> Kembali ke Dashboard
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="appearance-none pl-10 pr-10 py-2.5 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-600 shadow-sm hover:shadow-md hover:border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#43552c] transition-all cursor-pointer"
+              >
+                <option value="all">Semua Aktivitas</option>
+                <option value="user">User Baru</option>
+                <option value="product">Produk Baru</option>
+                <option value="order">Pesanan Baru</option>
+              </select>
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <Filter className="w-4 h-4" />
+              </div>
+              <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l border-gray-100 pl-2">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
             <button
               onClick={fetchActivities}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-600 shadow-sm hover:shadow-md transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-600 shadow-sm hover:shadow-md hover:border-gray-200 transition-all"
             >
               <RefreshCw className="w-4 h-4" /> Refresh
-            </button>
-            <button className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-xl text-sm font-bold text-gray-600 shadow-sm hover:shadow-md transition-all">
-              <Filter className="w-4 h-4" /> Filter
             </button>
           </div>
         </div>
@@ -80,8 +98,16 @@ export default function AdminActivities() {
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <RefreshCw className="w-6 h-6 text-[#43552c] animate-spin" />
+            <div className="divide-y divide-gray-50 animate-pulse">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="p-6 flex gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-gray-100 flex-shrink-0 animate-pulse" />
+                  <div className="flex-1 space-y-3">
+                    <div className="h-4 bg-gray-100 rounded-lg w-1/3" />
+                    <div className="h-3 bg-gray-50 rounded-lg w-2/3" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4">

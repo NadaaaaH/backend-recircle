@@ -177,14 +177,29 @@ class AdminDashboardApiController extends Controller
 
     public function transactions(Request $request): JsonResponse
     {
-        $query = Order::with(['buyer', 'seller', 'product']);
+        $query = Order::with(['user', 'product.user']);
+
+        if ($request->search) {
+            $query->where(function ($q) use ($request) {
+                $q->where('kode_pesanan', 'like', "%{$request->search}%")
+                  ->orWhere('id', 'like', "%{$request->search}%")
+                  ->orWhereHas('user', function ($uq) use ($request) {
+                      $uq->where('name', 'like', "%{$request->search}%");
+                  })
+                  ->orWhereHas('product', function ($pq) use ($request) {
+                      $pq->where('nama_barang', 'like', "%{$request->search}%");
+                  });
+            });
+        }
+
         $orders = $query->latest()->paginate(10);
         return $this->successResponse(OrderResource::collection($orders)->response()->getData(true), 'Transactions retrieved successfully');
     }
 
-    public function activities(): JsonResponse
+    public function activities(Request $request): JsonResponse
     {
-        $activities = \App\Services\ActivityService::getRecentActivities(50);
+        $type = $request->query('type');
+        $activities = \App\Services\ActivityService::getRecentActivities(50, $type);
         return $this->successResponse($activities, 'Activities retrieved successfully');
     }
 }

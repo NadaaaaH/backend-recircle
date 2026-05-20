@@ -56,9 +56,36 @@ export default function AdminOffers() {
       const res = await axios.get("/admin/offers", {
         params: { page, search },
       });
-      setOffers(res.data?.data || res.data);
+      const rawData = res.data?.data || res.data;
+      if (rawData && typeof rawData === 'object') {
+        const dataArray = Array.isArray(rawData) ? rawData : (rawData.data || []);
+        const meta = rawData.meta || {};
+        setOffers({
+          data: dataArray,
+          total: meta.total ?? rawData.total ?? dataArray.length,
+          current_page: meta.current_page ?? rawData.current_page ?? 1,
+          last_page: meta.last_page ?? rawData.last_page ?? 1,
+        });
+      } else {
+        setOffers({
+          data: [],
+          total: 0,
+          current_page: 1,
+          last_page: 1,
+        });
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Gagal memuat data penawaran.");
+      console.error("Fetch offers error:", err);
+      const status = err.response?.status;
+      let errorMsg = "Gagal memuat data penawaran.";
+      if (status === 404) {
+        errorMsg = "Endpoint penawaran tidak ditemukan (404). Silakan hubungi admin.";
+      } else if (status === 500) {
+        errorMsg = "Terjadi kesalahan internal pada server (500). Silakan coba beberapa saat lagi.";
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -151,19 +178,35 @@ export default function AdminOffers() {
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-3">
                             <div className="text-xs">
-                              <p className="text-gray-400 line-through">
-                                {formatCurrency(offer.original_price)}
-                              </p>
-                              <p className="font-bold text-[#43552c]">
-                                {formatCurrency(offer.offered_price)}
-                              </p>
+                              {offer.status === "accepted" && (offer.negotiated_price || offer.dealPrice || offer.deal_price) ? (
+                                <>
+                                  <p className="text-gray-400 line-through text-[10px]">
+                                    {formatCurrency(offer.original_price)}
+                                  </p>
+                                  <p className="text-gray-400 line-through text-[10px]">
+                                    {formatCurrency(offer.offered_price)}
+                                  </p>
+                                  <p className="font-extrabold text-green-600">
+                                    {formatCurrency(offer.negotiated_price || offer.dealPrice || offer.deal_price)}
+                                  </p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-gray-400 line-through text-[10px]">
+                                    {formatCurrency(offer.original_price)}
+                                  </p>
+                                  <p className="font-bold text-[#43552c]">
+                                    {formatCurrency(offer.offered_price)}
+                                  </p>
+                                </>
+                              )}
                             </div>
                             {offer.original_price > 0 && (
                               <div className="px-2 py-0.5 rounded bg-green-50 text-green-600 text-[10px] font-bold flex items-center gap-1">
                                 <TrendingDown className="w-3 h-3" />-
                                 {Math.round(
                                   (1 -
-                                    offer.offered_price /
+                                    (offer.status === "accepted" && (offer.negotiated_price || offer.dealPrice || offer.deal_price) ? (offer.negotiated_price || offer.dealPrice || offer.deal_price) : offer.offered_price) /
                                       offer.original_price) *
                                     100,
                                 )}

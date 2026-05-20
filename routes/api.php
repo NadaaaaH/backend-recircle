@@ -77,6 +77,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/chat/{otherUserId}', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'show']);
         Route::post('/chat', [\App\Http\Controllers\Api\V1\ChatApiController::class, 'store']);
 
+        // Notification Endpoints (Role Decoupled MongoDB)
+        Route::get('/notifications', [\App\Http\Controllers\Api\V1\NotificationApiController::class, 'index']);
+        Route::post('/notifications/{id}/read', [\App\Http\Controllers\Api\V1\NotificationApiController::class, 'markAsRead']);
+        Route::post('/notifications/read-all', [\App\Http\Controllers\Api\V1\NotificationApiController::class, 'markAllAsRead']);
+
         // Seller Operations Pre-Authorization
         Route::get('/seller/verification', [\App\Http\Controllers\Api\V1\SellerVerificationApiController::class, 'show']);
         Route::post('/seller/verification', [\App\Http\Controllers\Api\V1\SellerVerificationApiController::class, 'store']);

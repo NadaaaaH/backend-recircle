@@ -32,14 +32,27 @@ export default function AdminDashboard() {
         setError(null);
         try {
             const res = await api.get('/admin/dashboard');
-            // Backend now returns: { data: { stats, monthly_stats, recent_activities } }
+            // Backend returns: { data: { stats, monthlyStats, recentActivities } }
             const payload = res.data?.data || res.data;
             setStats(payload.stats || payload);
-            setMonthlyStats(payload.monthly_stats || []);
-            setRecentActivities(Array.isArray(payload.recent_activities) ? payload.recent_activities.slice(0, 5) : []);
+            
+            const mStats = payload.monthlyStats || payload.monthly_stats || [];
+            setMonthlyStats(mStats);
+            
+            const rAct = payload.recentActivities || payload.recent_activities || [];
+            setRecentActivities(Array.isArray(rAct) ? rAct.slice(0, 5) : []);
         } catch (err) {
             console.error('Admin dashboard error:', err);
-            setError(err.response?.data?.message || 'Gagal memuat data dashboard.');
+            const status = err.response?.status;
+            let errorMsg = 'Gagal memuat data dashboard.';
+            if (status === 404) {
+                errorMsg = 'Endpoint dashboard tidak ditemukan (404). Silakan hubungi admin.';
+            } else if (status === 500) {
+                errorMsg = 'Terjadi kesalahan internal pada server (500). Silakan coba beberapa saat lagi.';
+            } else if (err.response?.data?.message) {
+                errorMsg = err.response.data.message;
+            }
+            setError(errorMsg);
         } finally {
             setLoading(false);
         }

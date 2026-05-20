@@ -15,14 +15,16 @@ class OfferResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'            => $this->id,
-            'offeredPrice'  => $this->harga_tawar,
-            'dealPrice'     => $this->harga_deal,
-            'message'       => $this->pesan,
-            'status'        => $this->status,
-            'expiredAt'     => $this->deal_expired_at ? $this->deal_expired_at->toISOString() : null,
-            'isExpired'     => $this->isDealExpired(),
-            'createdAt'     => $this->created_at->diffForHumans(),
+            'id'               => $this->id,
+            'offeredPrice'     => $this->harga_tawar,
+            'dealPrice'        => $this->harga_deal,
+            'negotiatedPrice'  => $this->harga_deal,
+            'negotiated_price' => $this->harga_deal,
+            'message'          => $this->pesan,
+            'status'           => $this->status,
+            'expiredAt'        => $this->deal_expired_at ? $this->deal_expired_at->toISOString() : null,
+            'isExpired'        => $this->isDealExpired(),
+            'createdAt'        => $this->created_at->diffForHumans(),
             'product'       => [
                 'id'         => $this->product->id ?? null,
                 'name'       => $this->product->nama_barang ?? null,

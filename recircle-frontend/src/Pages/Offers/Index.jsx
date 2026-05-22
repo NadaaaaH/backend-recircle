@@ -84,27 +84,47 @@ export default function BuyerOffers() {
                                                         {config.icon} {config.label}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center gap-4 mt-3">
-                                                    <div>
-                                                        <p className="text-xs text-gray-400">Harga asli</p>
-                                                        <p className="text-sm text-gray-600">{formatPrice(offer.product?.price)}</p>
-                                                    </div>
-                                                    <div className="text-gray-300">→</div>
-                                                    <div>
-                                                        <p className="text-xs text-gray-400">Tawaranmu</p>
-                                                        <p className="text-sm font-bold text-primary">{formatPrice(offer.offeredPrice)}</p>
-                                                    </div>
-                                                    {offer.dealPrice && (
-                                                        <>
-                                                            <div className="text-gray-300">→</div>
-                                                            <div>
-                                                                <p className="text-xs text-gray-400">Deal</p>
-                                                                <p className="text-sm font-bold text-green-600">{formatPrice(offer.dealPrice)}</p>
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                    <span className="text-xs text-gray-400 ml-auto">{offer.createdAt}</span>
-                                                </div>
+                                                 {offer.status === 'accepted' && (offer.negotiated_price || offer.dealPrice) ? (
+                                                     <div className="flex items-center gap-4 mt-3">
+                                                         <div>
+                                                             <p className="text-xs text-gray-400">Harga asli</p>
+                                                             <p className="text-sm text-gray-400 line-through">{formatPrice(offer.product?.price)}</p>
+                                                         </div>
+                                                         <div className="text-gray-300">→</div>
+                                                         <div>
+                                                             <p className="text-xs text-gray-400">Tawaranmu</p>
+                                                             <p className="text-sm text-gray-400 line-through">{formatPrice(offer.offeredPrice)}</p>
+                                                         </div>
+                                                         <div className="text-gray-300">→</div>
+                                                         <div>
+                                                             <p className="text-xs text-green-600 font-bold">Harga Deal</p>
+                                                             <p className="text-sm font-extrabold text-green-600 animate-pulse">{formatPrice(offer.negotiated_price || offer.dealPrice)}</p>
+                                                         </div>
+                                                         <span className="text-xs text-gray-400 ml-auto">{offer.createdAt}</span>
+                                                     </div>
+                                                 ) : (
+                                                     <div className="flex items-center gap-4 mt-3">
+                                                         <div>
+                                                             <p className="text-xs text-gray-400">Harga asli</p>
+                                                             <p className="text-sm text-gray-600">{formatPrice(offer.product?.price)}</p>
+                                                         </div>
+                                                         <div className="text-gray-300">→</div>
+                                                         <div>
+                                                             <p className="text-xs text-gray-400">Tawaranmu</p>
+                                                             <p className="text-sm font-bold text-primary">{formatPrice(offer.offeredPrice)}</p>
+                                                         </div>
+                                                         {offer.dealPrice && (
+                                                             <>
+                                                                 <div className="text-gray-300">→</div>
+                                                                 <div>
+                                                                     <p className="text-xs text-gray-400">Deal</p>
+                                                                     <p className="text-sm font-bold text-green-600">{formatPrice(offer.dealPrice)}</p>
+                                                                 </div>
+                                                             </>
+                                                         )}
+                                                         <span className="text-xs text-gray-400 ml-auto">{offer.createdAt}</span>
+                                                     </div>
+                                                 )}
                                                 {/* CTA for accepted non-expired offers */}
                                                 {offer.status === 'accepted' && !offer.isExpired && (
                                                     <Link

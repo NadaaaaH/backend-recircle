@@ -15,7 +15,8 @@ class SellerActivityApiController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $activities = ActivityService::getSellerActivities($request->user()->id, 20);
+            $type = $request->query('type');
+            $activities = ActivityService::getSellerActivities($request->user()->id, 20, $type);
             // Assuming ActivityService returns raw arrays, we can still use the resource if we want but 
             // since it's already formatted, we can just return it or wrap it.
             return $this->successResponse($activities, 'Seller activities retrieved successfully');

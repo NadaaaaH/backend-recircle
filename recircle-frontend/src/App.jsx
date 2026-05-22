@@ -31,6 +31,9 @@ const WishlistIndex = React.lazy(() => import("@/Pages/Wishlist/Index"));
 // Offers
 const OffersIndex = React.lazy(() => import("@/Pages/Offers/Index"));
 
+// Notifications
+const NotificationsIndex = React.lazy(() => import("@/Pages/Notifications/Index"));
+
 // Auth Pages
 const Login = React.lazy(() => import("@/Pages/Auth/Login"));
 const Register = React.lazy(() => import("@/Pages/Auth/Register"));
@@ -149,6 +152,14 @@ function App() {
           element={
             <ProtectedRoute>
               <OffersIndex />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationsIndex />
             </ProtectedRoute>
           }
         />

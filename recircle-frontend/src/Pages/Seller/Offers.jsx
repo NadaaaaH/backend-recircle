@@ -157,18 +157,34 @@ export default function Offers() {
                                     </div>
                                 </div>
 
-                                {/* Tengah: Harga */}
-                                <div className="w-full md:w-auto flex md:flex-col items-center md:items-start justify-between md:justify-center border-t border-slate-100 md:border-0 pt-4 md:pt-0">
-                                    <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Penawaran:</p>
-                                    <div className="flex items-center md:items-baseline gap-2 mt-0.5">
-                                        <p className="text-2xl font-bold text-slate-900 tracking-tight">
-                                            {formatRp(offer.offeredPrice)}
-                                        </p>
-                                        <p className="text-sm text-slate-400 line-through font-medium hidden sm:inline-block">
-                                            {formatRp(offer.product?.price)}
-                                        </p>
-                                    </div>
-                                </div>
+                                 {/* Tengah: Harga */}
+                                 <div className="w-full md:w-auto flex md:flex-col items-center md:items-start justify-between md:justify-center border-t border-slate-100 md:border-0 pt-4 md:pt-0">
+                                     {offer.status === 'accepted' && (offer.negotiated_price || offer.dealPrice) ? (
+                                         <>
+                                             <p className="text-xs text-green-600 uppercase tracking-wider font-bold">Harga Deal:</p>
+                                             <div className="flex items-center md:items-baseline gap-2 mt-0.5">
+                                                 <p className="text-2xl font-extrabold text-green-600 tracking-tight">
+                                                     {formatRp(offer.negotiated_price || offer.dealPrice)}
+                                                 </p>
+                                                 <p className="text-xs text-slate-400 line-through font-medium hidden sm:inline-block">
+                                                     {formatRp(offer.offeredPrice)}
+                                                 </p>
+                                             </div>
+                                         </>
+                                     ) : (
+                                         <>
+                                             <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Penawaran:</p>
+                                             <div className="flex items-center md:items-baseline gap-2 mt-0.5">
+                                                 <p className="text-2xl font-bold text-slate-900 tracking-tight">
+                                                     {formatRp(offer.offeredPrice)}
+                                                 </p>
+                                                 <p className="text-sm text-slate-400 line-through font-medium hidden sm:inline-block">
+                                                     {formatRp(offer.product?.price)}
+                                                 </p>
+                                             </div>
+                                         </>
+                                     )}
+                                 </div>
 
                                 {/* Kanan: Aksi / Status */}
                                 <div className="w-full md:w-auto flex gap-3 md:justify-end">

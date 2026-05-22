@@ -16,7 +16,7 @@ class MongoLogService
      * @param array $data
      * @return Notification
      */
-    public static function notify(int $userId, string $type, string $message, array $data = [])
+    public static function notify(int $userId, string $type, string $message, array $data = [], string $targetRole = 'buyer')
     {
         return Notification::create([
             'user_id' => $userId,
@@ -24,6 +24,7 @@ class MongoLogService
             'message' => $message,
             'data' => $data,
             'is_read' => false,
+            'target_role' => $targetRole,
         ]);
     }
 

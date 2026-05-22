@@ -15,12 +15,14 @@ class Notification extends Model
         'message', // Pesan notifikasi 
         'data',    // Data dinamis JSON / Array
         'is_read',
+        'target_role', // 'seller' or 'buyer'
     ];
 
     protected $casts = [
         'user_id' => 'integer',
         'is_read' => 'boolean',
         'data' => 'array',
+        'target_role' => 'string',
     ];
 
     public function user()

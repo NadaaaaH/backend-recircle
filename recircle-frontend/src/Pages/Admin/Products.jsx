@@ -29,9 +29,10 @@ const formatCurrency = (n) =>
 
 const statusColors = {
   active: "bg-green-50 text-green-600 border-green-100",
+  sold: "bg-amber-50 text-amber-700 border-amber-100",
+  archived: "bg-gray-50 text-gray-500 border-gray-100",
   pending: "bg-orange-50 text-orange-600 border-orange-100",
   rejected: "bg-red-50 text-red-600 border-red-100",
-  inactive: "bg-gray-50 text-gray-500 border-gray-100",
 };
 
 export default function AdminProducts() {
@@ -114,8 +115,8 @@ export default function AdminProducts() {
               >
                 <option value="">Semua Status</option>
                 <option value="active">Aktif</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Ditolak</option>
+                <option value="sold">Terjual</option>
+                <option value="archived">Diarsipkan</option>
               </select>
               <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
@@ -200,16 +201,16 @@ export default function AdminProducts() {
                         </td>
                         <td className="px-6 py-5">
                           <div
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusColors[product.status] || statusColors.inactive}`}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusColors[product.status] || statusColors.archived}`}
                           >
                             {product.status === "active" ? (
                               <CheckCircle2 className="w-3 h-3" />
-                            ) : product.status === "pending" ? (
-                              <Clock className="w-3 h-3" />
+                            ) : product.status === "sold" ? (
+                              <ArrowUpRight className="w-3 h-3" />
                             ) : (
                               <XCircle className="w-3 h-3" />
                             )}
-                            {product.status || "inactive"}
+                            {product.status || "archived"}
                           </div>
                         </td>
                         <td className="px-6 py-5 text-right">
@@ -239,10 +240,10 @@ export default function AdminProducts() {
                             {product.status === "active" && (
                               <button
                                 onClick={() =>
-                                  handleStatusUpdate(product.id, "inactive")
+                                  handleStatusUpdate(product.id, "archived")
                                 }
                                 className="p-2 rounded-xl bg-gray-50 text-gray-400 hover:bg-gray-100 transition-colors shadow-sm border border-gray-100"
-                                title="Sembunyikan"
+                                title="Arsipkan"
                               >
                                 <XCircle className="w-3.5 h-3.5" />
                               </button>

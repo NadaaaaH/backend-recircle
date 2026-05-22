@@ -151,9 +151,6 @@ export default function ChatIndex() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    const openChat = async (targetUser) => {
-        setSelectedUser(targetUser);
-
     const openChat = async (user) => {
         setSelectedUser(user);
 
@@ -487,4 +484,4 @@ export default function ChatIndex() {
             </div>
         </MainLayout>
     );
-    }}
+}

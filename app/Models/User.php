@@ -32,6 +32,7 @@ class User extends Authenticatable
         'bio',
         'komerce_destination_id',
         'komerce_destination_label',
+        'is_active',
     ];
 
     protected $hidden = [
@@ -44,6 +45,7 @@ class User extends Authenticatable
         'password' => 'hashed',
         'is_verified' => 'boolean',
         'is_seller' => 'boolean',
+        'is_active' => 'boolean',
         'notifications_read_at' => 'datetime',
     ];
 

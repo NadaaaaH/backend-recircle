@@ -32,11 +32,11 @@ export default function AdminDashboard() {
         setError(null);
         try {
             const res = await api.get('/admin/dashboard');
-            // Backend now returns: { data: { stats, monthly_stats, recent_activities } }
+            // Backend returns: { data: { stats, monthlyStats, recentActivities } }
             const payload = res.data?.data || res.data;
             setStats(payload.stats || payload);
-            setMonthlyStats(payload.monthly_stats || []);
-            setRecentActivities(Array.isArray(payload.recent_activities) ? payload.recent_activities.slice(0, 5) : []);
+            setMonthlyStats(payload.monthlyStats || []);
+            setRecentActivities(Array.isArray(payload.recentActivities) ? payload.recentActivities.slice(0, 5) : []);
         } catch (err) {
             console.error('Admin dashboard error:', err);
             setError(err.response?.data?.message || 'Gagal memuat data dashboard.');

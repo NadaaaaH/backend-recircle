@@ -60,7 +60,19 @@ export default function AdminUsersPage() {
       const res = await axios.get("/admin/users", {
         params: { page, ...filters },
       });
-      setUsers(res.data?.data || res.data);
+      // Normalize response: API wraps data with { status, message, data }
+      // and resources with paginator return { data: [...], meta: { total, current_page, last_page } }
+      const payload = res.data?.data || res.data;
+      if (payload && payload.data && payload.meta) {
+        setUsers({
+          data: payload.data,
+          total: payload.meta.total,
+          current_page: payload.meta.current_page,
+          last_page: payload.meta.last_page,
+        });
+      } else {
+        setUsers(payload);
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Gagal memuat data pengguna.");
     } finally {
@@ -241,7 +253,7 @@ export default function AdminUsersPage() {
                               </p>
                               <div className="flex items-center gap-1 mt-0.5 text-[10px] text-gray-400">
                                 <Calendar className="w-3 h-3" />{" "}
-                                {formatDate(user.created_at)}
+                                {formatDate(user.createdAt)}
                               </div>
                             </div>
                           </div>
@@ -266,7 +278,7 @@ export default function AdminUsersPage() {
                           </div>
                         </td>
                         <td className="px-6 py-5">
-                          {user.is_active ? (
+                          {user.isActive ? (
                             <div className="flex items-center gap-1.5 text-green-600 text-[10px] font-bold">
                               <CheckCircle2 className="w-3.5 h-3.5" /> AKTIF
                             </div>
@@ -280,8 +292,8 @@ export default function AdminUsersPage() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => handleToggleStatus(user.id)}
-                              title={user.is_active ? "Blokir" : "Aktifkan"}
-                              className={`p-2 rounded-lg transition-colors ${user.is_active ? "text-orange-400 hover:bg-orange-50" : "text-green-500 hover:bg-green-50"}`}
+                              title={user.isActive ? "Blokir" : "Aktifkan"}
+                              className={`p-2 rounded-lg transition-colors ${user.isActive ? "text-orange-400 hover:bg-orange-50" : "text-green-500 hover:bg-green-50"}`}
                             >
                               <Power className="w-4 h-4" />
                             </button>

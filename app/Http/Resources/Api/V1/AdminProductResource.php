@@ -12,8 +12,9 @@ class AdminProductResource extends JsonResource
         return [
             'id'        => $this->id,
             'name'      => $this->nama_barang,
-            'seller'    => $this->user->name ?? 'Unknown',
-            'category'  => $this->category->nama_kategori ?? 'Umum',
+            // Use nullsafe operator to avoid errors when relations are missing
+            'seller'    => $this->user?->name ?? 'Unknown',
+            'category'  => $this->category?->nama_kategori ?? 'Umum',
             'price'     => $this->harga,
             'status'    => $this->status ?? 'pending',
             'image'     => $this->foto_barang_url,

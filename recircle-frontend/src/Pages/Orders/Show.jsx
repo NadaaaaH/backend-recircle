@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   Loader2,
 } from "lucide-react";
-import api from "@/lib/axios";
 
 export default function Show() {
   const { id } = useParams();

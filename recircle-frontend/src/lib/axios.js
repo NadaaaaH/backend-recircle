@@ -26,12 +26,22 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        // If token expired or unauthenticated, clear auth and redirect
         if (error.response?.status === 401) {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('auth_user');
             // Avoid redirect loop if already on login page
             if (!window.location.pathname.startsWith('/login')) {
                 window.location.href = '/login';
+            }
+        }
+        // If account is deactivated (forbidden), sign the user out to prevent continued access
+        if (error.response?.status === 403) {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            if (!window.location.pathname.startsWith('/login')) {
+                // Add query to indicate blocked state (optional)
+                window.location.href = '/login?blocked=1';
             }
         }
         return Promise.reject(error);

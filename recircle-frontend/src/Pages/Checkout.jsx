@@ -227,7 +227,7 @@ export default function Checkout() {
                 catatan: catatan,
                 shipping_cost: shippingCost,
                 courier_info: courierServiceLabel
-            };
+            });
 
             if (response.data.success) {
                 const data = response.data.data;

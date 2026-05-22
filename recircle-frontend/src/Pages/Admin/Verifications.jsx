@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   RefreshCw,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 
 const formatDate = (d) =>
@@ -145,11 +146,6 @@ export default function AdminVerifications() {
             >
               Coba Lagi
             </button>
-          </div>
-        ) : verifications.length === 0 ? (
-          <div className="bg-white rounded-[2.5rem] p-16 text-center shadow-sm border border-gray-100">
-            <Loader2 className="w-10 h-10 animate-spin text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Memuat data verifikasi...</p>
           </div>
         ) : verifications.length === 0 ? (
           <div className="bg-white rounded-[2.5rem] p-16 text-center shadow-sm border border-gray-100">

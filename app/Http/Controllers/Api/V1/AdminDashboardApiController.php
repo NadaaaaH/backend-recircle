@@ -15,6 +15,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AdminDashboardApiController extends Controller
 {
@@ -160,10 +161,13 @@ class AdminDashboardApiController extends Controller
     {
         try {
             $product = Product::findOrFail($id);
-            $validated = $request->validate(['status' => 'required|in:active,rejected,inactive,pending']);
-            $product->update(['status' => $validated['status']]);
+            $validated = $request->validate(['status' => 'required|in:active,sold,archived,inactive']);
+            $status = $validated['status'] === 'inactive' ? 'archived' : $validated['status'];
+            $product->update(['status' => $status]);
             return $this->successResponse(new AdminProductResource($product), 'Product status updated successfully');
         } catch (\Exception $e) {
+            Log::error('Product status update failed: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
             return $this->errorResponse('Failed to update product status', 500);
         }
     }

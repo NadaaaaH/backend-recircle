@@ -66,6 +66,11 @@ class AuthApiController extends Controller
             if (!$user || !Hash::check($request->password, $user->password)) {
                 return $this->errorResponse('Invalid credentials', 401);
             }
+            
+            // Prevent login if account is deactivated
+            if (!($user->is_active ?? true)) {
+                return $this->errorResponse('Akun Anda telah diblokir. Hubungi administrator.', 403);
+            }
 
             // Generate Token
             $token = $user->createToken('auth_token')->plainTextToken;
@@ -95,6 +100,10 @@ class AuthApiController extends Controller
             $user = auth('sanctum')->user();
             if (!$user) {
                 return $this->successResponse(null, 'User is not logged in');
+            }
+            // If account is deactivated, treat as not authenticated
+            if (!($user->is_active ?? true)) {
+                return $this->errorResponse('Akun dinonaktifkan', 403);
             }
             return $this->successResponse(new \App\Http\Resources\Api\V1\UserResource($user), 'Authenticated user retrieved successfully');
         } catch (\Exception $e) {

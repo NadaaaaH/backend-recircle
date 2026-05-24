@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+// Ensure VITE_APP_URL is normalized (no trailing slash) so we don't end up
+// with accidental double-slashes or relative paths when building baseURL.
+const rawAppUrl = import.meta.env.VITE_APP_URL || 'http://localhost:8000';
+const baseAppUrl = rawAppUrl.toString().trim().replace(/\/+$|\s+$/g, '');
+
 const api = axios.create({
-    baseURL: `${import.meta.env.VITE_APP_URL || 'http://localhost:8000'}/api/v1`,
+    baseURL: `${baseAppUrl}/api/v1`,
     headers: {
         'X-Requested-With': 'XMLHttpRequest',
         'Accept': 'application/json',

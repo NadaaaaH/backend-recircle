@@ -8,14 +8,19 @@ import Pusher from 'pusher-js';
 
 window.Pusher = Pusher;
 
+const reverbHost = import.meta.env.VITE_REVERB_HOST ?? window.location.hostname;
+const reverbPort = import.meta.env.VITE_REVERB_PORT ?? (window.location.protocol === 'https:' ? 443 : 80);
+const reverbScheme = (import.meta.env.VITE_REVERB_SCHEME || (window.location.protocol === 'https:' ? 'https' : 'http')).toString();
+const isSecure = reverbScheme === 'https' || Number(reverbPort) === 443;
+
 window.Echo = new Echo({
     broadcaster: 'reverb',
     key: import.meta.env.VITE_REVERB_APP_KEY,
-    wsHost: import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
-    wsPort: import.meta.env.VITE_REVERB_PORT ?? 8080,
-    wssPort: import.meta.env.VITE_REVERB_PORT ?? 8080,
-    forceTLS: false,
-    enabledTransports: ['ws'],
+    wsHost: reverbHost,
+    wsPort: reverbPort,
+    wssPort: reverbPort,
+    forceTLS: isSecure,
+    enabledTransports: isSecure ? ['wss'] : ['ws'],
     authorizer: (channel, options) => {
         return {
             authorize: (socketId, callback) => {

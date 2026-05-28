@@ -24,6 +24,8 @@ class ProductResource extends JsonResource
             'campusLocation' => $this->lokasi_kampus,
             'status'         => $this->status,
             'images'         => $this->foto_barang_urls,
+            'img'            => $this->foto_barang_url,
+            'gambar_url'     => $this->foto_barang_url,
             'seller'         => new UserResource($this->whenLoaded('user')),
             'category'       => new CategoryResource($this->whenLoaded('category')),
             'createdAt'      => $this->created_at?->format('Y-m-d H:i:s'),

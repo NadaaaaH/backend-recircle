@@ -47,11 +47,13 @@ class OrderService
                 'dana_ditahan'       => $metodePengiriman === 'kirim_paket',
             ]);
 
-            // Tandai produk sebagai sold
-            $product->markAsSold();
+            if ($metodePengiriman === 'cod') {
+                // Tandai produk sebagai sold
+                $product->markAsSold();
 
-            // Auto-cancel semua penawaran pending/accepted pada produk ini
-            $this->offerService->cancelAllOffersForProduct($product);
+                // Auto-cancel semua penawaran pending/accepted pada produk ini
+                $this->offerService->cancelAllOffersForProduct($product);
+            }
 
             // Jika kirim paket, buat Snap token Midtrans
             $snapToken = null;
@@ -118,6 +120,18 @@ class OrderService
                 'midtrans_transaction_id' => $transactionId,
                 'metode_pembayaran'       => $paymentType,
             ]);
+
+            // Mark the product as sold
+            $order->product->markAsSold();
+
+            // Auto-cancel all other pending/accepted offers for this product
+            $this->offerService->cancelAllOffersForProduct($order->product);
+
+            // Also auto-cancel/expire other pending orders for the same product
+            Order::where('product_id', $order->product_id)
+                ->where('id', '!=', $order->id)
+                ->where('status', 'pending')
+                ->update(['status' => 'dibatalkan']);
 
             return $order->fresh();
         });

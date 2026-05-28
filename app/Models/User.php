@@ -56,9 +56,9 @@ class User extends Authenticatable
         return Attribute::make(
             get: function () {
                 if ($this->avatar) {
-                    return filter_var($this->avatar, FILTER_VALIDATE_URL) ? $this->avatar : asset('storage/' . ltrim(str_replace('public/', '', $this->avatar), '/'));
+                    return filter_var($this->avatar, FILTER_VALIDATE_URL) ? $this->avatar : url('storage/' . ltrim(str_replace('public/', '', $this->avatar), '/'));
                 }
-                return asset('images/default-avatar.png');
+                return url('images/default-avatar.png');
             }
         );
     }
@@ -93,6 +93,11 @@ class User extends Authenticatable
     public function sellerBalances()
     {
         return $this->hasMany(SellerBalance::class);
+    }
+
+    public function withdrawals()
+    {
+        return $this->hasMany(Withdrawal::class);
     }
 
     public function categoryViews()

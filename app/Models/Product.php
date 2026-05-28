@@ -47,21 +47,21 @@ class Product extends Model
                     $decoded = json_decode($this->image, true);
                     if (is_array($decoded)) {
                         foreach ($decoded as $path) {
-                            $urls[] = filter_var($path, FILTER_VALIDATE_URL) ? $path : asset('storage/' . ltrim(str_replace('public/', '', $path), '/'));
+                            $urls[] = filter_var($path, FILTER_VALIDATE_URL) ? $path : url('storage/' . ltrim(str_replace('public/', '', $path), '/'));
                         }
                     } else {
-                        $urls[] = filter_var($this->image, FILTER_VALIDATE_URL) ? $this->image : asset('storage/' . ltrim(str_replace('public/', '', $this->image), '/'));
+                        $urls[] = filter_var($this->image, FILTER_VALIDATE_URL) ? $this->image : url('storage/' . ltrim(str_replace('public/', '', $this->image), '/'));
                     }
                 }
 
                 if ($this->relationLoaded('images')) {
                     foreach ($this->images as $img) {
-                        $urls[] = filter_var($img->path, FILTER_VALIDATE_URL) ? $img->path : asset('storage/' . ltrim(str_replace('public/', '', $img->path), '/'));
+                        $urls[] = filter_var($img->path, FILTER_VALIDATE_URL) ? $img->path : url('storage/' . ltrim(str_replace('public/', '', $img->path), '/'));
                     }
                 }
 
                 if (empty($urls)) {
-                    $urls[] = asset('images/placeholder-product.png');
+                    $urls[] = url('images/placeholder-product.png');
                 }
 
                 return $urls;
@@ -71,7 +71,7 @@ class Product extends Model
 
     public function getFotoBarangUrlAttribute()
     {
-        $fallback = asset('images/placeholder-product.png');
+        $fallback = url('images/placeholder-product.png');
 
         if (empty($this->image)) {
             return $fallback;
@@ -92,7 +92,7 @@ class Product extends Model
             }
             // Bersihkan path jika ada prefix storage atau public
             $cleanPath = ltrim(str_replace(['public/', '/storage/', 'storage/'], ['', '', ''], $path), '/');
-            return Storage::url($cleanPath);
+            return url('storage/' . $cleanPath);
         }
 
         return $fallback;
@@ -100,7 +100,7 @@ class Product extends Model
 
     public function getFotoBarangUrlsAttribute()
     {
-        $fallback = asset('images/placeholder-product.png');
+        $fallback = url('images/placeholder-product.png');
         $urls = [];
 
         if (!empty($this->image)) {
@@ -112,7 +112,7 @@ class Product extends Model
                         $urls[] = $path;
                     } else {
                         $cleanPath = ltrim(str_replace(['public/', '/storage/', 'storage/'], ['', '', ''], $path), '/');
-                        $urls[] = Storage::url($cleanPath);
+                        $urls[] = url('storage/' . $cleanPath);
                     }
                 }
             } elseif (is_string($this->image)) {
@@ -120,7 +120,7 @@ class Product extends Model
                     $urls[] = $this->image;
                 } else {
                     $cleanPath = ltrim(str_replace(['public/', '/storage/', 'storage/'], ['', '', ''], $this->image), '/');
-                    $urls[] = Storage::url($cleanPath);
+                    $urls[] = url('storage/' . $cleanPath);
                 }
             }
         }

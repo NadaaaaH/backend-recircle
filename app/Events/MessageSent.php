@@ -26,42 +26,51 @@ class MessageSent implements ShouldBroadcastNow
     }
 
     /**
-     * Get the channels the event should broadcast on.
-     *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * Broadcast ONLY to the receiver's private channel.
+     * The sender already appends their own message optimistically — broadcasting
+     * to the sender's channel would cause duplicate messages in the UI.
      */
     public function broadcastOn(): array
     {
-        // Broadcasts to the receiver's private channel
         return [
-            new PrivateChannel('chat.' . $this->message->receiver_id),
-            new PrivateChannel('chat.' . $this->message->sender_id),
+            new PrivateChannel('chat.' . (int) $this->message->receiver_id),
         ];
     }
 
     /**
-     * Data to broadcast.
+     * The event name that will be broadcast.
+     */
+    public function broadcastAs(): string
+    {
+        return 'MessageSent';
+    }
+
+    /**
+     * Flatten the data payload so the frontend receives it directly on the event object.
+     * Frontend reads: event.id, event.sender_id, event.message, etc.
      */
     public function broadcastWith(): array
     {
         return [
-            'id' => $this->message->id,
-            'sender_id' => $this->message->sender_id,
-            'receiver_id' => $this->message->receiver_id,
-            'product_id' => $this->message->product_id,
+            'id' => (string) $this->message->id,
+            'sender_id' => (int) $this->message->sender_id,
+            'receiver_id' => (int) $this->message->receiver_id,
+            'product_id' => $this->message->product_id ? (int) $this->message->product_id : null,
             'message' => $this->message->message,
-            'is_read' => $this->message->is_read,
+            'is_read' => (bool) $this->message->is_read,
             'created_at' => $this->message->created_at ? $this->message->created_at->toISOString() : now()->toISOString(),
-            // Optionally load the product or sender details
             'product' => $this->message->product ? [
                 'id' => $this->message->product->id,
                 'name' => $this->message->product->nama_barang,
                 'price' => $this->message->product->harga,
-                'img' => $this->message->product->image,
+                'image' => $this->message->product->foto_barang_url,
             ] : null,
-            'sender' => [
-                'id' => $this->message->sender->id,
+            'sender' => $this->message->relationLoaded('sender') && $this->message->sender ? [
+                'id' => (int) $this->message->sender->id,
                 'name' => $this->message->sender->name,
+            ] : [
+                'id' => (int) $this->message->sender_id,
+                'name' => 'Unknown User',
             ],
         ];
     }

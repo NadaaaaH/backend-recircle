@@ -51,6 +51,9 @@ class CheckoutApiController extends Controller
                 'offer' => $offer,
                 'final_price' => $finalPrice,
                 'midtrans_client_key' => config('services.midtrans.client_key'),
+                'midtrans_snap_url'   => config('services.midtrans.is_production')
+                    ? 'https://app.midtrans.com/snap/snap.js'
+                    : 'https://app.sandbox.midtrans.com/snap/snap.js',
             ], 'Checkout data retrieved successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to retrieve checkout data', 500);
@@ -113,8 +116,10 @@ class CheckoutApiController extends Controller
                 'dana_ditahan'       => $validated['metode_pengiriman'] === 'kirim_paket',
             ]);
 
-            $product->markAsSold();
-            $this->offerService->cancelAllOffersForProduct($product);
+            if ($validated['metode_pengiriman'] === 'cod') {
+                $product->markAsSold();
+                $this->offerService->cancelAllOffersForProduct($product);
+            }
 
             $snapToken = null;
 

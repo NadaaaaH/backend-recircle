@@ -15,6 +15,10 @@ class MidtransWebhookController extends Controller
      */
     public function __invoke(Request $request, OrderService $orderService)
     {
+        // REMINDER: Exclude this webhook route ('api/midtrans/webhook') from CSRF verification
+        // in Laravel's bootstrap/app.php (Laravel 11+) using ->validateCsrfTokens(except: ['api/midtrans/webhook'])
+        // or in App\Http\Middleware\VerifyCsrfToken middleware (Laravel < 11) in the $except array.
+
         try {
             $payload = $request->all();
             
@@ -34,17 +38,17 @@ class MidtransWebhookController extends Controller
             $grossAmount  = $payload['gross_amount'];
             $signatureKey = $payload['signature_key'];
 
-            // Verifikasi signature key
-            $serverKey    = config('midtrans.server_key');
+            // STRICT AUDIT 1 (Security): Ensure it correctly validates the signature key using server_key, order_id, status_code, and gross_amount to prevent spoofing.
+            $serverKey = config('services.midtrans.server_key') ?? config('midtrans.server_key');
             
             if (!$serverKey) {
-                Log::error('Midtrans Webhook Config Error: server_key not configured in config/midtrans.php');
+                Log::error('Midtrans Webhook Config Error: server_key not configured in config/services.php or config/midtrans.php');
                 return response()->json(['message' => 'Server configuration error'], 500);
             }
 
             $expectedSignature = hash('sha512', $orderIdSent . $statusCode . $grossAmount . $serverKey);
 
-            if ($expectedSignature !== $signatureKey) {
+            if (!hash_equals($expectedSignature, $signatureKey)) {
                 Log::warning('Midtrans Webhook: Invalid Signature', ['expected' => $expectedSignature, 'actual' => $signatureKey]);
                 return response()->json(['message' => 'Invalid signature'], 403);
             }
@@ -76,19 +80,25 @@ class MidtransWebhookController extends Controller
             $transactionId     = $payload['transaction_id'] ?? '';
             $paymentType       = $payload['payment_type'] ?? 'midtrans';
  
-            if ($transactionStatus == 'capture') {
-                if ($fraudStatus == 'accept') {
-                    // Leverage encapsulated OrderService flow
+            // STRICT AUDIT 2 (Status Logic): Ensure the database update logic correctly translates Midtrans transaction_status
+            if ($transactionStatus === 'settlement' || $transactionStatus === 'capture') {
+                if ($transactionStatus === 'capture' && $fraudStatus === 'challenge') {
+                    // Challenge status means payment is pending review
+                    $order->update(['status' => 'pending']);
+                    Log::info("Midtrans Webhook: Order {$order->kode_pesanan} capture is challenged. Status set to pending.");
+                } else {
+                    // 'settlement' or 'capture' (approved/accept) -> Update order to 'paid' (mapped locally as 'dibayar')
                     $orderService->handlePaymentSettlement($order, $transactionId, $paymentType);
+                    Log::info("Midtrans Webhook: Order {$order->kode_pesanan} paid successfully. Status updated to dibayar.");
                 }
-            } else if ($transactionStatus == 'settlement') {
-                // Successful payment confirmation
-                $orderService->handlePaymentSettlement($order, $transactionId, $paymentType);
-            } else if ($transactionStatus == 'cancel' || $transactionStatus == 'deny' || $transactionStatus == 'expire') {
-                // Triggers automated product restocking & escrow deletion
-                $orderService->handlePaymentFailure($order);
-            } else if ($transactionStatus == 'pending') {
+            } else if ($transactionStatus === 'pending') {
+                // 'pending' -> Update order to 'pending'
                 $order->update(['status' => 'pending']);
+                Log::info("Midtrans Webhook: Order {$order->kode_pesanan} is pending payment.");
+            } else if (in_array($transactionStatus, ['deny', 'expire', 'cancel'])) {
+                // 'deny', 'expire', 'cancel' -> Update order to 'failed' or 'cancelled' (mapped locally as 'dibatalkan')
+                $orderService->handlePaymentFailure($order);
+                Log::warning("Midtrans Webhook: Order {$order->kode_pesanan} payment failed/cancelled/denied. Status set to dibatalkan.");
             }
 
             return response()->json(['message' => 'OK']);

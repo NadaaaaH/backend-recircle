@@ -22,6 +22,9 @@ class OrderResource extends JsonResource
             'isPending' => $this->status === 'pending',
             'snapToken' => $this->when($this->status === 'pending', $this->midtrans_snap_token),
             'midtransClientKey' => config('services.midtrans.client_key') ?? config('midtrans.client_key'),
+            'midtransSnapUrl' => config('services.midtrans.is_production')
+                ? 'https://app.midtrans.com/snap/snap.js'
+                : 'https://app.sandbox.midtrans.com/snap/snap.js',
             'createdAt' => $this->created_at?->toIso8601String(),
             'product' => new ProductResource($this->whenLoaded('product')),
             

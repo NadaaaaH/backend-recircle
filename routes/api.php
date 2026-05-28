@@ -70,6 +70,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/checkout', [\App\Http\Controllers\Api\V1\CheckoutApiController::class, 'store']);
         Route::get('/orders', [\App\Http\Controllers\Api\V1\OrderApiController::class, 'index']);
         Route::get('/orders/{id}', [\App\Http\Controllers\Api\V1\OrderApiController::class, 'show']);
+        Route::put('/orders/{id}', [\App\Http\Controllers\Api\V1\OrderApiController::class, 'update']);
         Route::post('/orders/{id}/confirm', [\App\Http\Controllers\Api\V1\OrderApiController::class, 'confirmReceipt']);
 
         // Chat Endpoints
@@ -85,6 +86,7 @@ Route::prefix('v1')->group(function () {
         // Seller Operations Pre-Authorization
         Route::get('/seller/verification', [\App\Http\Controllers\Api\V1\SellerVerificationApiController::class, 'show']);
         Route::post('/seller/verification', [\App\Http\Controllers\Api\V1\SellerVerificationApiController::class, 'store']);
+        Route::post('/withdrawals', [\App\Http\Controllers\Api\V1\WithdrawalApiController::class, 'store'])->middleware('seller');
 
         // Seller Dashboard & Operations Endpoints (Requires Verified Seller Status)
         Route::middleware('seller')->prefix('seller')->group(function () {

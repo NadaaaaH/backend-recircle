@@ -71,4 +71,62 @@ class OrderApiController extends Controller
             return $this->errorResponse('Failed to confirm receipt: ' . $e->getMessage(), 500);
         }
     }
+
+    public function update(int $id, Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:shipped,completed',
+        ]);
+
+        $statusInput = $validated['status'];
+
+        try {
+            $order = Order::with('product')->findOrFail($id);
+
+            if ($statusInput === 'shipped') {
+                // 1. Seller shipping confirmation
+                // Verify that authenticated user is the seller of the product
+                if ($order->product->user_id !== $request->user()->id) {
+                    return $this->errorResponse('Unauthorized', 403);
+                }
+
+                if ($order->status !== 'dibayar') {
+                    return $this->errorResponse('Order must be in paid status to ship', 400);
+                }
+
+                $this->orderService->markAsShipped($order);
+
+                return $this->successResponse(
+                    new OrderResource($order->fresh()),
+                    'Order marked as shipped successfully.'
+                );
+            }
+
+            if ($statusInput === 'completed') {
+                // 2. Buyer order completion
+                // Verify that authenticated user is the buyer of the order
+                if ($order->user_id !== $request->user()->id) {
+                    return $this->errorResponse('Unauthorized', 403);
+                }
+
+                if ($order->status !== 'dikirim') {
+                    return $this->errorResponse('Order must be in shipped status to complete', 400);
+                }
+
+                $updatedOrder = $this->orderService->confirmReceipt($order);
+
+                return $this->successResponse(
+                    new OrderResource($updatedOrder),
+                    'Order completed and funds released to seller.'
+                );
+            }
+
+            return $this->errorResponse('Invalid status transition', 400);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return $this->errorResponse('Order not found', 404);
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to update order: ' . $e->getMessage(), 500);
+        }
+    }
 }

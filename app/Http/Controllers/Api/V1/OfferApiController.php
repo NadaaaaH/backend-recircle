@@ -106,6 +106,7 @@ class OfferApiController extends Controller
     /**
      * Seller menerima tawaran.
      */
+   // 1. BACKEND (Offer Acceptance Logic) - App\Http\Controllers\Api\V1\OfferApiController.php
     public function accept(Request $request, $id): JsonResponse
     {
         try {
@@ -115,7 +116,6 @@ class OfferApiController extends Controller
                 return $this->errorResponse('Offer not found', 404);
             }
 
-            // Pastikan hanya seller pemilik produk yang bisa accept
             if ($offer->product->user_id !== $request->user()->id) {
                 return $this->errorResponse('Unauthorized to accept this offer', 403);
             }
@@ -130,6 +130,7 @@ class OfferApiController extends Controller
             return $this->errorResponse('Failed to accept offer: ' . $e->getMessage(), 500);
         }
     }
+
 
     /**
      * Seller menolak tawaran.

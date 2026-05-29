@@ -19,8 +19,24 @@ class SellerOrderApiController extends Controller
     {
         try {
             $productIds = $request->user()->products()->pluck('id');
+            
             $orders = Order::whereIn('product_id', $productIds)
                 ->with(['user', 'product'])
+                ->when($request->filled('status'), function ($query) use ($request) {
+                    $query->where('status', $request->status);
+                })
+                ->when($request->filled('search'), function ($query) use ($request) {
+                    $search = $request->search;
+                    $query->where(function ($q) use ($search) {
+                        $q->where('order_code', 'like', "%{$search}%")
+                          ->orWhereHas('product', function ($p) use ($search) {
+                              $p->where('name', 'like', "%{$search}%");
+                          })
+                          ->orWhereHas('user', function ($u) use ($search) {
+                              $u->where('name', 'like', "%{$search}%");
+                          });
+                    });
+                })
                 ->latest()
                 ->paginate(10);
 

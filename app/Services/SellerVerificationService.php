@@ -47,7 +47,10 @@ class SellerVerificationService
         $verification->update(['status' => 'approved']);
 
         // Set user sebagai verified seller
-        $verification->user->update(['is_seller' => true]);
+        $verification->user->update([
+            'is_seller' => true,
+            'role' => 'seller'
+        ]);
 
         return $verification->fresh();
     }

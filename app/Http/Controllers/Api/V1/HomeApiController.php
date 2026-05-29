@@ -28,7 +28,7 @@ class HomeApiController extends Controller
             ]);
 
             // 2. Recommended/Trending Products
-            $query = Product::with(['images', 'user'])
+            $query = Product::with(['images', 'user', 'category'])
                 ->where('status', 'active');
 
             if (Auth::guard('sanctum')->check()) {
@@ -45,14 +45,18 @@ class HomeApiController extends Controller
                 }
             }
 
-            $products = $query->inRandomOrder()->take(4)->get()->map(fn($p) => [
-                'id'     => $p->id,
-                'name'   => $p->nama_barang,
-                'price'  => $p->harga,
-                'loc'    => $p->lokasi_kampus,
-                'img'    => $p->foto_barang_url,
-                'tag'    => $p->kondisi,
-                'seller' => $p->user->name,
+            $products = $query->inRandomOrder()->take(8)->get()->map(fn($p) => [
+                'id'       => $p->id,
+                'name'     => $p->nama_barang,
+                'price'    => $p->harga,
+                'loc'      => $p->lokasi_kampus,
+                'img'      => $p->foto_barang_url,
+                'tag'      => $p->kondisi,
+                'category' => $p->category ? $p->category->nama_kategori : null,
+                'seller'   => [
+                    'name'   => $p->user->name,
+                    'avatar' => $p->user->avatar_url,
+                ],
             ]);
 
             return $this->successResponse([

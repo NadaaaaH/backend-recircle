@@ -26,15 +26,33 @@ class RajaOngkirController extends Controller
     public function calculateCost(Request $request)
     {
         $request->validate([
-            'origin' => 'required',
+            'product_id'  => 'sometimes|exists:products,id',
+            'origin'      => 'required_without:product_id',
             'destination' => 'required',
-            'weight' => 'required|numeric',
-            'courier' => 'required|string',
+            'weight'      => 'required|numeric',
+            'courier'     => 'required|string',
         ]);
 
         try {
+            $origin = $request->origin;
+            if ($request->has('product_id')) {
+                $product = \App\Models\Product::with('user')->find($request->product_id);
+                if ($product && $product->user) {
+                    $origin = $product->user->komerce_destination_id;
+                }
+            } else if (is_numeric($origin) && \App\Models\Product::find($origin)) {
+                $product = \App\Models\Product::with('user')->find($origin);
+                if ($product && $product->user) {
+                    $origin = $product->user->komerce_destination_id;
+                }
+            }
+
+            if (empty($origin)) {
+                $origin = '34260'; // Safe Default Fallback (Depok)
+            }
+
             $cost = $this->rajaOngkir->calculateCost(
-                $request->origin,
+                $origin,
                 $request->destination,
                 $request->weight,
                 $request->courier

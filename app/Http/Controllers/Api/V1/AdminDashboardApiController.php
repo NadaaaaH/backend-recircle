@@ -69,7 +69,16 @@ class AdminDashboardApiController extends Controller
         }
 
         $users = $query->latest()->paginate(10);
-        return $this->successResponse(AdminUserResource::collection($users)->response()->getData(true), 'Users retrieved successfully');
+        $paginatedData = AdminUserResource::collection($users)->response()->getData(true);
+
+        $paginatedData['stats'] = [
+            'total' => User::count(),
+            'admin' => User::where('role', 'admin')->count(),
+            'seller' => User::where('role', 'seller')->count(),
+            'user' => User::where('role', 'user')->count(),
+        ];
+
+        return $this->successResponse($paginatedData, 'Users retrieved successfully');
     }
 
     public function storeUser(Request $request): JsonResponse
@@ -154,7 +163,16 @@ class AdminDashboardApiController extends Controller
         }
 
         $products = $query->latest()->paginate(10);
-        return $this->successResponse(AdminProductResource::collection($products)->response()->getData(true), 'Products retrieved successfully');
+        $paginatedData = AdminProductResource::collection($products)->response()->getData(true);
+
+        $paginatedData['stats'] = [
+            'total' => Product::count(),
+            'active' => Product::where('status', 'active')->count(),
+            'sold' => Product::where('status', 'sold')->count(),
+            'archived' => Product::where('status', 'archived')->count(),
+        ];
+
+        return $this->successResponse($paginatedData, 'Products retrieved successfully');
     }
 
     public function updateProductStatus(Request $request, int $id): JsonResponse
@@ -183,6 +201,10 @@ class AdminDashboardApiController extends Controller
     {
         $query = Order::with(['user', 'product.user']);
 
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
+
         if ($request->search) {
             $query->where(function ($q) use ($request) {
                 $q->where('kode_pesanan', 'like', "%{$request->search}%")
@@ -197,7 +219,16 @@ class AdminDashboardApiController extends Controller
         }
 
         $orders = $query->latest()->paginate(10);
-        return $this->successResponse(OrderResource::collection($orders)->response()->getData(true), 'Transactions retrieved successfully');
+        $paginatedData = OrderResource::collection($orders)->response()->getData(true);
+
+        $paginatedData['stats'] = [
+            'total' => Order::count(),
+            'revenue' => Order::where('status', 'selesai')->sum('total_harga') ?? 0,
+            'pending' => Order::where('status', 'pending')->count(),
+            'completed' => (Order::where('status', 'selesai')->count() + Order::where('status', 'dikirim')->count()),
+        ];
+
+        return $this->successResponse($paginatedData, 'Transactions retrieved successfully');
     }
 
     public function activities(Request $request): JsonResponse

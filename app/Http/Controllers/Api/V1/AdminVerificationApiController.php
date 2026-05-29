@@ -19,8 +19,17 @@ class AdminVerificationApiController extends Controller
     {
         try {
             $verifications = $this->verificationService->getPendingVerifications();
+            $data = [
+                'list' => SellerVerificationResource::collection($verifications),
+                'stats' => [
+                    'total' => \App\Models\SellerVerification::count(),
+                    'pending' => \App\Models\SellerVerification::where('status', 'pending')->count(),
+                    'approved' => \App\Models\SellerVerification::where('status', 'approved')->count(),
+                    'rejected' => \App\Models\SellerVerification::where('status', 'rejected')->count(),
+                ]
+            ];
             return $this->successResponse(
-                SellerVerificationResource::collection($verifications),
+                $data,
                 'Pending verifications retrieved successfully'
             );
         } catch (\Exception $e) {
@@ -33,7 +42,14 @@ class AdminVerificationApiController extends Controller
         try {
             $verification = SellerVerification::findOrFail($id);
             $this->verificationService->approveVerification($verification);
-            return $this->successResponse(null, 'Seller approved successfully');
+            
+            // Get fresh user object
+            $user = $verification->user->fresh();
+            
+            return $this->successResponse([
+                'verification' => new SellerVerificationResource($verification),
+                'user' => $user
+            ], 'Seller approved successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to approve verification', 500);
         }

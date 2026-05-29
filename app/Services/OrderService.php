@@ -74,6 +74,15 @@ class OrderService
                 ]);
             }
 
+            // Kirim notifikasi ke Seller
+            \App\Services\MongoLogService::notify(
+                $product->user_id,
+                'order',
+                'Ada pesanan baru masuk untuk "' . $product->nama_barang . '" sebesar Rp ' . number_format($totalHarga, 0, ',', '.') . '!',
+                ['order_id' => $order->id, 'product_id' => $product->id],
+                'seller'
+            );
+
             // COD: status tetap pending (konfirmasi saat meetup)
 
             return [
@@ -105,6 +114,15 @@ class OrderService
                 ]);
             }
 
+            // Kirim notifikasi ke Seller
+            \App\Services\MongoLogService::notify(
+                $order->product->user_id,
+                'order_update',
+                'Pesanan selesai! Barang "' . $order->product->nama_barang . '" telah diterima pembeli. Dana Rp ' . number_format($order->total_harga, 0, ',', '.') . ' telah dilepas ke saldo Anda.',
+                ['order_id' => $order->id, 'product_id' => $order->product_id],
+                'seller'
+            );
+
             return $order->fresh();
         });
     }
@@ -133,6 +151,15 @@ class OrderService
                 ->where('status', 'pending')
                 ->update(['status' => 'dibatalkan']);
 
+            // Kirim notifikasi ke Seller bahwa order sudah lunas dan siap kirim
+            \App\Services\MongoLogService::notify(
+                $order->product->user_id,
+                'order_update',
+                'Pembayaran diterima! Pesanan "' . $order->product->nama_barang . '" telah dibayar. Harap segera mengirimkan paket.',
+                ['order_id' => $order->id, 'product_id' => $order->product_id],
+                'seller'
+            );
+
             return $order->fresh();
         });
     }
@@ -154,6 +181,15 @@ class OrderService
                 $balance->delete();
             }
 
+            // Kirim notifikasi ke Seller
+            \App\Services\MongoLogService::notify(
+                $order->product->user_id,
+                'order_update',
+                'Pesanan untuk "' . $order->product->nama_barang . '" telah dibatalkan karena kegagalan pembayaran.',
+                ['order_id' => $order->id, 'product_id' => $order->product_id],
+                'seller'
+            );
+
             return $order->fresh();
         });
     }
@@ -164,6 +200,16 @@ class OrderService
     public function markAsShipped(Order $order): Order
     {
         $order->update(['status' => 'dikirim']);
+
+        // Kirim notifikasi ke Buyer
+        \App\Services\MongoLogService::notify(
+            $order->user_id,
+            'order_update',
+            'Pesanan Anda untuk "' . $order->product->nama_barang . '" telah dikirim oleh penjual!',
+            ['order_id' => $order->id, 'product_id' => $order->product_id],
+            'buyer'
+        );
+
         return $order->fresh();
     }
 }

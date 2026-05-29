@@ -9,10 +9,22 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class SellerDashboardApiController extends Controller
 {
     use ApiResponse;
+
+    /**
+     * Calculate MoM percentage change safely.
+     */
+    private function calculateTrend($current, $previous): float|int
+    {
+        if ($previous == 0) {
+            return $current > 0 ? 100 : 0;
+        }
+        return round((($current - $previous) / $previous) * 100, 1);
+    }
 
     /**
      * Get seller dashboard statistics, chart data, and recent orders.
@@ -23,26 +35,65 @@ class SellerDashboardApiController extends Controller
             $user = $request->user();
             $productIds = $user->products()->pluck('id');
 
-            // --- Stats ---
-            $totalProducts  = $user->products()->count();
-            $activeProducts = $user->products()->where('status', 'active')->count();
-            $totalSold      = $user->products()->where('status', 'sold')->count();
+            // --- MoM Trends using Carbon ---
+            $now = Carbon::now();
+            $startOfCurrentMonth = $now->copy()->startOfMonth();
+            $endOfCurrentMonth = $now->copy()->endOfMonth();
+            $startOfPrevMonth = $now->copy()->subMonth()->startOfMonth();
+            $endOfPrevMonth = $now->copy()->subMonth()->endOfMonth();
 
-            $activeOrders   = Order::whereIn('product_id', $productIds)
-                ->whereIn('status', ['pending', 'dibayar', 'dikirim'])
+            // 1. Saldo MoM
+            $currentSaldo = SellerBalance::where('user_id', $user->id)
+                ->whereIn('status', ['dilepas', 'ditarik'])
+                ->whereBetween('created_at', [$startOfCurrentMonth, $endOfCurrentMonth])
+                ->sum('jumlah');
+
+            $prevSaldo = SellerBalance::where('user_id', $user->id)
+                ->whereIn('status', ['dilepas', 'ditarik'])
+                ->whereBetween('created_at', [$startOfPrevMonth, $endOfPrevMonth])
+                ->sum('jumlah');
+
+            // 2. Escrow MoM
+            $currentEscrow = SellerBalance::where('user_id', $user->id)
+                ->where('status', 'ditahan')
+                ->whereBetween('created_at', [$startOfCurrentMonth, $endOfCurrentMonth])
+                ->sum('jumlah');
+
+            $prevEscrow = SellerBalance::where('user_id', $user->id)
+                ->where('status', 'ditahan')
+                ->whereBetween('created_at', [$startOfPrevMonth, $endOfPrevMonth])
+                ->sum('jumlah');
+
+            // 3. Total Produk MoM
+            $currentProducts = $user->products()
+                ->whereBetween('created_at', [$startOfCurrentMonth, $endOfCurrentMonth])
                 ->count();
 
+            $prevProducts = $user->products()
+                ->whereBetween('created_at', [$startOfPrevMonth, $endOfPrevMonth])
+                ->count();
+
+            // 4. Pesanan Aktif MoM
+            $currentActiveOrders = Order::whereIn('product_id', $productIds)
+                ->whereIn('status', ['pending', 'dibayar', 'dikirim'])
+                ->whereBetween('created_at', [$startOfCurrentMonth, $endOfCurrentMonth])
+                ->count();
+
+            $prevActiveOrders = Order::whereIn('product_id', $productIds)
+                ->whereIn('status', ['pending', 'dibayar', 'dikirim'])
+                ->whereBetween('created_at', [$startOfPrevMonth, $endOfPrevMonth])
+                ->count();
+
+            // --- Other Legacy Stats (needed by sidebar / advisor) ---
+            $activeProducts = $user->products()->where('status', 'active')->count();
+            $totalSold      = $user->products()->where('status', 'sold')->count();
             $needsShipping  = Order::whereIn('product_id', $productIds)
                 ->where('status', 'dibayar')
                 ->count();
 
-            // --- Wallet ---
+            // --- Wallet active ---
             $walletActive = SellerBalance::where('user_id', $user->id)
                 ->whereIn('status', ['dilepas', 'ditarik'])
-                ->sum('jumlah');
-
-            $walletEscrow = SellerBalance::where('user_id', $user->id)
-                ->where('status', 'ditahan')
                 ->sum('jumlah');
 
             // --- Chart Data: Pendapatan 7 hari terakhir dari orders selesai ---
@@ -84,13 +135,26 @@ class SellerDashboardApiController extends Controller
 
             return $this->successResponse([
                 'stats' => [
-                    'total_products'  => $totalProducts,
+                    'saldo' => [
+                        'value' => $currentSaldo,
+                        'trend' => $this->calculateTrend($currentSaldo, $prevSaldo),
+                    ],
+                    'escrow' => [
+                        'value' => $currentEscrow,
+                        'trend' => $this->calculateTrend($currentEscrow, $prevEscrow),
+                    ],
+                    'total_produk' => [
+                        'value' => $currentProducts,
+                        'trend' => $this->calculateTrend($currentProducts, $prevProducts),
+                    ],
+                    'pesanan_aktif' => [
+                        'value' => $currentActiveOrders,
+                        'trend' => $this->calculateTrend($currentActiveOrders, $prevActiveOrders),
+                    ],
                     'active_products' => $activeProducts,
                     'total_sold'      => $totalSold,
-                    'active_orders'   => $activeOrders,
                     'needs_shipping'  => $needsShipping,
                     'total_revenue'   => $walletActive,
-                    'pending_balance' => $walletEscrow,
                 ],
                 'chartData'     => $chartData,
                 'recent_orders' => $recentOrders,

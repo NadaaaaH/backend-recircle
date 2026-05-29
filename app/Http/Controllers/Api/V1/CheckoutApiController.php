@@ -116,10 +116,9 @@ class CheckoutApiController extends Controller
                 'dana_ditahan'       => $validated['metode_pengiriman'] === 'kirim_paket',
             ]);
 
-            if ($validated['metode_pengiriman'] === 'cod') {
-                $product->markAsSold();
-                $this->offerService->cancelAllOffersForProduct($product);
-            }
+            // Mark product as sold (held) on checkout to secure stock and cancel other active negotiations
+            $product->markAsSold();
+            $this->offerService->cancelAllOffersForProduct($product);
 
             $snapToken = null;
 

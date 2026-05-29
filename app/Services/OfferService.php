@@ -29,13 +29,23 @@ class OfferService
             throw new \InvalidArgumentException('Harga tawaran harus lebih rendah dari harga asli.');
         }
 
-        return Offer::create([
+        $offer = Offer::create([
             'user_id'     => $user->id,
             'product_id'  => $product->id,
             'harga_tawar' => $hargaTawar,
             'pesan'       => $pesan,
             'status'      => 'pending',
         ]);
+
+        \App\Services\MongoLogService::notify(
+            $product->user_id,
+            'new_offer',
+            'Ada penawaran baru sebesar Rp ' . number_format($hargaTawar, 0, ',', '.') . ' untuk produk "' . $product->nama_barang . '"!',
+            ['offer_id' => $offer->id, 'product_id' => $product->id],
+            'seller'
+        );
+
+        return $offer;
     }
 
     /**
@@ -59,6 +69,14 @@ class OfferService
                 ->where('status', 'pending')
                 ->update(['status' => 'rejected']);
 
+            \App\Services\MongoLogService::notify(
+                $offer->user_id,
+                'offer',
+                'Penawaran Anda sebesar Rp ' . number_format($offer->harga_tawar, 0, ',', '.') . ' untuk "' . $offer->product->nama_barang . '" telah DITERIMA! Silakan segera lakukan checkout.',
+                ['offer_id' => $offer->id, 'product_id' => $offer->product_id],
+                'buyer'
+            );
+
             return $offer->fresh();
         });
     }
@@ -69,6 +87,15 @@ class OfferService
     public function rejectOffer(Offer $offer): Offer
     {
         $offer->update(['status' => 'rejected']);
+
+        \App\Services\MongoLogService::notify(
+            $offer->user_id,
+            'offer',
+            'Tawaran Anda untuk produk "' . $offer->product->nama_barang . '" ditolak oleh penjual.',
+            ['offer_id' => $offer->id, 'product_id' => $offer->product_id],
+            'buyer'
+        );
+
         return $offer->fresh();
     }
 

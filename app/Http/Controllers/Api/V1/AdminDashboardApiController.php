@@ -190,6 +190,47 @@ class AdminDashboardApiController extends Controller
         }
     }
 
+    public function updateProduct(Request $request, int $id): JsonResponse
+    {
+        try {
+            $product = Product::findOrFail($id);
+            $validated = $request->validate([
+                'category_id' => 'required|exists:categories,id',
+                'name' => 'required|string|max:255',
+                'price' => 'required|numeric|min:0',
+                'condition' => 'required|string',
+                'description' => 'required|string',
+                'campus_location' => 'required|string|max:255',
+                'status' => 'required|in:active,sold,archived,pending,rejected',
+            ]);
+
+            $product->update([
+                'category_id' => $validated['category_id'],
+                'nama_barang' => $validated['name'],
+                'harga' => $validated['price'],
+                'kondisi' => $validated['condition'],
+                'deskripsi' => $validated['description'],
+                'lokasi_kampus' => $validated['campus_location'],
+                'status' => $validated['status'],
+            ]);
+
+            return $this->successResponse(new AdminProductResource($product->load(['user', 'category'])), 'Product updated successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to update product: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function destroyProduct(int $id): JsonResponse
+    {
+        try {
+            $product = Product::findOrFail($id);
+            $product->delete();
+            return $this->successResponse(null, 'Product deleted successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to delete product', 500);
+        }
+    }
+
     public function offers(Request $request): JsonResponse
     {
         $query = Offer::with(['user', 'product.user']);

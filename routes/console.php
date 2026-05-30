@@ -13,3 +13,7 @@ Schedule::command('escrow:release')->daily();
 
 // Hapus otomatis produk yang di soft-delete > 30 hari
 Schedule::command('products:cleanup-trash')->daily();
+
+// Batal otomatis order pending (belum dibayar) > 24 jam
+Schedule::command('orders:auto-cancel')->everyMinute();
+

@@ -80,6 +80,7 @@ Route::prefix('v1')->group(function () {
 
         // Notification Endpoints (Role Decoupled MongoDB)
         Route::get('/notifications', [\App\Http\Controllers\Api\V1\NotificationApiController::class, 'index']);
+        Route::get('/notifications/latest', [\App\Http\Controllers\Api\V1\NotificationApiController::class, 'latest']);
         Route::post('/notifications/{id}/read', [\App\Http\Controllers\Api\V1\NotificationApiController::class, 'markAsRead']);
         Route::post('/notifications/read-all', [\App\Http\Controllers\Api\V1\NotificationApiController::class, 'markAllAsRead']);
 
@@ -125,6 +126,8 @@ Route::prefix('v1')->group(function () {
             
             // Admin Products, Offers, Transactions, Activities
             Route::get('/products', [\App\Http\Controllers\Api\V1\AdminDashboardApiController::class, 'products']);
+            Route::patch('/products/{id}', [\App\Http\Controllers\Api\V1\AdminDashboardApiController::class, 'updateProduct']);
+            Route::delete('/products/{id}', [\App\Http\Controllers\Api\V1\AdminDashboardApiController::class, 'destroyProduct']);
             Route::post('/products/{id}/status', [\App\Http\Controllers\Api\V1\AdminDashboardApiController::class, 'updateProductStatus']);
             Route::get('/offers', [\App\Http\Controllers\Api\V1\AdminDashboardApiController::class, 'offers']);
             Route::get('/transactions', [\App\Http\Controllers\Api\V1\AdminDashboardApiController::class, 'transactions']);

@@ -12,6 +12,7 @@ class SellerVerificationResource extends JsonResource
         return [
             'id'          => $this->id,
             'campusName'  => $this->nama_kampus,
+            'nama_kampus' => $this->nama_kampus,
             'nim'         => $this->nim,
             'ktmPhoto'    => $this->foto_ktm_url,
             'selfiePhoto' => $this->foto_selfie_url,

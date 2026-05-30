@@ -18,7 +18,7 @@ class AdminVerificationApiController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $verifications = $this->verificationService->getPendingVerifications();
+            $verifications = SellerVerification::with('user')->latest()->get();
             $data = [
                 'list' => SellerVerificationResource::collection($verifications),
                 'stats' => [
@@ -30,7 +30,7 @@ class AdminVerificationApiController extends Controller
             ];
             return $this->successResponse(
                 $data,
-                'Pending verifications retrieved successfully'
+                'All verifications retrieved successfully'
             );
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to retrieve verifications', 500);
@@ -40,18 +40,29 @@ class AdminVerificationApiController extends Controller
     public function approve(int $id): JsonResponse
     {
         try {
-            $verification = SellerVerification::findOrFail($id);
-            $this->verificationService->approveVerification($verification);
+            $verification = \Illuminate\Support\Facades\DB::transaction(function () use ($id) {
+                $verification = SellerVerification::findOrFail($id);
+                
+                // 1. Update status to approved
+                $verification->update(['status' => 'approved']);
+                
+                // 2. Find and update the associated User's is_seller flag to true
+                $verification->user->update([
+                    'is_seller' => true
+                ]);
+
+                return $verification;
+            });
             
             // Get fresh user object
-            $user = $verification->user->fresh();
+            $freshUser = $verification->user->fresh();
             
             return $this->successResponse([
-                'verification' => new SellerVerificationResource($verification),
-                'user' => $user
+                'verification' => new SellerVerificationResource($freshUser->latestVerification ?: $verification),
+                'user' => $freshUser
             ], 'Seller approved successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to approve verification', 500);
+            return $this->errorResponse('Failed to approve verification: ' . $e->getMessage(), 500);
         }
     }
 

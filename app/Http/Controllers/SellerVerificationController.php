@@ -36,6 +36,7 @@ class SellerVerificationController extends Controller
     {
         $validated = $request->validate([
             'foto_ktm'     => 'required|image|mimes:jpeg,png,jpg|max:5120',
+            'foto_selfie'  => 'required|image|mimes:jpeg,png,jpg|max:5120',
             'nama_kampus'  => 'required|string|max:255',
             'nim'          => 'required|string|max:20',
         ]);
@@ -44,6 +45,7 @@ class SellerVerificationController extends Controller
             $this->verificationService->submitVerification(
                 $request->user(),
                 $request->file('foto_ktm'),
+                $request->file('foto_selfie'),
                 $validated['nama_kampus'],
                 $validated['nim'],
             );

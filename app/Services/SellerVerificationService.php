@@ -11,7 +11,7 @@ class SellerVerificationService
     /**
      * Submit verifikasi KTM baru.
      */
-    public function submitVerification(User $user, UploadedFile $fotoKtm, string $namaKampus, string $nim): SellerVerification
+    public function submitVerification(User $user, UploadedFile $fotoKtm, UploadedFile $fotoSelfie, string $namaKampus, string $nim): SellerVerification
     {
         // Cek apakah sudah ada verifikasi pending
         $existing = SellerVerification::where('user_id', $user->id)
@@ -27,12 +27,14 @@ class SellerVerificationService
             throw new \InvalidArgumentException('Akun kamu sudah terverifikasi sebagai penjual.');
         }
 
-        // Upload foto KTM ke local storage
-        $path = $fotoKtm->store('verifikasi-ktm', 'public');
+        // Upload foto KTM & Selfie ke local storage
+        $pathKtm = $fotoKtm->store('verifikasi-ktm', 'public');
+        $pathSelfie = $fotoSelfie->store('verifikasi-selfie', 'public');
 
         return SellerVerification::create([
             'user_id'      => $user->id,
-            'foto_ktm'     => '/storage/' . $path,
+            'foto_ktm'     => '/storage/' . $pathKtm,
+            'foto_selfie'  => '/storage/' . $pathSelfie,
             'nama_kampus'  => $namaKampus,
             'nim'          => $nim,
             'status'       => 'pending',

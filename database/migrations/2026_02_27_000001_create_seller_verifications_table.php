@@ -11,6 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('foto_ktm');               // path to uploaded KTM image
+            $table->string('foto_selfie');            // path to uploaded KYC selfie image
             $table->string('nama_kampus');
             $table->string('nim');                     // student ID number
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');

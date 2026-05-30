@@ -14,13 +14,14 @@ class SellerVerification extends Model
     protected $fillable = [
         'user_id',
         'foto_ktm',
+        'foto_selfie',
         'nama_kampus',
         'nim',
         'status',
         'catatan_admin',
     ];
 
-    protected $appends = ['foto_ktm_url'];
+    protected $appends = ['foto_ktm_url', 'foto_selfie_url'];
 
     protected function fotoKtmUrl(): Attribute
     {
@@ -30,6 +31,18 @@ class SellerVerification extends Model
                     return filter_var($this->foto_ktm, FILTER_VALIDATE_URL) ? $this->foto_ktm : asset('storage/' . ltrim(str_replace('public/', '', $this->foto_ktm), '/'));
                 }
                 return asset('images/placeholder-ktm.png');
+            }
+        );
+    }
+
+    protected function fotoSelfieUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if ($this->foto_selfie) {
+                    return filter_var($this->foto_selfie, FILTER_VALIDATE_URL) ? $this->foto_selfie : asset('storage/' . ltrim(str_replace('public/', '', $this->foto_selfie), '/'));
+                }
+                return asset('images/placeholder-selfie.png');
             }
         );
     }

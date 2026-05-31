@@ -138,6 +138,7 @@ class CheckoutApiController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        \Illuminate\Support\Facades\Log::info('Checkout Payload:', $request->all());
         try {
             // Check if it is a unified multi-seller payload or traditional single product payload
             if ($request->has('items')) {
@@ -338,8 +339,9 @@ class CheckoutApiController extends Controller
             ], 'Checkout processed successfully', 201);
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->errorResponse('Checkout failed: ' . $e->getMessage(), 500);
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('Checkout Error: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            return response()->json(['error' => 'Checkout failed', 'message' => $e->getMessage(), 'line' => $e->getLine(), 'file' => $e->getFile()], 500);
         }
     }
 }

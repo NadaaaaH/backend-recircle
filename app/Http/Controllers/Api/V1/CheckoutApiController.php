@@ -150,83 +150,28 @@ class CheckoutApiController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        // Check if it is a unified multi-seller payload or traditional single product payload
-        if ($request->has('items')) {
-            $validated = $request->validate([
-                    'items'              => 'required|array',
-                    'items.*.product_id' => 'required|exists:products,id',
-                    'items.*.price'      => 'required|numeric|min:0',
-                    'items.*.quantity'   => 'required|integer|min:1',
-                    'items.*.name'       => 'required|string',
-                    'items.*.seller_id'  => 'required|exists:users,id',
-                    'items.*.offer_id'   => 'nullable|exists:offers,id',
-                    'couriers'           => 'required|array',
-                    'total_amount'       => 'required|numeric|min:0',
-                    'metode_pengiriman'  => 'required|in:cod,kirim_paket',
-                    'alamat_pengiriman'  => 'required_if:metode_pengiriman,kirim_paket|nullable|string',
-                    'catatan'            => 'nullable|string|max:500',
-                ]);
+        $validated = $request->validate([
+            'items'              => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.seller_id'  => 'required|exists:users,id',
+            'items.*.price'      => 'required|numeric|min:0',
+            'items.*.quantity'   => 'nullable|integer',
+            'items.*.name'       => 'nullable|string',
+            'items.*.offer_id'   => 'nullable|exists:offers,id',
+            'couriers'           => 'required|array',
+            'total_amount'       => 'required|numeric|min:0',
+            'metode_pengiriman'  => 'required|in:cod,kirim_paket',
+            'alamat_pengiriman'  => 'required_if:metode_pengiriman,kirim_paket|nullable|string',
+            'shipping_address'   => 'nullable|string',
+            'catatan'            => 'nullable|string|max:500',
+        ]);
 
-                $items = $validated['items'];
-                $couriers = $validated['couriers'];
-                $totalAmount = (int) $validated['total_amount'];
-                $metodePengiriman = $validated['metode_pengiriman'];
-                $alamatPengiriman = $validated['alamat_pengiriman'] ?? null;
-                $catatan = $validated['catatan'] ?? null;
-            } else {
-                $validated = $request->validate([
-                    'product_id'         => 'required|exists:products,id',
-                    'offer_id'           => 'nullable|exists:offers,id',
-                    'metode_pengiriman'  => 'required|in:cod,kirim_paket',
-                    'alamat_pengiriman'  => 'required_if:metode_pengiriman,kirim_paket|nullable|string',
-                    'catatan'            => 'nullable|string|max:500',
-                    'shipping_cost'      => 'nullable|numeric|min:0',
-                    'courier_info'       => 'nullable|string'
-                ]);
-
-                $product = Product::findOrFail($validated['product_id']);
-                if (!$product->isActive()) {
-                    return $this->errorResponse('Product is no longer available', 400);
-                }
-
-                $offer = null;
-                if (!empty($validated['offer_id'])) {
-                    $offer = Offer::where('id', $validated['offer_id'])
-                        ->where('user_id', $request->user()->id)
-                        ->where('status', 'accepted')
-                        ->where('deal_expired_at', '>', now())
-                        ->first();
-                }
-
-                $finalPrice = $offer ? $offer->harga_deal : $product->harga;
-                $shippingCost = ($validated['metode_pengiriman'] === 'kirim_paket') ? (int) ($validated['shipping_cost'] ?? 0) : 0;
-
-                // Wrap single product into unified cart structure
-                $items = [[
-                    'product_id' => $product->id,
-                    'price'      => $finalPrice,
-                    'quantity'   => 1,
-                    'name'       => $product->nama_barang,
-                    'seller_id'  => $product->user_id,
-                    'offer_id'   => $offer?->id,
-                ]];
-
-                $couriers = [
-                    $product->user_id => [
-                        'price' => $shippingCost,
-                        'name'  => $validated['courier_info'] ?? 'Kirim Paket',
-                    ]
-                ];
-
-                $totalAmount = $finalPrice + $shippingCost;
-                $metodePengiriman = $validated['metode_pengiriman'];
-                $alamatPengiriman = $validated['alamat_pengiriman'] ?? null;
-                $catatan = $validated['catatan'] ?? null;
-
-                if ($alamatPengiriman && isset($validated['courier_info'])) {
-                    $alamatPengiriman .= " (Kurir: " . $validated['courier_info'] . ")";
-                }
-            }
+        $items = $validated['items'];
+        $couriers = $validated['couriers'];
+        $totalAmount = (int) $validated['total_amount'];
+        $metodePengiriman = $validated['metode_pengiriman'];
+        $alamatPengiriman = $validated['alamat_pengiriman'] ?? $validated['shipping_address'] ?? null;
+        $catatan = $validated['catatan'] ?? null;
 
             // 1. GENERATE PAYMENT REFERENCE:
             $paymentRef = 'PAY-' . strtoupper(uniqid());

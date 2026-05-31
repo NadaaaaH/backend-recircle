@@ -71,13 +71,25 @@ class CheckoutApiController extends Controller
         try {
             $cartItemIds = $request->input('cart_item_ids', []);
             if (is_string($cartItemIds)) {
-                $cartItemIds = explode(',', $cartItemIds);
+                $cartItemIds = json_decode($cartItemIds, true) ?? explode(',', $cartItemIds);
             }
-
-            $cartItems = \App\Models\Cart::whereIn('id', $cartItemIds)
-                ->where('user_id', $request->user()->id)
-                ->with(['product.user', 'offer'])
+            $products = \App\Models\Product::with(['user', 'images'])
+                ->whereIn('id', $cartItemIds)
                 ->get();
+
+            $acceptedOffers = \App\Models\Offer::where('user_id', auth()->id())
+                ->whereIn('product_id', $cartItemIds)
+                ->where('status', 'accepted')
+                ->get();
+
+            $cartItems = $products->map(function ($product) use ($acceptedOffers) {
+                $offer = $acceptedOffers->firstWhere('product_id', $product->id);
+                return (object) [
+                    'id'      => $product->id,
+                    'product' => $product,
+                    'offer'   => $offer,
+                ];
+            });
 
             if ($cartItems->isEmpty()) {
                 return $this->errorResponse('No cart items found', 404);
@@ -222,6 +234,7 @@ class CheckoutApiController extends Controller
             DB::beginTransaction();
 
             $orders = [];
+            $appliedCourierSellers = [];
 
             // 2. MULTI-ORDER CREATION (Inside DB::transaction):
             foreach ($items as $itemData) {
@@ -232,10 +245,11 @@ class CheckoutApiController extends Controller
 
                 $sellerId = $itemData['seller_id'];
                 
-                // Get the courier price for this seller
+                // Get the courier price for this seller (applied only once per seller)
                 $courierPrice = 0;
-                if (isset($couriers[$sellerId])) {
+                if (isset($couriers[$sellerId]) && !in_array($sellerId, $appliedCourierSellers)) {
                     $courierPrice = (int) $couriers[$sellerId]['price'];
+                    $appliedCourierSellers[] = $sellerId;
                 }
 
                 $orderKode = $paymentRef . '-' . $product->id;
@@ -257,8 +271,9 @@ class CheckoutApiController extends Controller
                 $product->markAsSold();
                 $this->offerService->cancelAllOffersForProduct($product);
 
-                // Remove from cart if it exists
-                \App\Models\Cart::where('user_id', $request->user()->id)
+                // Remove from cart/wishlist if it exists
+                DB::table('wishlists')
+                    ->where('user_id', $request->user()->id)
                     ->where('product_id', $product->id)
                     ->delete();
 

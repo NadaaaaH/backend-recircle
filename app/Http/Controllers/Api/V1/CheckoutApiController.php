@@ -69,16 +69,24 @@ class CheckoutApiController extends Controller
     public function showCartCheckout(Request $request): JsonResponse
     {
         try {
-            $cartItemIds = $request->input('cart_item_ids', []);
+            $cartItemIds = $request->input('cart_item_ids');
+            if (empty($cartItemIds)) {
+                $cartItemIds = [];
+            }
             if (is_string($cartItemIds)) {
                 $cartItemIds = json_decode($cartItemIds, true) ?? explode(',', $cartItemIds);
             }
+            if (!is_array($cartItemIds)) {
+                $cartItemIds = (array) $cartItemIds;
+            }
+            $cartItemIds = array_filter($cartItemIds);
+
             $products = \App\Models\Product::with(['user', 'images'])
-                ->whereIn('id', $cartItemIds)
+                ->whereIn('id', (array) ($cartItemIds ?? []))
                 ->get();
 
             $acceptedOffers = \App\Models\Offer::where('user_id', auth()->id())
-                ->whereIn('product_id', $cartItemIds)
+                ->whereIn('product_id', (array) ($cartItemIds ?? []))
                 ->where('status', 'accepted')
                 ->get();
 

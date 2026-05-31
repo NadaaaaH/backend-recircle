@@ -65,7 +65,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/offers/{id}/accept', [\App\Http\Controllers\Api\V1\OfferApiController::class, 'accept']);
         Route::post('/offers/{id}/reject', [\App\Http\Controllers\Api\V1\OfferApiController::class, 'reject']);
 
-        // Checkout & Orders Endpoints (Buyer)
+        Route::get('/checkout-cart', [\App\Http\Controllers\Api\V1\CheckoutApiController::class, 'showCartCheckout']);
+        Route::post('/checkout-cart', [\App\Http\Controllers\Api\V1\CheckoutApiController::class, 'store']);
         Route::get('/checkout/{product}', [\App\Http\Controllers\Api\V1\CheckoutApiController::class, 'show']);
         Route::post('/checkout', [\App\Http\Controllers\Api\V1\CheckoutApiController::class, 'store']);
         Route::get('/orders', [\App\Http\Controllers\Api\V1\OrderApiController::class, 'index']);

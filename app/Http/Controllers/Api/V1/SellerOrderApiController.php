@@ -51,6 +51,10 @@ class SellerOrderApiController extends Controller
 
     public function ship(int $id, Request $request): JsonResponse
     {
+        $request->validate([
+            'tracking_number' => 'required|string|max:100',
+        ]);
+
         try {
             $order = Order::findOrFail($id);
             $productIds = $request->user()->products()->pluck('id');
@@ -59,14 +63,14 @@ class SellerOrderApiController extends Controller
                 return $this->errorResponse('Unauthorized', 403);
             }
 
-            if ($order->status !== 'dibayar') {
+            if ($order->status !== 'dibayar' && $order->status !== 'paid') {
                 return $this->errorResponse('Order must be in paid status to ship', 400);
             }
 
-            $this->orderService->markAsShipped($order);
+            $this->orderService->markAsShipped($order, $request->input('tracking_number'));
             return $this->successResponse(new SellerOrderResource($order), 'Order marked as shipped');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to mark order as shipped', 500);
+            return $this->errorResponse('Failed to mark order as shipped: ' . $e->getMessage(), 500);
         }
     }
 }

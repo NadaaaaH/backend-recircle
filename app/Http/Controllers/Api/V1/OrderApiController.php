@@ -37,7 +37,10 @@ class OrderApiController extends Controller
         try {
             $order = Order::with(['product.user', 'offer'])->findOrFail($id);
 
-            if ($order->user_id !== $request->user()->id) {
+            $isBuyer = $order->user_id === $request->user()->id;
+            $isSeller = ($order->product && $order->product->user_id === $request->user()->id);
+
+            if (!$isBuyer && !$isSeller) {
                 return $this->errorResponse('Unauthorized', 403);
             }
 

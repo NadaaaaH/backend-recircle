@@ -197,15 +197,20 @@ class OrderService
     /**
      * Seller menandai barang sudah dikirim.
      */
-    public function markAsShipped(Order $order): Order
+    public function markAsShipped(Order $order, string $trackingNumber): Order
     {
-        $order->update(['status' => 'dikirim']);
+        $order->update([
+            'status' => 'dikirim',
+            'rajaongkir_tracking_id' => $trackingNumber
+        ]);
+
+        $sellerName = $order->product->user->name ?? 'Penjual';
 
         // Kirim notifikasi ke Buyer
         \App\Services\MongoLogService::notify(
             $order->user_id,
             'order_update',
-            'Pesanan Anda untuk "' . $order->product->nama_barang . '" telah dikirim oleh penjual!',
+            'Pesanan Anda dari toko ' . $sellerName . ' telah dikirim. No Resi: ' . $trackingNumber,
             ['order_id' => $order->id, 'product_id' => $order->product_id],
             'buyer'
         );

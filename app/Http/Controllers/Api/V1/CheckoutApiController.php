@@ -48,6 +48,7 @@ class CheckoutApiController extends Controller
                     'price' => $product->harga,
                     'img'   => $product->foto_barang_url,
                     'loc'   => $product->lokasi_kampus,
+                    'seller_id' => $product->user_id,
                     'seller_name' => $product->user->name,
                     'seller_area_id' => $product->user->komerce_destination_id ?? '34260',
                 ],

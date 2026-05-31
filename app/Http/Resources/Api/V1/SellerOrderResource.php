@@ -17,6 +17,9 @@ class SellerOrderResource extends JsonResource
             'status'         => $this->status,
             'shippingAddress'=> $this->alamat_pengiriman,
             'createdAt'      => $this->created_at?->toIso8601String(),
+            'trackingNumber' => $this->rajaongkir_tracking_id,
+            'courierName'    => $this->courier_service,
+            'shippingCost'   => $this->shipping_cost,
             'buyer' => [
                 'id'    => $this->whenLoaded('user', fn() => $this->user->id),
                 'name'  => $this->whenLoaded('user', fn() => $this->user->name),

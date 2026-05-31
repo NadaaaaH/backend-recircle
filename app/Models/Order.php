@@ -24,6 +24,8 @@ class Order extends Model
         'midtrans_transaction_id',
         'midtrans_snap_token',
         'metode_pembayaran',
+        'courier_service',
+        'rajaongkir_tracking_id',
         'dana_ditahan',
         'dana_dilepas_at',
     ];

@@ -80,25 +80,32 @@ class MidtransWebhookController extends Controller
             $transactionId     = $payload['transaction_id'] ?? '';
             $paymentType       = $payload['payment_type'] ?? 'midtrans';
  
-            // STRICT AUDIT 2 (Status Logic): Ensure the database update logic correctly translates Midtrans transaction_status
-            if ($transactionStatus === 'settlement' || $transactionStatus === 'capture') {
-                if ($transactionStatus === 'capture' && $fraudStatus === 'challenge') {
-                    // Challenge status means payment is pending review
-                    $order->update(['status' => 'pending']);
-                    Log::info("Midtrans Webhook: Order {$order->kode_pesanan} capture is challenged. Status set to pending.");
-                } else {
-                    // 'settlement' or 'capture' (approved/accept) -> Update order to 'paid' (mapped locally as 'dibayar')
-                    $orderService->handlePaymentSettlement($order, $transactionId, $paymentType);
-                    Log::info("Midtrans Webhook: Order {$order->kode_pesanan} paid successfully. Status updated to dibayar.");
+            $ordersToProcess = [$order];
+            if ($order->midtrans_snap_token) {
+                $ordersToProcess = Order::where('midtrans_snap_token', $order->midtrans_snap_token)->get();
+            }
+
+            foreach ($ordersToProcess as $ord) {
+                // STRICT AUDIT 2 (Status Logic): Ensure the database update logic correctly translates Midtrans transaction_status
+                if ($transactionStatus === 'settlement' || $transactionStatus === 'capture') {
+                    if ($transactionStatus === 'capture' && $fraudStatus === 'challenge') {
+                        // Challenge status means payment is pending review
+                        $ord->update(['status' => 'pending']);
+                        Log::info("Midtrans Webhook: Order {$ord->kode_pesanan} capture is challenged. Status set to pending.");
+                    } else {
+                        // 'settlement' or 'capture' (approved/accept) -> Update order to 'paid' (mapped locally as 'dibayar')
+                        $orderService->handlePaymentSettlement($ord, $transactionId, $paymentType);
+                        Log::info("Midtrans Webhook: Order {$ord->kode_pesanan} paid successfully. Status updated to dibayar.");
+                    }
+                } else if ($transactionStatus === 'pending') {
+                    // 'pending' -> Update order to 'pending'
+                    $ord->update(['status' => 'pending']);
+                    Log::info("Midtrans Webhook: Order {$ord->kode_pesanan} is pending payment.");
+                } else if (in_array($transactionStatus, ['deny', 'expire', 'cancel'])) {
+                    // 'deny', 'expire', 'cancel' -> Update order to 'failed' or 'cancelled' (mapped locally as 'dibatalkan')
+                    $orderService->handlePaymentFailure($ord);
+                    Log::warning("Midtrans Webhook: Order {$ord->kode_pesanan} payment failed/cancelled/denied. Status set to dibatalkan.");
                 }
-            } else if ($transactionStatus === 'pending') {
-                // 'pending' -> Update order to 'pending'
-                $order->update(['status' => 'pending']);
-                Log::info("Midtrans Webhook: Order {$order->kode_pesanan} is pending payment.");
-            } else if (in_array($transactionStatus, ['deny', 'expire', 'cancel'])) {
-                // 'deny', 'expire', 'cancel' -> Update order to 'failed' or 'cancelled' (mapped locally as 'dibatalkan')
-                $orderService->handlePaymentFailure($order);
-                Log::warning("Midtrans Webhook: Order {$order->kode_pesanan} payment failed/cancelled/denied. Status set to dibatalkan.");
             }
 
             return response()->json(['message' => 'OK']);

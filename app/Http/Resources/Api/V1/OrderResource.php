@@ -14,6 +14,9 @@ class OrderResource extends JsonResource
             'orderCode' => $this->kode_pesanan,
             'totalPrice' => (int) $this->total_harga,
             'shippingMethod' => $this->metode_pengiriman,
+            'shippingCost' => (int) $this->shipping_cost,
+            'subtotal' => (int) ($this->total_harga - $this->shipping_cost),
+            'grandTotal' => (int) $this->total_harga,
             'status' => $this->status,
             'paymentMethod' => $this->metode_pembayaran,
             'shippingAddress' => $this->alamat_pengiriman,
@@ -37,6 +40,8 @@ class OrderResource extends JsonResource
             // Snake_case keys for direct fallback compatibility
             'kode_pesanan' => $this->kode_pesanan,
             'total_harga' => (int) $this->total_harga,
+            'shipping_cost' => (int) $this->shipping_cost,
+            'grand_total' => (int) $this->total_harga,
             'metode_pengiriman' => $this->metode_pengiriman,
             'metode_pembayaran' => $this->metode_pembayaran,
             'alamat_pengiriman' => $this->alamat_pengiriman,

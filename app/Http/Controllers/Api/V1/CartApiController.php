@@ -26,10 +26,9 @@ class CartApiController extends Controller
                 ->where('user_id', $userId)
                 ->pluck('product_id');
 
-            // 2. Get accepted & non-expired offers for this buyer
+            // 2. Get accepted offers (even if expired, so we can display live countdown or expired status on the frontend!)
             $acceptedOffers = \App\Models\Offer::where('user_id', $userId)
                 ->where('status', 'accepted')
-                ->where('deal_expired_at', '>', now())
                 ->get();
             $acceptedOfferProductIds = $acceptedOffers->pluck('product_id');
 
@@ -48,6 +47,15 @@ class CartApiController extends Controller
             // 5. Build Cart Items array
             $cartItems = $products->map(function ($product) use ($acceptedOffers) {
                 $offer = $acceptedOffers->firstWhere('product_id', $product->id);
+
+                // Check expiration
+                $isExpired = false;
+                if ($offer) {
+                    $expiry = $offer->expires_at ?? $offer->deal_expired_at;
+                    if ($expiry && now()->gt($expiry)) {
+                        $isExpired = true;
+                    }
+                }
 
                 // Resolve product image
                 $image = null;
@@ -68,8 +76,13 @@ class CartApiController extends Controller
                     'offer'  => $offer ? [
                         'id'         => $offer->id,
                         'harga_deal' => (int) $offer->harga_deal,
-                        'expires_at' => $offer->deal_expired_at,
+                        'expires_at' => $offer->expires_at ?? $offer->deal_expired_at,
+                        'is_expired' => $isExpired,
                     ] : null,
+                    'offer_price' => $offer ? (int) $offer->harga_deal : null,
+                    'original_price' => (int) $product->harga,
+                    'offer_expires_at' => $offer ? ($offer->expires_at ?? $offer->deal_expired_at)?->toIso8601String() : null,
+                    'is_expired' => $isExpired,
                     'seller' => $product->user,
                 ];
             });
@@ -83,6 +96,7 @@ class CartApiController extends Controller
                     'seller' => [
                         'id'          => $seller->id,
                         'name'        => $seller->name,
+                        'avatar_url'  => $seller->avatar_url,
                         'universitas' => $seller->kampus ?? $seller->universitas ?? null,
                     ],
                     'items' => collect($items)->map(function ($i) {
@@ -103,13 +117,36 @@ class CartApiController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        return $this->addToCart($request);
+    }
+
+    /**
+     * Internal/Action method to add to cart with optional offer_id.
+     */
+    public function addToCart(Request $request): JsonResponse
+    {
         try {
             $request->validate([
                 'product_id' => 'required|exists:products,id',
+                'offer_id'   => 'nullable|exists:offers,id',
             ]);
 
             $userId    = $request->user()->id;
             $productId = $request->product_id;
+            $offerId   = $request->offer_id;
+
+            if ($offerId) {
+                $offer = \App\Models\Offer::findOrFail($offerId);
+                if ($offer->user_id !== $userId) {
+                    return $this->errorResponse('Unauthorized offer access.', 403);
+                }
+                if ($offer->status !== 'accepted') {
+                    return $this->errorResponse('Offer has not been accepted.', 400);
+                }
+                if ($offer->isDealExpired()) {
+                    return $this->errorResponse('Offer has expired.', 400);
+                }
+            }
 
             $exists = DB::table('wishlists')
                 ->where('user_id', $userId)

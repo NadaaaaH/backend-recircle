@@ -16,6 +16,7 @@ class Order extends Model
         'product_id',
         'offer_id',
         'total_harga',
+        'shipping_cost',
         'metode_pengiriman',
         'status',
         'alamat_pengiriman',
@@ -29,6 +30,7 @@ class Order extends Model
 
     protected $casts = [
         'total_harga'    => 'integer',
+        'shipping_cost'  => 'integer',
         'dana_ditahan'   => 'boolean',
         'dana_dilepas_at' => 'datetime',
     ];

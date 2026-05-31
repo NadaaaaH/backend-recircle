@@ -35,7 +35,16 @@ class Product extends Model
         'harga' => 'integer',
     ];
 
-    protected $appends = ['foto_barang', 'foto_barang_url', 'foto_barang_urls'];
+    protected $appends = ['foto_barang', 'foto_barang_url', 'foto_barang_urls', 'image_url'];
+
+    protected function imageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                return $this->foto_barang_url;
+            }
+        );
+    }
 
     protected function fotoBarang(): Attribute
     {

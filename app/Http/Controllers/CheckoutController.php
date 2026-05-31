@@ -112,13 +112,13 @@ class CheckoutController extends Controller
                 $alamatLengkap .= " (Kurir: " . $validated['courier_info'] . ")";
             }
 
-            // 1. Buat Order
-            $order = Order::create([
+             $order = Order::create([
                 'kode_pesanan'       => $orderKode,
                 'user_id'            => $request->user()->id,
                 'product_id'         => $product->id,
                 'offer_id'           => $offer?->id,
                 'total_harga'        => $totalHarga, // Subtotal + Ongkir
+                'shipping_cost'      => $ongkir,
                 'metode_pengiriman'  => $validated['metode_pengiriman'],
                 'status'             => 'pending',
                 'alamat_pengiriman'  => $alamatLengkap,

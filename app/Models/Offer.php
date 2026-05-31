@@ -17,12 +17,14 @@ class Offer extends Model
         'status',
         'harga_deal',
         'deal_expired_at',
+        'expires_at',
     ];
 
     protected $casts = [
         'harga_tawar' => 'integer',
         'harga_deal'  => 'integer',
         'deal_expired_at' => 'datetime',
+        'expires_at'  => 'datetime',
     ];
 
     // ── Relasi ─────────────────────────────────────
@@ -68,8 +70,9 @@ class Offer extends Model
 
     public function isDealExpired(): bool
     {
+        $expiry = $this->expires_at ?? $this->deal_expired_at;
         return $this->isAccepted()
-            && $this->deal_expired_at !== null
-            && $this->deal_expired_at->isPast();
+            && $expiry !== null
+            && $expiry->isPast();
     }
 }

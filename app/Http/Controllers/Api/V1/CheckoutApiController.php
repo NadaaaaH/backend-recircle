@@ -64,7 +64,7 @@ class CheckoutApiController extends Controller
     }
 
     /**
-     * Get checkout verification details for multiple cart items (same seller).
+     * Get checkout verification details for multiple cart items (multi-seller supported).
      */
     public function showCartCheckout(Request $request): JsonResponse
     {
@@ -103,10 +103,9 @@ class CheckoutApiController extends Controller
                 return $this->errorResponse('No cart items found', 404);
             }
 
-            $firstCartItem = $cartItems->first();
-            $seller = $firstCartItem->product->user;
-            
             $itemsData = [];
+            $sellersData = [];
+            $uniqueSellers = [];
             $totalOriginalPrice = 0;
             $totalFinalPrice = 0;
 
@@ -125,22 +124,32 @@ class CheckoutApiController extends Controller
                 $itemsData[] = [
                     'cart_item_id' => $item->id,
                     'product_id'   => $product->id,
+                    'seller_id'    => $product->user_id,
                     'name'         => $product->nama_barang,
                     'price'        => $product->harga,
                     'final_price'  => $finalPrice,
                     'img'          => $product->foto_barang_url,
                     'offer_id'     => $offer?->id,
                 ];
+
+                $seller = $product->user;
+                if ($seller && !in_array($seller->id, $uniqueSellers)) {
+                    $uniqueSellers[] = $seller->id;
+                    $sellersData[] = [
+                        'id'             => $seller->id,
+                        'name'           => $seller->name,
+                        'loc'            => $product->lokasi_kampus,
+                        'seller_area_id' => $seller->komerce_destination_id ?? '34260',
+                    ];
+                }
             }
+
+            $fallbackSeller = !empty($sellersData) ? $sellersData[0] : null;
 
             return $this->successResponse([
                 'items' => $itemsData,
-                'seller' => [
-                    'id'          => $seller->id,
-                    'name'        => $seller->name,
-                    'loc'         => $firstCartItem->product->lokasi_kampus,
-                    'seller_area_id' => $seller->komerce_destination_id ?? '34260',
-                ],
+                'seller' => $fallbackSeller, // Fallback for legacy single-seller client support
+                'sellers' => $sellersData,   // Native multi-seller array
                 'total_original_price' => $totalOriginalPrice,
                 'total_final_price'    => $totalFinalPrice,
                 'midtrans_client_key' => config('services.midtrans.client_key'),

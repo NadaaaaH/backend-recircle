@@ -23,7 +23,7 @@ class OfferResource extends JsonResource
             'negotiated_price' => $this->harga_deal,
             'message'          => $this->pesan,
             'status'           => $this->status,
-            'expires_at'       => ($this->expires_at ?? $this->deal_expired_at) ? ($this->expires_at ?? $this->deal_expired_at)->toIso8601String() : null,
+            'expires_at'       => $this->deal_expired_at ? $this->deal_expired_at->toIso8601String() : null,
             'deal_expired_at'  => $this->deal_expired_at ? $this->deal_expired_at->toIso8601String() : null,
             'expiredAt'        => $this->deal_expired_at ? $this->deal_expired_at->toIso8601String() : null,
             'isExpired'        => $this->isDealExpired(),

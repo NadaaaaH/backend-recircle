@@ -17,6 +17,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' || request()->secure() || app()->environment('production') || str_contains(request()->header('host', ''), 'ngrok')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
     }
 }

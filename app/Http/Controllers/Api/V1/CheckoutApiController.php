@@ -134,92 +134,45 @@ class CheckoutApiController extends Controller
     }
 
     /**
-     * Store and finalize transaction for single or multiple products.
+     * Store and finalize transaction for single or multi-seller cart checkout.
      */
     public function store(Request $request): JsonResponse
     {
         try {
-            $validated = $request->validate([
-                'product_id'         => 'nullable|exists:products,id',
-                'offer_id'           => 'nullable|exists:offers,id',
-                'cart_item_ids'      => 'nullable|array',
-                'cart_item_ids.*'    => 'exists:carts,id',
-                'metode_pengiriman'  => 'required|in:cod,kirim_paket',
-                'alamat_pengiriman'  => 'required_if:metode_pengiriman,kirim_paket|nullable|string',
-                'catatan'            => 'nullable|string|max:500',
-                'shipping_cost'      => 'nullable|numeric|min:0',
-                'courier_info'       => 'nullable|string'
-            ]);
+            // Check if it is a unified multi-seller payload or traditional single product payload
+            if ($request->has('items')) {
+                $validated = $request->validate([
+                    'items'              => 'required|array',
+                    'items.*.product_id' => 'required|exists:products,id',
+                    'items.*.price'      => 'required|numeric|min:0',
+                    'items.*.quantity'   => 'required|integer|min:1',
+                    'items.*.name'       => 'required|string',
+                    'items.*.seller_id'  => 'required|exists:users,id',
+                    'items.*.offer_id'   => 'nullable|exists:offers,id',
+                    'couriers'           => 'required|array',
+                    'total_amount'       => 'required|numeric|min:0',
+                    'metode_pengiriman'  => 'required|in:cod,kirim_paket',
+                    'alamat_pengiriman'  => 'required_if:metode_pengiriman,kirim_paket|nullable|string',
+                    'catatan'            => 'nullable|string|max:500',
+                ]);
 
-            $isCartCheckout = !empty($validated['cart_item_ids']);
-
-            if (!$isCartCheckout && empty($validated['product_id'])) {
-                return $this->errorResponse('Either product_id or cart_item_ids is required', 400);
-            }
-
-            DB::beginTransaction();
-
-            $orders = [];
-            $totalSubTotal = 0;
-            $ongkir = ($validated['metode_pengiriman'] === 'kirim_paket' && isset($validated['shipping_cost'])) 
-                      ? (int) $validated['shipping_cost'] 
-                      : 0;
-
-            $alamatLengkap = $validated['alamat_pengiriman'] ?? null;
-            if ($alamatLengkap && isset($validated['courier_info'])) {
-                $alamatLengkap .= " (Kurir: " . $validated['courier_info'] . ")";
-            }
-
-            if ($isCartCheckout) {
-                $cartItems = \App\Models\Cart::whereIn('id', $validated['cart_item_ids'])
-                    ->where('user_id', $request->user()->id)
-                    ->with(['product', 'offer'])
-                    ->get();
-
-                if ($cartItems->isEmpty()) {
-                    return $this->errorResponse('No valid cart items found', 400);
-                }
-
-                foreach ($cartItems as $item) {
-                    $product = $item->product;
-                    if (!$product->isActive()) {
-                        throw new \Exception("Product '{$product->nama_barang}' is no longer available");
-                    }
-
-                    $offer = $item->offer;
-                    $subTotal = ($offer && $offer->status === 'accepted' && $offer->deal_expired_at > now()) 
-                        ? $offer->harga_deal 
-                        : $product->harga;
-
-                    $totalSubTotal += $subTotal;
-
-                    // Distribute full shipping cost to first order only
-                    $itemOngkir = (count($orders) === 0) ? $ongkir : 0;
-                    $itemTotalHarga = $subTotal + $itemOngkir;
-
-                    $orderKode = 'RC-' . strtoupper(uniqid()) . '-' . time();
-
-                    $order = Order::create([
-                        'kode_pesanan'       => $orderKode,
-                        'user_id'            => $request->user()->id,
-                        'product_id'         => $product->id,
-                        'offer_id'           => $offer?->id,
-                        'total_harga'        => $itemTotalHarga,
-                        'shipping_cost'      => $itemOngkir,
-                        'metode_pengiriman'  => $validated['metode_pengiriman'],
-                        'status'             => 'pending',
-                        'alamat_pengiriman'  => $alamatLengkap,
-                        'catatan'            => $validated['catatan'] ?? null,
-                        'dana_ditahan'       => $validated['metode_pengiriman'] === 'kirim_paket',
-                    ]);
-
-                    $product->markAsSold();
-                    $this->offerService->cancelAllOffersForProduct($product);
-
-                    $orders[] = $order;
-                    $item->delete();
-                }
+                $items = $validated['items'];
+                $couriers = $validated['couriers'];
+                $totalAmount = (int) $validated['total_amount'];
+                $metodePengiriman = $validated['metode_pengiriman'];
+                $alamatPengiriman = $validated['alamat_pengiriman'] ?? null;
+                $catatan = $validated['catatan'] ?? null;
             } else {
+                $validated = $request->validate([
+                    'product_id'         => 'required|exists:products,id',
+                    'offer_id'           => 'nullable|exists:offers,id',
+                    'metode_pengiriman'  => 'required|in:cod,kirim_paket',
+                    'alamat_pengiriman'  => 'required_if:metode_pengiriman,kirim_paket|nullable|string',
+                    'catatan'            => 'nullable|string|max:500',
+                    'shipping_cost'      => 'nullable|numeric|min:0',
+                    'courier_info'       => 'nullable|string'
+                ]);
+
                 $product = Product::findOrFail($validated['product_id']);
                 if (!$product->isActive()) {
                     return $this->errorResponse('Product is no longer available', 400);
@@ -234,75 +187,135 @@ class CheckoutApiController extends Controller
                         ->first();
                 }
 
-                $subTotal = $offer ? $offer->harga_deal : $product->harga;
-                $totalSubTotal = $subTotal;
-                $totalHarga = $subTotal + $ongkir;
+                $finalPrice = $offer ? $offer->harga_deal : $product->harga;
+                $shippingCost = ($validated['metode_pengiriman'] === 'kirim_paket') ? (int) ($validated['shipping_cost'] ?? 0) : 0;
 
-                $orderKode = 'RC-' . strtoupper(uniqid()) . '-' . time();
+                // Wrap single product into unified cart structure
+                $items = [[
+                    'product_id' => $product->id,
+                    'price'      => $finalPrice,
+                    'quantity'   => 1,
+                    'name'       => $product->nama_barang,
+                    'seller_id'  => $product->user_id,
+                    'offer_id'   => $offer?->id,
+                ]];
+
+                $couriers = [
+                    $product->user_id => [
+                        'price' => $shippingCost,
+                        'name'  => $validated['courier_info'] ?? 'Kirim Paket',
+                    ]
+                ];
+
+                $totalAmount = $finalPrice + $shippingCost;
+                $metodePengiriman = $validated['metode_pengiriman'];
+                $alamatPengiriman = $validated['alamat_pengiriman'] ?? null;
+                $catatan = $validated['catatan'] ?? null;
+
+                if ($alamatPengiriman && isset($validated['courier_info'])) {
+                    $alamatPengiriman .= " (Kurir: " . $validated['courier_info'] . ")";
+                }
+            }
+
+            // 1. GENERATE PAYMENT REFERENCE:
+            $paymentRef = 'PAY-' . strtoupper(uniqid());
+
+            DB::beginTransaction();
+
+            $orders = [];
+
+            // 2. MULTI-ORDER CREATION (Inside DB::transaction):
+            foreach ($items as $itemData) {
+                $product = Product::findOrFail($itemData['product_id']);
+                if (!$product->isActive()) {
+                    throw new \Exception("Product '{$product->nama_barang}' is no longer available");
+                }
+
+                $sellerId = $itemData['seller_id'];
+                
+                // Get the courier price for this seller
+                $courierPrice = 0;
+                if (isset($couriers[$sellerId])) {
+                    $courierPrice = (int) $couriers[$sellerId]['price'];
+                }
+
+                $orderKode = $paymentRef . '-' . $product->id;
 
                 $order = Order::create([
                     'kode_pesanan'       => $orderKode,
                     'user_id'            => $request->user()->id,
                     'product_id'         => $product->id,
-                    'offer_id'           => $offer?->id,
-                    'total_harga'        => $totalHarga,
-                    'shipping_cost'      => $ongkir,
-                    'metode_pengiriman'  => $validated['metode_pengiriman'],
+                    'offer_id'           => $itemData['offer_id'] ?? null,
+                    'total_harga'        => (int) $itemData['price'] + $courierPrice,
+                    'shipping_cost'      => $courierPrice,
+                    'metode_pengiriman'  => $metodePengiriman,
                     'status'             => 'pending',
-                    'alamat_pengiriman'  => $alamatLengkap,
-                    'catatan'            => $validated['catatan'] ?? null,
-                    'dana_ditahan'       => $validated['metode_pengiriman'] === 'kirim_paket',
+                    'alamat_pengiriman'  => $alamatPengiriman,
+                    'catatan'            => $catatan,
+                    'dana_ditahan'       => $metodePengiriman === 'kirim_paket',
                 ]);
 
                 $product->markAsSold();
                 $this->offerService->cancelAllOffersForProduct($product);
 
+                // Remove from cart if it exists
+                \App\Models\Cart::where('user_id', $request->user()->id)
+                    ->where('product_id', $product->id)
+                    ->delete();
+
                 $orders[] = $order;
             }
 
-            $primaryOrder = $orders[0];
             $snapToken = null;
 
-            if ($validated['metode_pengiriman'] === 'kirim_paket') {
+            if ($metodePengiriman === 'kirim_paket') {
                 Config::$serverKey = config('services.midtrans.server_key');
                 Config::$isProduction = config('services.midtrans.is_production');
                 Config::$isSanitized = true;
                 Config::$is3ds = true;
 
-                $grossAmount = $totalSubTotal + $ongkir;
+                // 3. STRICT MIDTRANS ITEM MAPPING:
+                $midtransItems = [];
 
-                $itemDetails = [];
-                foreach ($orders as $ord) {
-                    $itemDetails[] = [
-                        'id'       => $ord->product->id,
-                        'price'    => (int) ($ord->total_harga - $ord->shipping_cost),
-                        'quantity' => 1,
-                        'name'     => substr($ord->product->nama_barang, 0, 50),
+                foreach ($items as $itemData) {
+                    $midtransItems[] = [
+                        'id'       => $itemData['product_id'],
+                        'price'    => (int) $itemData['price'],
+                        'quantity' => (int) $itemData['quantity'],
+                        'name'     => substr($itemData['name'], 0, 50),
                     ];
                 }
 
-                if ($ongkir > 0) {
-                    $itemDetails[] = [
-                        'id'       => 'shipping_cost',
-                        'price'    => (int) $ongkir,
-                        'quantity' => 1,
-                        'name'     => 'Shipping Cost',
-                    ];
+                foreach ($couriers as $sellerId => $courier) {
+                    if ((int) $courier['price'] > 0) {
+                        $midtransItems[] = [
+                            'id'       => 'ONGKIR-' . $sellerId,
+                            'price'    => (int) $courier['price'],
+                            'quantity' => 1,
+                            'name'     => 'Ongkir ' . ($courier['name'] ?? 'Kirim Paket'),
+                        ];
+                    }
                 }
 
                 $params = [
                     'transaction_details' => [
-                        'order_id'     => $primaryOrder->kode_pesanan,
-                        'gross_amount' => (int) $grossAmount,
+                        'order_id'     => $paymentRef,
+                        'gross_amount' => (int) $totalAmount,
                     ],
                     'customer_details' => [
                         'first_name' => $request->user()->name,
                         'email'      => $request->user()->email,
                         'phone'      => $request->user()->nomor_wa ?? '',
                     ],
-                    'item_details' => $itemDetails,
+                    'item_details' => $midtransItems,
+                    'expiry' => [
+                        'start_time' => now()->format('Y-m-d H:i:s O'),
+                        'unit'       => 'hour',
+                        'duration'   => 2
+                    ],
                 ];
 
+                // 4. SNAP TOKEN:
                 $snapToken = Snap::getSnapToken($params);
 
                 foreach ($orders as $ord) {
@@ -320,7 +333,7 @@ class CheckoutApiController extends Controller
             DB::commit();
 
             return $this->successResponse([
-                'order_id' => $primaryOrder->id,
+                'order_id'   => $orders[0]->id,
                 'snap_token' => $snapToken,
             ], 'Checkout processed successfully', 201);
 

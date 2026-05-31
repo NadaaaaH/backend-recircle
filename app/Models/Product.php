@@ -51,26 +51,32 @@ class Product extends Model
         return Attribute::make(
             get: function () {
                 $urls = [];
+                $baseStorage = $this->getBaseStorageUrl();
 
-                if ($this->image) {
+                if ($this->image && $this->image !== '[]' && $this->image !== '[""]') {
                     $decoded = json_decode($this->image, true);
                     if (is_array($decoded)) {
                         foreach ($decoded as $path) {
-                            $urls[] = filter_var($path, FILTER_VALIDATE_URL) ? $path : url('storage/' . ltrim(str_replace('public/', '', $path), '/'));
+                            if ($path && $path !== '[]') {
+                                $cleanPath = ltrim(str_replace(['public/', '/storage/', 'storage/'], ['', '', ''], $path), '/');
+                                $urls[] = filter_var($path, FILTER_VALIDATE_URL) ? $path : $baseStorage . '/' . $cleanPath;
+                            }
                         }
                     } else {
-                        $urls[] = filter_var($this->image, FILTER_VALIDATE_URL) ? $this->image : url('storage/' . ltrim(str_replace('public/', '', $this->image), '/'));
+                        $cleanPath = ltrim(str_replace(['public/', '/storage/', 'storage/'], ['', '', ''], $this->image), '/');
+                        $urls[] = filter_var($this->image, FILTER_VALIDATE_URL) ? $this->image : $baseStorage . '/' . $cleanPath;
                     }
                 }
 
                 if ($this->relationLoaded('images')) {
                     foreach ($this->images as $img) {
-                        $urls[] = filter_var($img->path, FILTER_VALIDATE_URL) ? $img->path : url('storage/' . ltrim(str_replace('public/', '', $img->path), '/'));
+                        $cleanPath = ltrim(str_replace(['public/', '/storage/', 'storage/'], ['', '', ''], $img->path), '/');
+                        $urls[] = filter_var($img->path, FILTER_VALIDATE_URL) ? $img->path : $baseStorage . '/' . $cleanPath;
                     }
                 }
 
                 if (empty($urls)) {
-                    $urls[] = url('images/placeholder-product.png');
+                    $urls[] = $this->getFallbackUrl();
                 }
 
                 return $urls;
@@ -80,9 +86,10 @@ class Product extends Model
 
     public function getFotoBarangUrlAttribute()
     {
-        $fallback = url('images/placeholder-product.png');
+        $fallback = $this->getFallbackUrl();
+        $baseStorage = $this->getBaseStorageUrl();
 
-        if (empty($this->image)) {
+        if (empty($this->image) || $this->image === '[]' || $this->image === '[""]') {
             return $fallback;
         }
 
@@ -91,17 +98,17 @@ class Product extends Model
 
         if (is_array($decoded) && count($decoded) > 0) {
             $path = $decoded[0];
-        } elseif (is_string($this->image)) {
+        } elseif (is_string($this->image) && $this->image !== '[]' && $this->image !== '[""]') {
             $path = $this->image;
         }
 
-        if ($path) {
+        if ($path && $path !== '[]') {
             if (filter_var($path, FILTER_VALIDATE_URL)) {
                 return $path;
             }
             // Bersihkan path jika ada prefix storage atau public
             $cleanPath = ltrim(str_replace(['public/', '/storage/', 'storage/'], ['', '', ''], $path), '/');
-            return url('storage/' . $cleanPath);
+            return $baseStorage . '/' . $cleanPath;
         }
 
         return $fallback;
@@ -109,27 +116,30 @@ class Product extends Model
 
     public function getFotoBarangUrlsAttribute()
     {
-        $fallback = url('images/placeholder-product.png');
+        $fallback = $this->getFallbackUrl();
+        $baseStorage = $this->getBaseStorageUrl();
         $urls = [];
 
-        if (!empty($this->image)) {
+        if (!empty($this->image) && $this->image !== '[]' && $this->image !== '[""]') {
             $decoded = json_decode($this->image, true);
 
             if (is_array($decoded) && count($decoded) > 0) {
                 foreach ($decoded as $path) {
-                    if (filter_var($path, FILTER_VALIDATE_URL)) {
-                        $urls[] = $path;
-                    } else {
-                        $cleanPath = ltrim(str_replace(['public/', '/storage/', 'storage/'], ['', '', ''], $path), '/');
-                        $urls[] = url('storage/' . $cleanPath);
+                    if ($path && $path !== '[]') {
+                        if (filter_var($path, FILTER_VALIDATE_URL)) {
+                            $urls[] = $path;
+                        } else {
+                            $cleanPath = ltrim(str_replace(['public/', '/storage/', 'storage/'], ['', '', ''], $path), '/');
+                            $urls[] = $baseStorage . '/' . $cleanPath;
+                        }
                     }
                 }
-            } elseif (is_string($this->image)) {
+            } elseif (is_string($this->image) && $this->image !== '[]' && $this->image !== '[""]') {
                 if (filter_var($this->image, FILTER_VALIDATE_URL)) {
                     $urls[] = $this->image;
                 } else {
                     $cleanPath = ltrim(str_replace(['public/', '/storage/', 'storage/'], ['', '', ''], $this->image), '/');
-                    $urls[] = url('storage/' . $cleanPath);
+                    $urls[] = $baseStorage . '/' . $cleanPath;
                 }
             }
         }
@@ -195,5 +205,21 @@ class Product extends Model
     public function markAsSold(): void
     {
         $this->update(['status' => 'sold']);
+    }
+
+    private function getBaseStorageUrl()
+    {
+        if (app()->runningInConsole() || !request()) {
+            return url('storage');
+        }
+        return request()->getSchemeAndHttpHost() . '/storage';
+    }
+
+    private function getFallbackUrl()
+    {
+        if (app()->runningInConsole() || !request()) {
+            return url('images/placeholder-product.png');
+        }
+        return request()->getSchemeAndHttpHost() . '/images/placeholder-product.png';
     }
 }

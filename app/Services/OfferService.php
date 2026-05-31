@@ -61,7 +61,6 @@ class OfferService
                 'status'          => 'accepted',
                 'harga_deal'      => $offer->harga_tawar,
                 'deal_expired_at' => now()->addHours(24),
-                'expires_at'      => now()->addHours(24),
             ]);
 
             // Auto-reject semua pending offers lainnya pada produk ini

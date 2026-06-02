@@ -29,9 +29,12 @@ class AutoCancelUnpaidOrders extends Command
     {
         $expiredTime = now()->subHours(2);
 
+        // Eager load product with trashed to prevent issues with soft-deleted products
         $pendingOrders = Order::where('status', 'pending')
             ->where('created_at', '<', $expiredTime)
-            ->with('product')
+            ->with(['product' => function ($query) {
+                $query->withTrashed();
+            }])
             ->get();
 
         if ($pendingOrders->isEmpty()) {
@@ -56,22 +59,29 @@ class AutoCancelUnpaidOrders extends Command
                     $order->sellerBalance->delete();
                 }
 
-                // Notify buyer and seller
+                // Safely resolve product name and IDs
+                $productName = $order->product?->nama_barang ?? 'Produk';
+                $productId = $order->product_id ?? null;
+
+                // Notify buyer
                 \App\Services\MongoLogService::notify(
                     $order->user_id,
                     'order_update',
-                    'Pesanan Anda untuk "' . $order->product->nama_barang . '" telah dibatalkan otomatis karena tidak dibayar dalam 2 jam.',
-                    ['order_id' => $order->id, 'product_id' => $order->product_id],
+                    "Pesanan Anda dengan ID #{$order->id} (untuk \"{$productName}\") telah dibatalkan otomatis karena tidak dibayar dalam 2 jam.",
+                    ['order_id' => $order->id, 'product_id' => $productId],
                     'buyer'
                 );
 
-                \App\Services\MongoLogService::notify(
-                    $order->product->user_id,
-                    'order_update',
-                    'Pesanan untuk produk "' . $order->product->nama_barang . '" telah dibatalkan otomatis karena tidak dibayar pembeli dalam 2 jam.',
-                    ['order_id' => $order->id, 'product_id' => $order->product_id],
-                    'seller'
-                );
+                // Notify seller (only if product and seller ID exists)
+                if ($order->product && $order->product->user_id) {
+                    \App\Services\MongoLogService::notify(
+                        $order->product->user_id,
+                        'order_update',
+                        "Pesanan dengan ID #{$order->id} (untuk produk \"{$productName}\") telah dibatalkan otomatis karena tidak dibayar pembeli dalam 2 jam.",
+                        ['order_id' => $order->id, 'product_id' => $productId],
+                        'seller'
+                    );
+                }
 
                 $cancelledCount++;
             });

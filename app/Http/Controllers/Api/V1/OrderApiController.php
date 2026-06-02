@@ -132,4 +132,59 @@ class OrderApiController extends Controller
             return $this->errorResponse('Failed to update order: ' . $e->getMessage(), 500);
         }
     }
+
+    public function cancelOrder(int $id, Request $request): JsonResponse
+    {
+        try {
+            \Illuminate\Support\Facades\DB::beginTransaction();
+
+            $order = Order::with(['product'])->findOrFail($id);
+
+            $isBuyer = $order->user_id === $request->user()->id;
+            $isSeller = ($order->product && $order->product->user_id === $request->user()->id);
+
+            if (!$isBuyer && !$isSeller) {
+                return $this->errorResponse('Unauthorized', 403);
+            }
+
+            if ($order->status !== 'pending') {
+                return $this->errorResponse('Pesanan yang sudah dibayar tidak dapat dibatalkan', 422);
+            }
+
+            // Update order status to 'dibatalkan' (mapped to cancel in database enum)
+            $order->status = 'dibatalkan';
+            $order->save();
+
+            // RESTOCK LOGIC: Loop through $order->items and restore the availability in products table.
+            // Since we have a single product order, we handle both items relation (if added later) and direct product relation.
+            $productsToRestock = [];
+            if (isset($order->items) && $order->items) {
+                foreach ($order->items as $item) {
+                    if ($item->product) {
+                        $productsToRestock[] = $item->product;
+                    }
+                }
+            } elseif ($order->product) {
+                $productsToRestock[] = $order->product;
+            }
+
+            foreach ($productsToRestock as $product) {
+                $product->status = 'active';
+                $product->save();
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return $this->successResponse(
+                new OrderResource($order->fresh()),
+                'Pesanan berhasil dibatalkan.'
+            );
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return $this->errorResponse('Order not found', 404);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return $this->errorResponse('Failed to cancel order: ' . $e->getMessage(), 500);
+        }
+    }
 }

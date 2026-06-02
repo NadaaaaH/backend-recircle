@@ -72,6 +72,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/orders', [\App\Http\Controllers\Api\V1\OrderApiController::class, 'index']);
         Route::get('/orders/{id}', [\App\Http\Controllers\Api\V1\OrderApiController::class, 'show']);
         Route::put('/orders/{id}', [\App\Http\Controllers\Api\V1\OrderApiController::class, 'update']);
+        Route::put('/orders/{id}/cancel', [\App\Http\Controllers\Api\V1\OrderApiController::class, 'cancelOrder']);
         Route::post('/orders/{id}/confirm', [\App\Http\Controllers\Api\V1\OrderApiController::class, 'confirmReceipt']);
 
         // Chat Endpoints

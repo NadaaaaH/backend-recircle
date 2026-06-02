@@ -4,7 +4,7 @@ $app = require_once __DIR__."/bootstrap/app.php";
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
-$users = App\Models\User::all();
-foreach ($users as $user) {
-    echo "ID: " . $user->id . " | Name: " . $user->name . " | Email: " . $user->email . "\n";
+$orders = App\Models\Order::with('user')->get();
+foreach ($orders as $order) {
+    echo "ID: " . $order->id . " | Buyer: " . ($order->user?->name ?? 'N/A') . " | Alamat Pengiriman: " . var_export($order->alamat_pengiriman, true) . "\n";
 }

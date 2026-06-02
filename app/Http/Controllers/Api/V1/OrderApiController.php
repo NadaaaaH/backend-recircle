@@ -64,7 +64,8 @@ class OrderApiController extends Controller
                 return $this->errorResponse('Unauthorized', 403);
             }
 
-            if ($order->status !== 'dikirim') {
+            $isCodProcessing = ($order->metode_pengiriman === 'cod' && $order->status === 'processing');
+            if ($order->status !== 'dikirim' && !$isCodProcessing) {
                 return $this->errorResponse('Order is not in shipped status', 400);
             }
 
@@ -112,7 +113,8 @@ class OrderApiController extends Controller
                     return $this->errorResponse('Unauthorized', 403);
                 }
 
-                if ($order->status !== 'dikirim') {
+                $isCodProcessing = ($order->metode_pengiriman === 'cod' && $order->status === 'processing');
+                if ($order->status !== 'dikirim' && !$isCodProcessing) {
                     return $this->errorResponse('Order must be in shipped status to complete', 400);
                 }
 

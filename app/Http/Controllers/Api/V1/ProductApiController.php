@@ -53,10 +53,17 @@ class ProductApiController extends Controller
 
             $products = $query->paginate(10)->appends($request->query());
 
-            $resource = ProductResource::collection($products);
+            $campuses = Product::active()
+                ->whereNotNull('lokasi_kampus')
+                ->where('lokasi_kampus', '!=', '')
+                ->distinct()
+                ->pluck('lokasi_kampus');
+
+            $responseData = ProductResource::collection($products)->response()->getData(true);
+            $responseData['campuses'] = $campuses;
 
             return $this->successResponse(
-                $resource->response()->getData(true),
+                $responseData,
                 'Products retrieved successfully'
             );
         } catch (\Exception $e) {

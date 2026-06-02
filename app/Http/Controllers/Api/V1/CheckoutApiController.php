@@ -229,7 +229,7 @@ class CheckoutApiController extends Controller
                     'shipping_cost'      => $courierPrice,
                     'courier_service'    => $courierName,
                     'metode_pengiriman'  => $metodePengiriman,
-                    'status'             => 'pending',
+                    'status'             => $metodePengiriman === 'cod' ? 'processing' : 'pending',
                     'alamat_pengiriman'  => $alamatPengiriman,
                     'catatan'            => $catatan,
                     'dana_ditahan'       => $metodePengiriman === 'kirim_paket',
@@ -316,6 +316,8 @@ class CheckoutApiController extends Controller
             return $this->successResponse([
                 'order_id'   => $orders[0]->id,
                 'snap_token' => $snapToken,
+                'seller_id'  => $orders[0]->product->user_id,
+                'is_cod'     => $metodePengiriman === 'cod',
             ], 'Checkout processed successfully', 201);
     }
 }

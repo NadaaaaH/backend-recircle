@@ -210,8 +210,10 @@ class CheckoutApiController extends Controller
                 
                 // Get the courier price for this seller (applied only once per seller)
                 $courierPrice = 0;
+                $courierName = null;
                 if (isset($couriers[$sellerId]) && !in_array($sellerId, $appliedCourierSellers)) {
                     $courierPrice = (int) $couriers[$sellerId]['price'];
+                    $courierName = $couriers[$sellerId]['name'] ?? 'Tukang Paket';
                     $appliedCourierSellers[] = $sellerId;
                 }
 
@@ -224,6 +226,7 @@ class CheckoutApiController extends Controller
                     'offer_id'           => $itemData['offer_id'] ?? null,
                     'total_harga'        => (int) $itemData['price'] + $courierPrice,
                     'shipping_cost'      => $courierPrice,
+                    'courier_service'    => $courierName,
                     'metode_pengiriman'  => $metodePengiriman,
                     'status'             => 'pending',
                     'alamat_pengiriman'  => $alamatPengiriman,

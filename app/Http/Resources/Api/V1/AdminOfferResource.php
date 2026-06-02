@@ -15,7 +15,12 @@ class AdminOfferResource extends JsonResource
             'buyer'         => $this->user->name ?? 'Unknown',
             'seller'        => $this->product->user->name ?? 'Unknown',
             'originalPrice' => $this->product->harga ?? 0,
+            'original_price' => $this->product->harga ?? 0,
             'offeredPrice'  => $this->harga_tawar,
+            'offered_price'  => $this->harga_tawar,
+            'dealPrice'     => $this->harga_deal,
+            'deal_price'     => $this->harga_deal,
+            'negotiated_price' => $this->harga_deal,
             'status'        => $this->status,
             'createdAt'     => $this->created_at->format('d M Y'),
         ];

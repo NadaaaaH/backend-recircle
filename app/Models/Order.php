@@ -26,6 +26,7 @@ class Order extends Model
         'metode_pembayaran',
         'courier_service',
         'rajaongkir_tracking_id',
+        'tracking_number',
         'dana_ditahan',
         'dana_dilepas_at',
     ];

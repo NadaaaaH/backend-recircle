@@ -29,6 +29,8 @@ class OrderResource extends JsonResource
                 ? 'https://app.midtrans.com/snap/snap.js'
                 : 'https://app.sandbox.midtrans.com/snap/snap.js',
             'createdAt' => $this->created_at?->toIso8601String(),
+            'trackingNumber' => $this->rajaongkir_tracking_id,
+            'tracking_number' => $this->rajaongkir_tracking_id,
             'product' => new ProductResource($this->whenLoaded('product')),
             
             // Added properties for Transactions and other views

@@ -28,9 +28,8 @@ class AdminDashboardApiController extends Controller
             'totalProducts' => Product::count(),
             'pendingVerifications' => SellerVerification::where('status', 'pending')->count(),
             'totalTransactions' => Order::count(),
-            'totalRevenue' => Order::where('status', 'selesai')->sum('total_harga'),
+            'totalRevenue' => (int) Order::whereIn('status', ['dibayar', 'dikirim', 'selesai'])->sum('total_harga'),
             'activeOffers' => Offer::where('status', 'pending')->count(),
-            // Pre-populated mocked trends for cosmetic view parity if exact calculations are not available
             'usersTrend' => 12,
             'productsTrend' => 5,
             'transactionsTrend' => 8,
@@ -43,9 +42,10 @@ class AdminDashboardApiController extends Controller
             $date = now()->subMonths($i);
             $monthlyStats[] = [
                 'month' => $date->format('n'), // Numerical month representation
-                'revenue' => Order::whereYear('created_at', $date->year)
+                'revenue' => (int) (Order::whereIn('status', ['dibayar', 'dikirim', 'selesai'])
+                    ->whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)
-                    ->sum('total_harga') ?? 0
+                    ->sum('total_harga') ?? 0)
             ];
         }
 
@@ -54,7 +54,9 @@ class AdminDashboardApiController extends Controller
         return $this->successResponse([
             'stats' => $stats,
             'monthlyStats' => $monthlyStats,
-            'recentActivities' => $recentActivities
+            'monthly_stats' => $monthlyStats,
+            'recentActivities' => $recentActivities,
+            'recent_activities' => $recentActivities
         ], 'Admin dashboard summary aggregated successfully');
     }
 

@@ -16,6 +16,8 @@ class SellerOrderResource extends JsonResource
             'shippingMethod' => $this->metode_pengiriman,
             'status'         => $this->status,
             'shippingAddress'=> $this->alamat_pengiriman,
+            'shipping_address'=> $this->alamat_pengiriman,
+            'alamat_pengiriman'=> $this->alamat_pengiriman,
             'createdAt'      => $this->created_at?->toIso8601String(),
             'trackingNumber' => $this->rajaongkir_tracking_id,
             'courierName'    => $this->courier_service,

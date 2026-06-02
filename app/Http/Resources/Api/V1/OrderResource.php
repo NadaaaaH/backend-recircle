@@ -47,6 +47,7 @@ class OrderResource extends JsonResource
             'metode_pengiriman' => $this->metode_pengiriman,
             'metode_pembayaran' => $this->metode_pembayaran,
             'alamat_pengiriman' => $this->alamat_pengiriman,
+            'shipping_address' => $this->alamat_pengiriman,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

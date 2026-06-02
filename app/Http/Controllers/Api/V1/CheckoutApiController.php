@@ -181,6 +181,7 @@ class CheckoutApiController extends Controller
             'metode_pengiriman'  => 'required|in:cod,kirim_paket',
             'alamat_pengiriman'  => 'required_if:metode_pengiriman,kirim_paket|nullable|string',
             'shipping_address'   => 'nullable|string',
+            'shippingAddress'    => 'nullable|string',
             'catatan'            => 'nullable|string|max:500',
         ]);
 
@@ -188,7 +189,7 @@ class CheckoutApiController extends Controller
         $couriers = $validated['couriers'];
         $totalAmount = (int) $validated['total_amount'];
         $metodePengiriman = $validated['metode_pengiriman'];
-        $alamatPengiriman = $validated['alamat_pengiriman'] ?? $validated['shipping_address'] ?? null;
+        $alamatPengiriman = $validated['alamat_pengiriman'] ?? $validated['shipping_address'] ?? $validated['shippingAddress'] ?? null;
         $catatan = $validated['catatan'] ?? null;
 
             // 1. GENERATE PAYMENT REFERENCE:

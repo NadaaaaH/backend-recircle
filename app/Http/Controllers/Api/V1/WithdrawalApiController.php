@@ -47,70 +47,25 @@ class WithdrawalApiController extends Controller
                     'ditarik_at' => now(),
                 ]);
 
-                // 3. Call Midtrans Payout API
-                $serverKey = env('MIDTRANS_SERVER_KEY');
-                $isProduction = env('MIDTRANS_IS_PRODUCTION', false);
-                $baseUrl = $isProduction ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com';
-                $endpoint = $baseUrl . '/v2/payouts';
-
-                $payload = [
-                    'amount' => $amount,
-                    'bank_account' => [
-                        'account_number' => (string) $validated['accountNumber'],
-                        'bank_name' => strtolower($validated['bankCode']),
-                    ],
-                    'customer_name' => $user->name,
-                ];
-
-                // Perform the HTTP request with standard timeout
-                $response = Http::timeout(15)
-                    ->withBasicAuth($serverKey, '')
-                    ->withHeaders([
-                        'Accept' => 'application/json',
-                        'Content-Type' => 'application/json',
-                    ])
-                    ->post($endpoint, $payload);
-
-                // 4. Handle Midtrans Response
-                if ($response->failed()) {
-                    throw new \Exception('Gagal memproses penarikan ke gateway pembayaran: HTTP ' . $response->status() . ' - ' . $response->body());
-                }
-
-                $resData = $response->json();
-                $midtransStatus = strtolower($resData['status'] ?? $resData['transaction_status'] ?? 'pending');
-
-                // If Midtrans explicitly failed/rejected, rollback transaction by throwing exception
-                if (in_array($midtransStatus, ['failed', 'failure', 'rejected', 'deny', 'cancelled', 'canceled'])) {
-                    throw new \Exception('Penarikan ditolak oleh gateway pembayaran: ' . ($resData['status_message'] ?? 'Unknown error'));
-                }
-
-                // Map Midtrans status to local Withdrawal status
-                $localStatus = 'pending';
-                if (in_array($midtransStatus, ['success', 'settlement', 'completed', 'approved'])) {
-                    $localStatus = 'success';
-                }
-
                 $referenceNo = 'WD-' . date('YmdHis') . '-' . Str::random(4);
 
-                // Create the Withdrawal record
+                // 3. Create the Withdrawal record with status 'success' (processed locally)
                 $withdrawal = Withdrawal::create([
                     'user_id' => $user->id,
                     'reference_no' => $referenceNo,
                     'amount' => $amount,
                     'bank_name' => $validated['bankCode'],
                     'account_number' => $validated['accountNumber'],
-                    'status' => $localStatus,
-                    'midtrans_payout_id' => $resData['payout_id'] ?? $resData['id'] ?? null,
+                    'status' => 'success',
                     'error_message' => null,
                 ]);
 
                 return [
                     'withdrawal' => $withdrawal,
-                    'midtrans_response' => $resData,
                 ];
             });
 
-            return $this->successResponse($result, 'Penarikan dana sedang diproses.', 201);
+            return $this->successResponse($result, 'Penarikan dana berhasil diproses secara lokal.', 201);
 
         } catch (\Exception $e) {
             if ($e->getMessage() === 'Saldo tidak mencukupi untuk penarikan ini.') {

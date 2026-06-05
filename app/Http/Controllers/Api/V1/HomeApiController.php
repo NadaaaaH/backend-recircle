@@ -53,6 +53,8 @@ class HomeApiController extends Controller
                 'img'      => $p->foto_barang_url,
                 'tag'      => $p->kondisi,
                 'category' => $p->category ? $p->category->nama_kategori : null,
+                'is_archived' => $p->is_archived,
+                'status'   => $p->status,
                 'seller'   => [
                     'name'   => $p->user->name,
                     'avatar' => $p->user->avatar_url,

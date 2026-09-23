@@ -27,14 +27,14 @@ class SellerVerificationService
             throw new \InvalidArgumentException('Akun kamu sudah terverifikasi sebagai penjual.');
         }
 
-        // Upload foto KTM & Selfie ke local storage
-        $pathKtm = $fotoKtm->store('verifikasi-ktm', 'public');
-        $pathSelfie = $fotoSelfie->store('verifikasi-selfie', 'public');
+        // Upload foto KTM & Selfie menggunakan default disk (Cloudinary/Storage)
+        $pathKtm = $fotoKtm->store('verifications');
+        $pathSelfie = $fotoSelfie->store('verifications');
 
         return SellerVerification::create([
             'user_id'      => $user->id,
-            'foto_ktm'     => '/storage/' . $pathKtm,
-            'foto_selfie'  => '/storage/' . $pathSelfie,
+            'foto_ktm'     => $pathKtm,
+            'foto_selfie'  => $pathSelfie,
             'nama_kampus'  => $namaKampus,
             'nim'          => $nim,
             'status'       => 'pending',

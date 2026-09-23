@@ -56,7 +56,7 @@ class User extends Authenticatable
         return Attribute::make(
             get: function () {
                 if ($this->avatar) {
-                    return filter_var($this->avatar, FILTER_VALIDATE_URL) ? $this->avatar : url('storage/' . ltrim(str_replace('public/', '', $this->avatar), '/'));
+                    return filter_var($this->avatar, FILTER_VALIDATE_URL) ? $this->avatar : Storage::url($this->avatar);
                 }
                 return url('images/default-avatar.png');
             }

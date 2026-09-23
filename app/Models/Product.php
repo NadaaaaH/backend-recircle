@@ -209,10 +209,14 @@ class Product extends Model
 
     private function getBaseStorageUrl()
     {
-        if (app()->runningInConsole() || !request()) {
-            return url('storage');
+        try {
+            return rtrim(Storage::url(''), '/');
+        } catch (\Throwable $e) {
+            if (app()->runningInConsole() || !request()) {
+                return url('storage');
+            }
+            return request()->getSchemeAndHttpHost() . '/storage';
         }
-        return request()->getSchemeAndHttpHost() . '/storage';
     }
 
     private function getFallbackUrl()

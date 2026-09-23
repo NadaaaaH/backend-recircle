@@ -28,7 +28,7 @@ class SellerVerification extends Model
         return Attribute::make(
             get: function () {
                 if ($this->foto_ktm) {
-                    return filter_var($this->foto_ktm, FILTER_VALIDATE_URL) ? $this->foto_ktm : asset('storage/' . ltrim(str_replace('public/', '', $this->foto_ktm), '/'));
+                    return filter_var($this->foto_ktm, FILTER_VALIDATE_URL) ? $this->foto_ktm : Storage::url($this->foto_ktm);
                 }
                 return asset('images/placeholder-ktm.png');
             }
@@ -40,7 +40,7 @@ class SellerVerification extends Model
         return Attribute::make(
             get: function () {
                 if ($this->foto_selfie) {
-                    return filter_var($this->foto_selfie, FILTER_VALIDATE_URL) ? $this->foto_selfie : asset('storage/' . ltrim(str_replace('public/', '', $this->foto_selfie), '/'));
+                    return filter_var($this->foto_selfie, FILTER_VALIDATE_URL) ? $this->foto_selfie : Storage::url($this->foto_selfie);
                 }
                 return asset('images/placeholder-selfie.png');
             }

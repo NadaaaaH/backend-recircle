@@ -277,8 +277,7 @@ class SellerDashboardController extends Controller
         ];
 
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('products', 'public');
-            $data['image'] = '/storage/' . $path;
+            $data['image'] = $request->file('image')->store('products');
         }
 
         $product->update($data);

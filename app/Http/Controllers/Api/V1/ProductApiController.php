@@ -140,7 +140,7 @@ class ProductApiController extends Controller
             if ($request->hasFile('images')) {
                 $imagePaths = [];
                 foreach ($request->file('images') as $image) {
-                    $imagePaths[] = $image->store('products', 'public');
+                    $imagePaths[] = $image->store('products');
                 }
                 $data['image'] = json_encode($imagePaths);
             }
@@ -199,12 +199,12 @@ class ProductApiController extends Controller
 
             // Handle image uploads
             if ($request->hasFile('image')) {
-                 $path = $request->file('image')->store('products', 'public');
+                 $path = $request->file('image')->store('products');
                  $data['image'] = $path;
             } elseif ($request->hasFile('images')) {
                 $imagePaths = [];
                 foreach ($request->file('images') as $image) {
-                    $imagePaths[] = $image->store('products', 'public');
+                    $imagePaths[] = $image->store('products');
                 }
                 $data['image'] = json_encode($imagePaths);
             }

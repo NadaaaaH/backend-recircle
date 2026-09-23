@@ -7,6 +7,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "ext-mongodb": "^2.3",
+        "cloudinary-labs/cloudinary-laravel": "^3.0",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/reverb": "^1.0",
@@ -14,8 +16,7 @@
         "laravel/tinker": "^2.10.1",
         "midtrans/midtrans-php": "*",
         "mongodb/laravel-mongodb": "^5.7",
-        "tightenco/ziggy": "^2.0",
-        "ext-mongodb": "^2.3"
+        "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

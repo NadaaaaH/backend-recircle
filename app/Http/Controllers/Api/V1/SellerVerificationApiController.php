@@ -54,8 +54,8 @@ class SellerVerificationApiController extends Controller
                 ->where('status', 'rejected')
                 ->first();
 
-            $pathKtm = $request->file('foto_ktm')->store('verifications', 'public');
-            $pathSelfie = $request->file('foto_selfie')->store('verifications', 'public');
+            $pathKtm = $request->file('foto_ktm')->store('verifications');
+            $pathSelfie = $request->file('foto_selfie')->store('verifications');
 
             if ($existingRejected) {
                 $existingRejected->update([

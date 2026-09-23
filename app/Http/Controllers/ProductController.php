@@ -120,11 +120,10 @@ class ProductController extends Controller
 
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $index => $file) {
-                $path = $file->store('products', 'public');
-                $fullPath = '/storage/' . $path;
-                $product->images()->create(['path' => $fullPath]);
+                $path = $file->store('products');
+                $product->images()->create(['path' => $path]);
                 if ($index === 0) {
-                    $product->update(['image' => $fullPath]);
+                    $product->update(['image' => $path]);
                 }
             }
         }

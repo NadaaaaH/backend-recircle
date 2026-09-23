@@ -26,11 +26,11 @@ class ProfileApiController extends Controller
 
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
-                // Hapus avatar lama jika ada dan bukan URL eksternal
+                // Hapus avatar lama jika ada
                 if ($user->avatar && !filter_var($user->avatar, FILTER_VALIDATE_URL)) {
-                    Storage::disk('public')->delete($user->avatar);
+                    Storage::delete($user->avatar);
                 }
-                $path = $request->file('avatar')->store('avatars', 'public');
+                $path = $request->file('avatar')->store('avatars');
                 $user->avatar = $path;
             }
 

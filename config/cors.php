@@ -11,7 +11,10 @@ return [
         'https://frontend-recircle.vercel.app',
         'https://frontend-recircle-seven.vercel.app',
     ],
-    'allowed_origins_patterns' => [],
+    // Tambahkan regex ini agar semua URL *.vercel.app diizinkan otomatis
+    'allowed_origins_patterns' => [
+        '#^https://.*\.vercel\.app$#',
+    ],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
     'max_age' => 0,

@@ -9,6 +9,7 @@ return [
         'http://localhost:5174',
         'http://localhost:8000',
         'https://frontend-recircle.vercel.app',
+        'https://frontend-recircle-seven.vercel.app',
     ],
     'allowed_origins_patterns' => [],
     'allowed_headers' => ['*'],

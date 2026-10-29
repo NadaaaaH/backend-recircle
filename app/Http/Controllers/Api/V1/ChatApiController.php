@@ -20,8 +20,9 @@ class ChatApiController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
+            $dsn = (string) config('database.connections.mongodb.dsn', '');
             // Cek apakah MongoDB sudah dikonfigurasi. Jika belum, jangan eksekusi query agar tidak hang.
-            if (str_contains(config('database.connections.mongodb.dsn'), '<cluster-url>')) {
+            if (empty($dsn) || str_contains($dsn, '<cluster-url>') || str_contains($dsn, '<username>')) {
                 return $this->successResponse([], 'Chat disabled: MongoDB not configured.');
             }
 
@@ -69,16 +70,17 @@ class ChatApiController extends Controller
             }
 
             return $this->successResponse($contacts, 'Chat contacts retrieved successfully');
-        } catch (\Exception $e) {
-            Log::error('Chat index error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
-            return $this->errorResponse('Failed to retrieve chat contacts: ' . $e->getMessage(), 500);
+        } catch (\Throwable $e) {
+            Log::warning('Chat index error: ' . $e->getMessage());
+            return $this->successResponse([], 'Chat service is temporarily unavailable.');
         }
     }
 
     public function show(int $otherUserId, Request $request): JsonResponse
     {
         try {
-            if (str_contains(config('database.connections.mongodb.dsn'), '<cluster-url>')) {
+            $dsn = (string) config('database.connections.mongodb.dsn', '');
+            if (empty($dsn) || str_contains($dsn, '<cluster-url>') || str_contains($dsn, '<username>')) {
                 return $this->successResponse([], 'Chat disabled: MongoDB not configured.');
             }
 
@@ -106,9 +108,9 @@ class ChatApiController extends Controller
                 ChatMessageResource::collection($messages),
                 'Chat messages retrieved successfully'
             );
-        } catch (\Exception $e) {
-            Log::error('Chat show error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
-            return $this->errorResponse('Failed to retrieve chat messages: ' . $e->getMessage(), 500);
+        } catch (\Throwable $e) {
+            Log::warning('Chat show error: ' . $e->getMessage());
+            return $this->successResponse([], 'Chat service is temporarily unavailable.');
         }
     }
 

@@ -28,7 +28,7 @@ class ProfileUpdateRequest extends FormRequest
             'bio' => ['nullable', 'string', 'max:1000'],
             'nomor_wa' => ['nullable', 'string', 'max:20'],
             'kampus' => ['nullable', 'string', 'max:255'],
-            'avatar' => ['nullable', 'image', 'max:2048'],
+            'avatar' => ['nullable', 'file', 'mimes:jpeg,png,jpg,webp,heic', 'max:5120'],
         ];
     }
 }

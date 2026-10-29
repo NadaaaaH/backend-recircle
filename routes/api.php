@@ -26,6 +26,8 @@ Route::prefix('v1')->group(function () {
     Route::post('/register', [AuthApiController::class, 'register']);
     Route::post('/login', [AuthApiController::class, 'login']);
     Route::get('/user', [AuthApiController::class, 'user']);
+    Route::post('/forgot-password', [AuthApiController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthApiController::class, 'resetPassword']);
     
     // Product Endpoints (Public)
     Route::get('/products', [ProductApiController::class, 'index']);
@@ -38,15 +40,18 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         // Auth Endpoints
         Route::post('/logout', [AuthApiController::class, 'logout']);
+        Route::put('/password', [AuthApiController::class, 'updatePassword']);
+        Route::post('/confirm-password', [AuthApiController::class, 'confirmPassword']);
+        Route::post('/email/verification-notification', [AuthApiController::class, 'sendVerificationNotification']);
         
         // Profile Endpoints
         Route::get('/profile', [\App\Http\Controllers\Api\V1\ProfileApiController::class, 'show']);
-        Route::patch('/profile', [\App\Http\Controllers\Api\V1\ProfileApiController::class, 'update']);
+        Route::match(['post', 'patch'], '/profile', [\App\Http\Controllers\Api\V1\ProfileApiController::class, 'update']);
         Route::delete('/profile', [\App\Http\Controllers\Api\V1\ProfileApiController::class, 'destroy']);
 
         // Product Management (Authenticated)
         Route::post('/products', [ProductApiController::class, 'store']);
-        Route::patch('/products/{id}', [ProductApiController::class, 'update']);
+        Route::match(['post', 'patch'], '/products/{id}', [ProductApiController::class, 'update']);
         Route::delete('/products/{id}', [ProductApiController::class, 'destroy']);
 
         // Wishlist Endpoints
@@ -108,7 +113,7 @@ Route::prefix('v1')->group(function () {
 
             Route::get('/products', [\App\Http\Controllers\Api\V1\SellerProductApiController::class, 'index']);
             Route::post('/products', [ProductApiController::class, 'store']); // Use common Product store
-            Route::patch('/products/{id}', [ProductApiController::class, 'update']); // Use common Product update
+            Route::match(['post', 'patch'], '/products/{id}', [ProductApiController::class, 'update']); // Use common Product update
             Route::post('/products/{id}/toggle-archive', [\App\Http\Controllers\Api\V1\SellerProductApiController::class, 'toggleArchive']);
             Route::delete('/products/{id}', [\App\Http\Controllers\Api\V1\SellerProductApiController::class, 'destroy']);
             Route::post('/products/{id}/restore', [\App\Http\Controllers\Api\V1\SellerProductApiController::class, 'restore']);

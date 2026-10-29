@@ -117,12 +117,124 @@ class AuthApiController extends Controller
     public function logout(Request $request): JsonResponse
     {
         try {
-            // Revoke current token
             $request->user()->currentAccessToken()->delete();
-
             return $this->successResponse(null, 'Logged out successfully');
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to logout', 500);
+        }
+    }
+
+    /**
+     * Update user password.
+     */
+    public function updatePassword(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'current_password' => ['required', 'current_password'],
+                'password'         => ['required', 'string', 'min:8', 'confirmed'],
+            ]);
+
+            $request->user()->update([
+                'password' => Hash::make($validated['password']),
+            ]);
+
+            return $this->successResponse(null, 'Password updated successfully');
+        } catch (ValidationException $e) {
+            return $this->errorResponse('Validation Error', 422, $e->errors());
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to update password: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Send password reset link.
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        try {
+            $request->validate(['email' => 'required|email']);
+            $status = \Illuminate\Support\Facades\Password::sendResetLink(
+                $request->only('email')
+            );
+            if ($status === \Illuminate\Support\Facades\Password::RESET_LINK_SENT) {
+                return $this->successResponse(null, __($status));
+            }
+            return $this->errorResponse(__($status), 400);
+        } catch (ValidationException $e) {
+            return $this->errorResponse('Validation Error', 422, $e->errors());
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to send reset link: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Reset user password using token.
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'token'    => 'required',
+                'email'    => 'required|email',
+                'password' => 'required|string|min:8|confirmed',
+            ]);
+
+            $status = \Illuminate\Support\Facades\Password::reset(
+                $request->only('email', 'password', 'password_confirmation', 'token'),
+                function ($user) use ($request) {
+                    $user->forceFill([
+                        'password' => Hash::make($request->password),
+                        'remember_token' => \Illuminate\Support\Str::random(60),
+                    ])->save();
+                    event(new \Illuminate\Auth\Events\PasswordReset($user));
+                }
+            );
+
+            if ($status === \Illuminate\Support\Facades\Password::PASSWORD_RESET) {
+                return $this->successResponse(null, __($status));
+            }
+            return $this->errorResponse(__($status), 400);
+        } catch (ValidationException $e) {
+            return $this->errorResponse('Validation Error', 422, $e->errors());
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to reset password: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Confirm password for sensitive actions.
+     */
+    public function confirmPassword(Request $request): JsonResponse
+    {
+        try {
+            $request->validate(['password' => 'required|string']);
+            if (!Hash::check($request->password, $request->user()->password)) {
+                return $this->errorResponse('Password tidak cocok', 422, [
+                    'password' => ['Password tidak cocok.'],
+                ]);
+            }
+            return $this->successResponse(null, 'Password confirmed');
+        } catch (ValidationException $e) {
+            return $this->errorResponse('Validation Error', 422, $e->errors());
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error confirming password', 500);
+        }
+    }
+
+    /**
+     * Send email verification notification.
+     */
+    public function sendVerificationNotification(Request $request): JsonResponse
+    {
+        try {
+            if ($request->user()->hasVerifiedEmail()) {
+                return $this->successResponse(null, 'Email already verified.');
+            }
+            $request->user()->sendEmailVerificationNotification();
+            return $this->successResponse(null, 'Verification link sent.');
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to send verification email: ' . $e->getMessage(), 500);
         }
     }
 }

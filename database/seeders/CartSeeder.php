@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Cart;
-use App\Models\Category;
 use App\Models\Offer;
 use App\Models\Product;
 use App\Models\User;
@@ -17,107 +16,102 @@ class CartSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Pastikan kategori tersedia
-        $category = Category::firstOrCreate(
-            ['slug' => 'elektronik'],
-            ['nama_kategori' => 'Elektronik', 'ikon' => 'Laptop']
-        );
+        $buyer = User::where('email', 'buyer@example.com')->first();
+        $rizky = User::where('email', 'rizky.fauzan@recircle.id')->first();
 
-        // 2. Pastikan kita memiliki user Pembeli (Buyer) dan Penjual (Seller)
-        $buyer = User::firstOrCreate(
-            ['email' => 'buyer@example.com'],
-            [
-                'name' => 'Buyer Name',
-                'password' => bcrypt('password'),
-                'kampus' => 'IPB University',
-                'is_seller' => false,
-            ]
-        );
+        $productMagicCom   = Product::where('nama_barang', 'like', '%Magic Com%')->first();
+        $productKulkas     = Product::where('nama_barang', 'like', '%Kulkas Mini%')->first();
+        $productKalkulator = Product::where('nama_barang', 'like', '%Kalkulator Scientific%')->first();
+        $productKalkulus   = Product::where('nama_barang', 'like', '%Buku Kalkulus%')->first();
+        $productSepeda     = Product::where('nama_barang', 'like', '%Sepeda Lipat%')->first();
+        $productToteBag    = Product::where('nama_barang', 'like', '%Tote Bag%')->first();
 
-        $seller = User::firstOrCreate(
-            ['email' => 'seller@example.com'],
-            [
-                'name' => 'Seller Name',
-                'password' => bcrypt('password'),
-                'kampus' => 'Institut Pertanian Bogor',
-                'is_seller' => true,
-            ]
-        );
+        // Cari offer deal yang accepted untuk buyer
+        $offerMagicCom = Offer::where('user_id', $buyer?->id)
+            ->where('product_id', $productMagicCom?->id)
+            ->where('status', 'accepted')
+            ->first();
 
-        // 3. Buat 2 produk untuk seller dengan atribut lengkap
-        $product1 = Product::firstOrCreate(
-            ['nama_barang' => 'Magic Com Miyako Ungu Series 1726'],
-            [
-                'user_id' => $seller->id,
-                'category_id' => $category->id,
-                'harga' => 75000,
-                'kondisi' => 'Bekas',
-                'deskripsi' => 'Kondisi bagus, masih berfungsi normal pemakaian anak kost.',
-                'lokasi_kampus' => 'IPB Dramaga',
-                'image' => 'https://images.unsplash.com/photo-1544233726-9f1d2b27be8b?auto=format&fit=crop&w=600&q=80',
-                'status' => 'active',
-            ]
-        );
+        $offerKalkulator = Offer::where('user_id', $buyer?->id)
+            ->where('product_id', $productKalkulator?->id)
+            ->where('status', 'accepted')
+            ->first();
 
-        $product2 = Product::firstOrCreate(
-            ['nama_barang' => 'Kulkas Mini Hisense Silver Series 189x'],
-            [
-                'user_id' => $seller->id,
-                'category_id' => $category->id,
-                'harga' => 850000,
-                'kondisi' => 'Bekas',
-                'deskripsi' => 'Dingin mantap, hemat listrik cocok untuk kamar kost.',
-                'lokasi_kampus' => 'IPB Dramaga',
-                'image' => 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=600&q=80',
-                'status' => 'active',
-            ]
-        );
+        // 1. Cart Items untuk Buyer:
+        if ($buyer) {
+            // Item 1: Magic Com (dengan Offer Deal accepted: 50.000)
+            if ($productMagicCom) {
+                Cart::updateOrCreate(
+                    [
+                        'user_id' => $buyer->id,
+                        'product_id' => $productMagicCom->id,
+                    ],
+                    [
+                        'offer_id' => $offerMagicCom?->id,
+                    ]
+                );
+            }
 
-        // 4. Item 1: Normal item (tanpa offer / nego)
-        Cart::firstOrCreate([
-            'user_id' => $buyer->id,
-            'product_id' => $product2->id,
-        ], [
-            'offer_id' => null,
-        ]);
+            // Item 2: Kulkas Mini (tanpa offer / harga normal: 850.000)
+            if ($productKulkas) {
+                Cart::updateOrCreate(
+                    [
+                        'user_id' => $buyer->id,
+                        'product_id' => $productKulkas->id,
+                    ],
+                    [
+                        'offer_id' => null,
+                    ]
+                );
+            }
 
-        // 5. Item 2: Item dengan penawaran/nego yang disetujui (offer_deal, expires_at 24 jam)
-        $offer = Offer::firstOrCreate(
-            [
-                'user_id' => $buyer->id,
-                'product_id' => $product1->id,
-            ],
-            [
-                'harga_tawar' => 60000,
-                'harga_deal' => 50000,
-                'status' => 'accepted',
-                'pesan' => 'Bisa kurang ngga kak?',
-                'deal_expired_at' => now()->addHours(24),
-                'expires_at' => now()->addHours(24),
-            ]
-        );
+            // Item 3: Tote Bag Kampus (harga normal: 25.000)
+            if ($productToteBag) {
+                Cart::updateOrCreate(
+                    [
+                        'user_id' => $buyer->id,
+                        'product_id' => $productToteBag->id,
+                    ],
+                    [
+                        'offer_id' => null,
+                    ]
+                );
+            }
+        }
 
-        Cart::firstOrCreate([
-            'user_id' => $buyer->id,
-            'product_id' => $product1->id,
-        ], [
-            'offer_id' => $offer->id,
-        ]);
+        // 2. Cart Items untuk Rizky:
+        if ($rizky && $productKalkulus) {
+            Cart::updateOrCreate(
+                [
+                    'user_id' => $rizky->id,
+                    'product_id' => $productKalkulus->id,
+                ],
+                [
+                    'offer_id' => null,
+                ]
+            );
+        }
 
-        // 6. Sinkronisasi tabel wishlists untuk kompatibilitas CartApiController (API Cart)
-        DB::table('wishlists')->insertOrIgnore([
-            [
-                'user_id' => $buyer->id,
-                'product_id' => $product1->id,
+        // 3. Wishlists untuk Buyer dan Rizky
+        if ($buyer) {
+            $wishlistProducts = array_filter([$productKalkulator?->id, $productSepeda?->id, $productKalkulus?->id]);
+            foreach ($wishlistProducts as $prodId) {
+                DB::table('wishlists')->insertOrIgnore([
+                    'user_id' => $buyer->id,
+                    'product_id' => $prodId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        if ($rizky && $productSepeda) {
+            DB::table('wishlists')->insertOrIgnore([
+                'user_id' => $rizky->id,
+                'product_id' => $productSepeda->id,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ],
-            [
-                'user_id' => $buyer->id,
-                'product_id' => $product2->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+            ]);
+        }
     }
 }

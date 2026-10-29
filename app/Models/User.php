@@ -49,7 +49,14 @@ class User extends Authenticatable
         'notifications_read_at' => 'datetime',
     ];
 
-    protected $appends = ['avatar_url'];
+    protected $appends = ['avatar_url', 'universitas'];
+
+    protected function universitas(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->kampus
+        );
+    }
 
     protected function avatarUrl(): Attribute
     {

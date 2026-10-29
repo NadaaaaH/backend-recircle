@@ -45,11 +45,16 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($categories as $cat) {
-            Category::create([
-                'nama_kategori' => $cat['nama_kategori'],
-                'slug'          => Str::slug($cat['nama_kategori']),
-                'ikon'          => $cat['ikon'],
-            ]);
+            Category::firstOrCreate(
+                ['slug' => Str::slug($cat['nama_kategori'])],
+                [
+                    'nama_kategori' => $cat['nama_kategori'],
+                    'ikon'          => $cat['ikon'],
+                ]
+            );
         }
+
+        // ── Seed Cart & Offers ────────────────────
+        $this->call(CartSeeder::class);
     }
 }
